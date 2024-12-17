@@ -1,6 +1,5 @@
-from django.urls import path
-from todo import views
+from django.urls import path, include
 
 urlpatterns = [
-    path("health", views.HealthView.as_view(), name="health"),
+    path("v1/", include("todo.urls"), name="api"),
 ]

@@ -35,3 +35,5 @@ tasks_db_data = [
         "updatedBy": "qMbT6M2GB65W7UHgJS4g",
     },
 ]
+
+tasks_models = [TaskModel(**data) for data in tasks_db_data]

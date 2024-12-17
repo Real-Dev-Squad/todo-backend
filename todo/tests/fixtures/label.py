@@ -18,3 +18,5 @@ label_db_data = [
         "createdBy": "qMbT6M2GB65W7UHgJS4g",
     },
 ]
+
+label_models = [LabelModel(**data) for data in label_db_data]

@@ -1,5 +1,8 @@
 from enum import Enum
 
+DEFAULT_PAGE_LIMIT = 20
+MAX_PAGE_LIMIT = 200
+
 
 class TaskStatus(Enum):
     TODO = "TODO"

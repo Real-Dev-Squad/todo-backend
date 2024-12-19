@@ -49,4 +49,5 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
     ],
     "UNAUTHENTICATED_USER": None,
+    "EXCEPTION_HANDLER": "todo.exceptions.exception_handler.handle_exception",
 }

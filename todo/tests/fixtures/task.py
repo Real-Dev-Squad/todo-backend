@@ -1,6 +1,7 @@
 from todo.constants.task import TaskPriority
 from todo.models.task import TaskModel
 from todo.constants.task import TaskStatus
+from todo.dto.task_dto import TaskDTO
 from bson import ObjectId
 
 tasks_db_data = [
@@ -37,3 +38,41 @@ tasks_db_data = [
 ]
 
 tasks_models = [TaskModel(**data) for data in tasks_db_data]
+
+
+task_dtos = [
+    TaskDTO(
+        id="672f7c5b775ee9f4471ff1dd",
+        displayId="#1",
+        title="created rest api",
+        priority=1,
+        status="TODO",
+        assignee={"id": "qMbT6M2GB65W7UHgJS4g", "name": "SYSTEM"},
+        isAcknowledged=False,
+        labels=[{"name": "Beginner Friendly", "color": "#fa1e4e"}],
+        isDeleted=False,
+        startedAt="2024-11-09T15:14:35.724000",
+        dueAt="2024-11-09T15:14:35.724000",
+        createdAt="2024-11-09T15:14:35.724000",
+        updatedAt="2024-10-18T15:55:14.802000Z",
+        createdBy={"id": "xQ1CkCncM8Novk252oAj", "name": "SYSTEM"},
+        updatedBy={"id": "Kn5N4Z3mdvpkv0HpqUCt", "name": "SYSTEM"},
+    ),
+    TaskDTO(
+        id="674c726ca89aab38040cb964",
+        displayId="#1",
+        title="task 2",
+        priority=1,
+        status="TODO",
+        assignee={"id": "qMbT6M2GB65W7UHgJS4g", "name": "SYSTEM"},
+        isAcknowledged=True,
+        labels=[{"name": "Beginner Friendly", "color": "#fa1e4e"}],
+        isDeleted=False,
+        startedAt="2024-11-09T15:14:35.724000",
+        dueAt="2024-11-09T15:14:35.724000",
+        createdAt="2024-11-09T15:14:35.724000",
+        updatedAt="2024-10-18T15:55:14.802000Z",
+        createdBy={"id": "xQ1CkCncM8Novk252oAj", "name": "SYSTEM"},
+        updatedBy={"id": "Kn5N4Z3mdvpkv0HpqUCt", "name": "SYSTEM"},
+    ),
+]

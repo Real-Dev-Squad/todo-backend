@@ -7,7 +7,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    container: python:3.11-slim-bookworm
     services:
       db:
         image: mongo:latest

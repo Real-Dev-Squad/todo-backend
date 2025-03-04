@@ -7,7 +7,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: python:3.12-slim-bookworm
 
     services:
       db:
@@ -24,13 +23,13 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.11.*'
 
       - name: Install dependencies
         run: |
-          python3.12 -m pip install -r requirements.txt
+          python3.11 -m pip install -r requirements.txt
 
       - name: Lint check
         run: |
@@ -38,4 +37,4 @@ jobs:
 
       - name: Run tests
         run: |
-          python3.12 manage.py test
+          python3.11 manage.py test

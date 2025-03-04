@@ -11,12 +11,12 @@
         ```
     - For Windows
         ```
-        pyenv install 3.12.7
+        pyenv install 3.11.5
         ```
 3. Create virtual environment by running the command
     - For Mac/Linux
         ```
-        pyenv virtualenv 3.12.7 venv
+        pyenv virtualenv 3.11.5 venv
         ```
     - For Windows
         ```

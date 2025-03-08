@@ -1,5 +1,4 @@
 from bson import ObjectId
-from todo.models.label import LabelModel
 
 
 label_db_data = [

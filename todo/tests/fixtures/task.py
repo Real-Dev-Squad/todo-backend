@@ -1,5 +1,4 @@
 from todo.constants.task import TaskPriority
-from todo.models.task import TaskModel
 from todo.constants.task import TaskStatus
 from bson import ObjectId
 

@@ -1,5 +1,4 @@
 from todo.constants.task import TaskPriority
-from todo.models.task import TaskModel
 from todo.constants.task import TaskStatus
 from bson import ObjectId
 
@@ -35,5 +34,3 @@ tasks_db_data = [
         "updatedBy": "qMbT6M2GB65W7UHgJS4g",
     },
 ]
-
-tasks_models = [TaskModel(**data) for data in tasks_db_data]

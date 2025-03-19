@@ -1,6 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .constants.health import AppHealthStatus, ComponentHealthStatus
+from todo.constants.health import AppHealthStatus, ComponentHealthStatus
 from todo_project.db.config import DatabaseManager
 
 database_manager = DatabaseManager()

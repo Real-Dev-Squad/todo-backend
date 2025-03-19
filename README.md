@@ -46,7 +46,7 @@
     ```
     python manage.py runserver
     ```
-10. Go to http://127.0.0.1:8000/health/ API to make sure the server it up. You should see this response
+10. Go to http://127.0.0.1:8000/v1/health API to make sure the server it up. You should see this response
     ```
     {
         "status": "UP",
@@ -64,7 +64,7 @@
     ```
     docker-compose up -d
     ```
-3. Go to http://127.0.0.1:8000/health/ API to make sure the server it up. You should see this response
+3. Go to http://127.0.0.1:8000/v1/health API to make sure the server it up. You should see this response
     ```
     {
     "status": "UP"

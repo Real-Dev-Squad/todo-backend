@@ -1,6 +1,7 @@
 from unittest import TestCase
 from rest_framework.test import APIRequestFactory
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 
 from todo.views.task import TaskView
 

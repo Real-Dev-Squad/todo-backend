@@ -50,4 +50,8 @@ REST_FRAMEWORK = {
     ],
     "UNAUTHENTICATED_USER": None,
     "EXCEPTION_HANDLER": "todo.exceptions.exception_handler.handle_exception",
+    "DEFAULT_PAGINATION_SETTINGS": {
+        "DEFAULT_PAGE_LIMIT": 20,
+        "MAX_PAGE_LIMIT": 200,
+    },
 }

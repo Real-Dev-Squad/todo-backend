@@ -1,7 +1,6 @@
 from unittest import TestCase
 from rest_framework.exceptions import ValidationError
 from django.conf import settings
-from unittest.mock import patch
 
 from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer
 

@@ -30,8 +30,8 @@ class TaskServiceTests(TestCase):
         self.assertEqual(len(response.tasks), 1)
 
         self.assertIsInstance(response.links, LinksData)
-        self.assertEqual(response.links.next, f"{self.mock_reverse_lazy("tasks")}?page=3&limit=1")
-        self.assertEqual(response.links.prev, f"{self.mock_reverse_lazy("tasks")}?page=1&limit=1")
+        self.assertEqual(response.links.next, f"{self.mock_reverse_lazy('tasks')}?page=3&limit=1")
+        self.assertEqual(response.links.prev, f"{self.mock_reverse_lazy('tasks')}?page=1&limit=1")
 
     @patch("todo.services.task_service.TaskRepository.count")
     @patch("todo.services.task_service.TaskRepository.list")

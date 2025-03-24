@@ -64,9 +64,7 @@ class TaskViewTests(APISimpleTestCase):
             self.assertEqual(actual_error["detail"], expected_error["detail"])
 
 
-class TaskViewUnitTest(TestCase):
-    """Unit tests using APIRequestFactory for direct view testing"""
-    
+class TaskViewTest(TestCase):
     def setUp(self):
         self.factory = APIRequestFactory()
         self.view = TaskView.as_view()

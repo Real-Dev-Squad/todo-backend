@@ -1,4 +1,3 @@
-from typing import List
 from unittest import TestCase
 
 from pydantic_core._pydantic_core import ValidationError

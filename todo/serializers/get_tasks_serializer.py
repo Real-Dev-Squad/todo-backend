@@ -1,6 +1,5 @@
 from rest_framework import serializers
-
-from todo.constants.task import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT
+from django.conf import settings
 
 
 class GetTaskQueryParamsSerializer(serializers.Serializer):
@@ -14,9 +13,9 @@ class GetTaskQueryParamsSerializer(serializers.Serializer):
     )
     limit = serializers.IntegerField(
         required=False,
-        default=DEFAULT_PAGE_LIMIT,
+        default=settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"],
         min_value=1,
-        max_value=MAX_PAGE_LIMIT,
+        max_value=settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["MAX_PAGE_LIMIT"],
         error_messages={
             "min_value": "limit must be greater than or equal to 1",
         },

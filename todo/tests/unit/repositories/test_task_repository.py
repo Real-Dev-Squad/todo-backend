@@ -49,3 +49,21 @@ class TaskRepositoryTests(TestCase):
 
         self.assertEqual(result, 42)
         self.mock_collection.count_documents.assert_called_once_with({})
+        
+    def test_get_all_returns_all_tasks(self):
+        self.mock_collection.find.return_value = self.task_data
+        
+        result = TaskRepository.get_all()
+        
+        self.assertEqual(len(result), len(self.task_data))
+        self.assertTrue(all(isinstance(task, TaskModel) for task in result))
+        
+        self.mock_collection.find.assert_called_once()
+        
+    def test_get_all_returns_empty_list_for_no_tasks(self):
+        self.mock_collection.find.return_value = []
+        
+        result = TaskRepository.get_all()
+        
+        self.assertEqual(result, [])
+        self.mock_collection.find.assert_called_once()

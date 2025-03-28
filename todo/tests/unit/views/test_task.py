@@ -23,7 +23,7 @@ class TaskViewTests(APISimpleTestCase):
 
         response: Response = self.client.get(self.url, self.valid_params)
 
-        mock_get_tasks.assert_called_once_with(1, 10)
+        mock_get_tasks.assert_called_once_with(page=1, limit=10)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         expected_response = mock_get_tasks.return_value.model_dump(mode="json", exclude_none=True)
         self.assertDictEqual(response.data, expected_response)
@@ -34,7 +34,7 @@ class TaskViewTests(APISimpleTestCase):
 
         response: Response = self.client.get(self.url)
         default_limit = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"]
-        mock_get_tasks.assert_called_once_with(1, default_limit)
+        mock_get_tasks.assert_called_once_with(page=1, limit=default_limit)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_get_tasks_returns_400_for_invalid_query_params(self):
@@ -79,7 +79,7 @@ class TaskViewTest(TestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         default_limit = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"]
-        mock_get_tasks.assert_called_once_with(1, default_limit)
+        mock_get_tasks.assert_called_once_with(page=1, limit=default_limit)
 
     @patch("todo.services.task_service.TaskService.get_tasks")
     def test_get_tasks_with_valid_pagination(self, mock_get_tasks):
@@ -90,7 +90,7 @@ class TaskViewTest(TestCase):
         response = self.view(request)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_get_tasks.assert_called_once_with(2, 15)
+        mock_get_tasks.assert_called_once_with(page=2, limit=15)
 
     def test_get_tasks_with_invalid_page(self):
         """Test GET /tasks with invalid page parameter"""

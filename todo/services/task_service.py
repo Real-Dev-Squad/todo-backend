@@ -1,4 +1,5 @@
 from django.urls import reverse_lazy
+from django.conf import settings
 from todo.dto.label_dto import LabelDTO
 from todo.dto.responses.get_tasks_response import GetTasksResponse
 from todo.dto.responses.paginated_response import LinksData
@@ -13,7 +14,7 @@ class TaskService:
     tasks_api_base_url = reverse_lazy("tasks")
 
     @classmethod
-    def get_tasks(cls, page, limit) -> GetTasksResponse:
+    def get_tasks(cls, page=1, limit=settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"]) -> GetTasksResponse:
         response = GetTasksResponse()
         tasks_count = TaskRepository.count()
         tasks_skip_count = (page - 1) * limit

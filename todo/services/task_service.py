@@ -18,7 +18,6 @@ from django.conf import settings
 
 @dataclass
 class PaginationConfig:
-    """Configuration for pagination parameters"""
     DEFAULT_PAGE: int = 1
     DEFAULT_LIMIT: int = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"]
     MAX_LIMIT: int = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["MAX_PAGE_LIMIT"]
@@ -31,16 +30,6 @@ class TaskService:
         page: int = PaginationConfig.DEFAULT_PAGE, 
         limit: int = PaginationConfig.DEFAULT_LIMIT
     ) -> GetTasksResponse:
-        """
-        Retrieves tasks with pagination.
-        
-        Args:
-            page: Page number (starts from 1)
-            limit: Number of items per page
-            
-        Returns:
-            GetTasksResponse with tasks and pagination links
-        """
         try:
 
             cls._validate_pagination_params(page, limit)
@@ -83,16 +72,6 @@ class TaskService:
 
     @classmethod
     def _validate_pagination_params(cls, page: int, limit: int) -> None:
-        """
-        Validates pagination parameters.
-        
-        Args:
-            page: Page number
-            limit: Number of items per page
-            
-        Raises:
-            ValidationError: If pagination parameters are invalid
-        """
         if page < 1:
             raise ValidationError("Page must be a positive integer")
             
@@ -104,17 +83,6 @@ class TaskService:
 
     @classmethod
     def _prepare_pagination_links(cls, current_page, page: int, limit: int) -> LinksData:
-        """
-        Prepares pagination links for the response.
-        
-        Args:
-            current_page: Django Paginator page object
-            page: Current page number
-            limit: Number of items per page
-            
-        Returns:
-            LinksData with next and prev links
-        """
         next_link = None
         prev_link = None
         
@@ -130,31 +98,12 @@ class TaskService:
 
     @classmethod
     def _build_page_url(cls, page: int, limit: int) -> str:
-        """
-        Builds a URL for a specific page with pagination parameters.
-        
-        Args:
-            page: Page number
-            limit: Number of items per page
-            
-        Returns:
-            URL string with pagination parameters
-        """
         base_url = reverse_lazy('tasks')
         query_params = urlencode({'page': page, 'limit': limit})
         return f"{base_url}?{query_params}"
 
     @classmethod
     def prepare_task_dto(cls, task_model: TaskModel) -> TaskDTO:
-        """
-        Maps a TaskModel to a TaskDTO.
-        
-        Args:
-            task_model: Task model instance
-            
-        Returns:
-            TaskDTO with data from the model
-        """
         label_dtos = cls._prepare_label_dtos(task_model.labels) if task_model.labels else []
         
         assignee = cls.prepare_user_dto(task_model.assignee) if task_model.assignee else None
@@ -181,15 +130,6 @@ class TaskService:
 
     @classmethod
     def _prepare_label_dtos(cls, label_ids: List[str]) -> List[LabelDTO]:
-        """
-        Prepares label DTOs from label IDs.
-        
-        Args:
-            label_ids: List of label IDs
-            
-        Returns:
-            List of LabelDTO objects
-        """
         label_models = LabelRepository.list_by_ids(label_ids)
         
         return [
@@ -206,14 +146,5 @@ class TaskService:
 
     @classmethod
     def prepare_user_dto(cls, user_id: str) -> UserDTO:
-        """
-        Maps a user ID to a UserDTO.
-        
-        Args:
-            user_id: User ID
-            
-        Returns:
-            UserDTO with data from the user ID
-        """
 
         return UserDTO(id=user_id, name="SYSTEM")

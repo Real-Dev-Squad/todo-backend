@@ -16,3 +16,15 @@ class TaskRepository(MongoRepository):
     def count(cls) -> int:
         tasks_collection = cls.get_collection()
         return tasks_collection.count_documents({})
+
+    @classmethod
+    def get_all(cls) -> List[TaskModel]:
+        """
+        Get all tasks from the repository
+
+        Returns:
+            List[TaskModel]: List of all task models
+        """
+        tasks_collection = cls.get_collection()
+        tasks_cursor = tasks_collection.find()
+        return [TaskModel(**task) for task in tasks_cursor]

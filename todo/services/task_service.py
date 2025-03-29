@@ -26,58 +26,50 @@ class PaginationConfig:
 class TaskService:
     @classmethod
     def get_tasks(
-        cls, 
-        page: int = PaginationConfig.DEFAULT_PAGE, 
-        limit: int = PaginationConfig.DEFAULT_LIMIT
+        cls, page: int = PaginationConfig.DEFAULT_PAGE, limit: int = PaginationConfig.DEFAULT_LIMIT
     ) -> GetTasksResponse:
         try:
-
             cls._validate_pagination_params(page, limit)
-            
 
             tasks = TaskRepository.get_all()
 
             if not tasks:
                 return GetTasksResponse(tasks=[], links=None)
-                
 
             paginator = Paginator(tasks, limit)
-            
-            try:
 
+            try:
                 current_page = paginator.page(page)
-                
 
                 task_dtos = [cls.prepare_task_dto(task) for task in current_page.object_list]
-                
 
-                links = cls._prepare_pagination_links(
-                    current_page=current_page,
-                    page=page,
-                    limit=limit
-                )
-                
+                links = cls._prepare_pagination_links(current_page=current_page, page=page, limit=limit)
+
                 return GetTasksResponse(tasks=task_dtos, links=links)
-                
+
             except EmptyPage:
-                return GetTasksResponse(tasks=[], links=None)
-                
-        except ValidationError:
+                return GetTasksResponse(
+                    tasks=[],
+                    links=None,
+                    error={"message": "Requested page exceeds available results", "code": "PAGE_NOT_FOUND"},
+                )
 
-            return GetTasksResponse(tasks=[], links=None)
-            
+        except ValidationError as e:
+            return GetTasksResponse(tasks=[], links=None, error={"message": str(e), "code": "VALIDATION_ERROR"})
+
         except Exception:
-
-            return GetTasksResponse(tasks=[], links=None)
+            return GetTasksResponse(
+                tasks=[], links=None, error={"message": "An unexpected error occurred", "code": "INTERNAL_ERROR"}
+            )
 
     @classmethod
     def _validate_pagination_params(cls, page: int, limit: int) -> None:
         if page < 1:
             raise ValidationError("Page must be a positive integer")
-            
+
         if limit < 1:
             raise ValidationError("Limit must be a positive integer")
-            
+
         if limit > PaginationConfig.MAX_LIMIT:
             raise ValidationError(f"Maximum limit of {PaginationConfig.MAX_LIMIT} exceeded")
 
@@ -85,31 +77,31 @@ class TaskService:
     def _prepare_pagination_links(cls, current_page, page: int, limit: int) -> LinksData:
         next_link = None
         prev_link = None
-        
+
         if current_page.has_next():
             next_page = current_page.next_page_number()
-            next_link = cls._build_page_url(next_page, limit)
-            
+            next_link = cls.build_page_url(next_page, limit)
+
         if current_page.has_previous():
             prev_page = current_page.previous_page_number()
-            prev_link = cls._build_page_url(prev_page, limit)
-            
+            prev_link = cls.build_page_url(prev_page, limit)
+
         return LinksData(next=next_link, prev=prev_link)
 
     @classmethod
-    def _build_page_url(cls, page: int, limit: int) -> str:
-        base_url = reverse_lazy('tasks')
-        query_params = urlencode({'page': page, 'limit': limit})
+    def build_page_url(cls, page: int, limit: int) -> str:
+        base_url = reverse_lazy("tasks")
+        query_params = urlencode({"page": page, "limit": limit})
         return f"{base_url}?{query_params}"
 
     @classmethod
     def prepare_task_dto(cls, task_model: TaskModel) -> TaskDTO:
         label_dtos = cls._prepare_label_dtos(task_model.labels) if task_model.labels else []
-        
+
         assignee = cls.prepare_user_dto(task_model.assignee) if task_model.assignee else None
-        created_by = cls.prepare_user_dto(task_model.createdBy) if task_model.createdBy else None
+        created_by = cls.prepare_user_dto(task_model.createdBy)
         updated_by = cls.prepare_user_dto(task_model.updatedBy) if task_model.updatedBy else None
-        
+
         return TaskDTO(
             id=str(task_model.id),
             displayId=task_model.displayId,
@@ -131,20 +123,21 @@ class TaskService:
     @classmethod
     def _prepare_label_dtos(cls, label_ids: List[str]) -> List[LabelDTO]:
         label_models = LabelRepository.list_by_ids(label_ids)
-        
+
         return [
             LabelDTO(
                 name=label_model.name,
                 color=label_model.color,
                 createdAt=label_model.createdAt,
-                updatedAt=label_model.updatedAt if hasattr(label_model, 'updatedAt') else None,
-                createdBy=cls.prepare_user_dto(label_model.createdBy) if hasattr(label_model, 'createdBy') and label_model.createdBy else None,
-                updatedBy=cls.prepare_user_dto(label_model.updatedBy) if hasattr(label_model, 'updatedBy') and label_model.updatedBy else None,
+                updatedAt=label_model.updatedAt if hasattr(label_model, "updatedAt") else None,
+                createdBy=cls.prepare_user_dto(label_model.createdBy),
+                updatedBy=cls.prepare_user_dto(label_model.updatedBy)
+                if hasattr(label_model, "updatedBy") and label_model.updatedBy
+                else None,
             )
             for label_model in label_models
         ]
 
     @classmethod
     def prepare_user_dto(cls, user_id: str) -> UserDTO:
-
         return UserDTO(id=user_id, name="SYSTEM")

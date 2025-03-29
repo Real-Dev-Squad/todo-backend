@@ -19,7 +19,7 @@ class GetTaskQueryParamsSerializerTest(TestCase):
         self.assertEqual(serializer.validated_data["page"], 1)
         self.assertEqual(
             serializer.validated_data["limit"],
-            settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"]
+            settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"],
         )
 
     def test_serializer_raises_error_for_page_below_min_value(self):
@@ -51,7 +51,7 @@ class GetTaskQueryParamsSerializerTest(TestCase):
         self.assertEqual(serializer.validated_data["page"], 3)
         self.assertEqual(
             serializer.validated_data["limit"],
-            settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"]
+            settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"],
         )
 
     def test_serializer_ignores_undefined_extra_fields(self):
@@ -61,19 +61,19 @@ class GetTaskQueryParamsSerializerTest(TestCase):
         self.assertEqual(serializer.validated_data["page"], 2)
         self.assertEqual(serializer.validated_data["limit"], 5)
         self.assertNotIn("extra_field", serializer.validated_data)
-        
+
     def test_serializer_uses_django_settings_values(self):
         """Test that the serializer correctly uses values from Django settings"""
         # Instead of mocking, we'll test against the actual settings values
         serializer = GetTaskQueryParamsSerializer(data={})
         self.assertTrue(serializer.is_valid())
-        
+
         # Verify the serializer uses the values from settings
         self.assertEqual(
-            serializer.validated_data["limit"], 
-            settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"]
+            serializer.validated_data["limit"],
+            settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"],
         )
-        
+
         # Test max value constraint using the actual max value
         max_limit = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["MAX_PAGE_LIMIT"]
         data = {"limit": f"{max_limit + 1}"}

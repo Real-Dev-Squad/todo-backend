@@ -21,7 +21,7 @@ class TaskRepository(MongoRepository):
     def get_all(cls) -> List[TaskModel]:
         """
         Get all tasks from the repository
-        
+
         Returns:
             List[TaskModel]: List of all task models
         """

@@ -27,15 +27,15 @@ class TaskModel(Document):
     displayId: str
     title: str
     description: str | None = None
-    priority: TaskPriority | None = None
-    status: TaskStatus | None = None
+    priority: TaskPriority | None = TaskPriority.LOW
+    status: TaskStatus | None = TaskStatus.TODO
     assignee: str | None = None
-    isAcknowledged: bool | None = None
+    isAcknowledged: bool = False
     labels: List[PyObjectId] | None = []
     isDeleted: bool = False
     deferredDetails: DeferredDetailsModel | None = None
     startedAt: datetime | None = None
-    dueAt: datetime | None = None
+    dueAt: datetime
     createdAt: datetime
     updatedAt: datetime | None = None
     createdBy: str

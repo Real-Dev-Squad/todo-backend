@@ -4,11 +4,13 @@ from django.core.paginator import Paginator, EmptyPage
 from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from urllib.parse import urlencode
+from datetime import datetime, timezone
 
 from todo.dto.label_dto import LabelDTO
-from todo.dto.task_dto import TaskDTO
+from todo.dto.task_dto import TaskDTO, CreateTaskDTO
 from todo.dto.user_dto import UserDTO
 from todo.dto.responses.get_tasks_response import GetTasksResponse
+from todo.dto.responses.create_task_response import CreateTaskResponse
 from todo.dto.responses.paginated_response import LinksData
 from todo.models.task import TaskModel
 from todo.repositories.task_repository import TaskRepository
@@ -141,3 +143,25 @@ class TaskService:
     @classmethod
     def prepare_user_dto(cls, user_id: str) -> UserDTO:
         return UserDTO(id=user_id, name="SYSTEM")
+    
+    @classmethod
+    def create_task(cls, dto:CreateTaskDTO) -> CreateTaskResponse:
+        task = TaskModel(
+            title=dto.title,
+            description = dto.description,
+            priority= dto.priority,
+            status=dto.status,
+            assignee=dto.assignee,
+            labels=dto.labels,
+            dueAt=dto.dueAt,
+            createdAt=datetime.now(timezone.utc),
+            isAcknowledged=False,
+            isDeleted=False,
+            createdBy="system" # placeholder, will be user_id when auth is in place
+        )
+
+        created_task = TaskRepository.create(task)
+
+        task_dto = cls.prepare_task_dto(created_task)
+
+        return CreateTaskResponse(data=task_dto)

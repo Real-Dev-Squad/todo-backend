@@ -2,8 +2,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.request import Request
+
 from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer
+from todo.serializers.create_task_serializer import CreateTaskSerializer
 from todo.services.task_service import TaskService
+from todo.dto.task_dto import CreateTaskDTO
+from todo.dto.responses.create_task_response import CreateTaskResponse
 
 
 class TaskView(APIView):
@@ -14,3 +18,23 @@ class TaskView(APIView):
         response = TaskService.get_tasks(page=query.validated_data["page"], limit=query.validated_data["limit"])
 
         return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
+
+    def post(self, request:Request):
+        serializer = CreateTaskSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        dto = CreateTaskDTO(**serializer.validated_data)
+
+        try:
+            response: CreateTaskResponse = TaskService.create_task(dto)
+            return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response(
+                data={
+                    "status": "internal_server_error",
+                    "statusCode": 500,
+                    "errorMessage": "An unexpected error occurred",
+                    "errors": [{"detail": str(e)}],
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

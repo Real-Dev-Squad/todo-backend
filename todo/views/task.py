@@ -21,13 +21,35 @@ class TaskView(APIView):
 
     def post(self, request:Request):
         serializer = CreateTaskSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
 
-        dto = CreateTaskDTO(**serializer.validated_data)
+        if not serializer.is_valid():
+            errors = []
+            for field, messages in serializer.errors.items():
+                if isinstance(messages, list):
+                    for message in messages:
+                        errors.append({"field": field, "message": str(message)})
+                else:
+                    errors.append({"field": field, "message": str(messages)})
+            
+            return Response(
+                {
+                    "status": "validation_failed",
+                    "statusCode": 400,
+                    "errorMessage": "Validation Error",
+                    "errors": errors
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
+            dto = CreateTaskDTO(**serializer.validated_data)
             response: CreateTaskResponse = TaskService.create_task(dto)
-            return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_201_CREATED)
+
+            return Response(
+                data=response.model_dump(mode="json", exclude_none=True), 
+                status=status.HTTP_201_CREATED
+                )
+        
         except Exception as e:
             return Response(
                 data={

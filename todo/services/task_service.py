@@ -15,6 +15,7 @@ from todo.dto.responses.paginated_response import LinksData
 from todo.models.task import TaskModel
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.label_repository import LabelRepository
+from todo.constants.task import TaskStatus
 from django.conf import settings
 
 
@@ -146,6 +147,10 @@ class TaskService:
     
     @classmethod
     def create_task(cls, dto:CreateTaskDTO) -> CreateTaskResponse:
+
+        now = datetime.now(timezone.utc)
+        started_at = now if dto.status == TaskStatus.IN_PROGRESS else None
+
         task = TaskModel(
             title=dto.title,
             description = dto.description,
@@ -154,7 +159,8 @@ class TaskService:
             assignee=dto.assignee,
             labels=dto.labels,
             dueAt=dto.dueAt,
-            createdAt=datetime.now(timezone.utc),
+            startedAt=started_at,
+            createdAt=now,
             isAcknowledged=False,
             isDeleted=False,
             createdBy="system" # placeholder, will be user_id when auth is in place

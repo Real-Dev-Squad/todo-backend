@@ -46,7 +46,7 @@ class TaskView(APIView):
             response: CreateTaskResponse = TaskService.create_task(dto)
 
             return Response(
-                data=response.model_dump(mode="json", exclude_none=True), 
+                data=response.model_dump(mode="json"), 
                 status=status.HTTP_201_CREATED
                 )
         

@@ -22,4 +22,12 @@ services:
       - "27017:27017"
     volumes:
       - ./mongo_data:/data/db
-    command: ["--replSet", "rs0"] #to enable replica set, requirement for enabling transactions
+    
+    #to enable replica set, requirement for enabling transactions
+    command: >
+      sh -c "
+        mongod --replSet rs0 --bind_ip_all --logpath /var/log/mongodb.log --logappend &
+        sleep 5 &&
+        mongosh --eval 'try { rs.initiate() } catch(e) { print(e) }' &&
+        tail -f /var/log/mongodb.log
+      "

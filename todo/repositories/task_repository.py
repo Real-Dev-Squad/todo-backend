@@ -31,6 +31,7 @@ class TaskRepository(MongoRepository):
         tasks_collection = cls.get_collection()
         tasks_cursor = tasks_collection.find()
         return [TaskModel(**task) for task in tasks_cursor]
+
     
     @classmethod
     def create(cls, task: TaskModel) -> TaskModel:
@@ -55,7 +56,7 @@ class TaskRepository(MongoRepository):
 
                         if last_task and "displayId" in last_task:
                             last_number = int(last_task["displayId"].split("-")[-1])
-                            task.displayId = f"TASK-{last_number + 1:04d}"
+                            task.displayId = f"TASK-{last_number + 1:06d}"
                         else:
                             task.displayId = "TASK-0001"
 
@@ -71,4 +72,4 @@ class TaskRepository(MongoRepository):
                 except DuplicateKeyError:
                     continue
                 
-        raise Exception("Failed to create task with a unique displayId after 3 attempts.")
+        raise ValueError("Failed to create task with a unique displayId after 3 attempts.")

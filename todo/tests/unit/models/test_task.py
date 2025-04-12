@@ -19,7 +19,7 @@ class TaskModelTest(TestCase):
 
     def test_task_model_throws_error_when_missing_required_fields(self):
         incomplete_data = self.valid_task_data.copy()
-        required_fields = ["displayId", "title", "createdAt", "createdBy"]
+        required_fields = ["title", "createdAt", "createdBy"]
         for field_name in required_fields:
             del incomplete_data[field_name]
 

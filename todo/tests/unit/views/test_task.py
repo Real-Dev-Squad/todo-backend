@@ -4,11 +4,16 @@ from rest_framework.reverse import reverse
 from rest_framework import status
 from unittest.mock import patch, Mock
 from rest_framework.response import Response
+from datetime import datetime, timedelta, timezone
 from django.conf import settings
 
 from todo.views.task import TaskView
+from todo.dto.user_dto import UserDTO
+from todo.dto.task_dto import TaskDTO
 from todo.dto.responses.get_tasks_response import GetTasksResponse
+from todo.dto.responses.create_task_response import CreateTaskResponse
 from todo.tests.fixtures.task import task_dtos
+from todo.constants.task import TaskPriority, TaskStatus
 
 
 class TaskViewTests(APISimpleTestCase):
@@ -120,3 +125,149 @@ class TaskViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         error_detail = str(response.data)
         self.assertTrue("page" in error_detail or "limit" in error_detail)
+
+class CreateTaskViewTests(APISimpleTestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse("tasks")
+
+        self.valid_payload = {
+            "title": "Write tests",
+            "description": "Cover all core paths",
+            "priority": "HIGH",
+            "status": "IN_PROGRESS",
+            "assignee": "developer1",
+            "labels": [],
+            "dueAt": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat().replace("+00:00", "Z")
+        }
+
+    @patch("todo.services.task_service.TaskService.create_task")
+    def test_create_task_returns_201_on_success(self, mock_create_task):
+        task_dto = TaskDTO(
+            id="abc123",
+            displayId="#1",
+            title=self.valid_payload["title"],
+            description=self.valid_payload["description"],
+            priority=TaskPriority[self.valid_payload["priority"]],
+            status=TaskStatus[self.valid_payload["status"]],
+            assignee=UserDTO(id="developer1", name="SYSTEM"),
+            isAcknowledged=False,
+            labels=[],
+            startedAt=datetime.now(timezone.utc),
+            dueAt=datetime.fromisoformat(self.valid_payload["dueAt"].replace("Z", "+00:00")),
+            createdAt=datetime.now(timezone.utc),
+            updatedAt=None,
+            createdBy=UserDTO(id="system", name="SYSTEM"),
+            updatedBy=None
+        )
+
+        mock_create_task.return_value = CreateTaskResponse(data=task_dto)
+
+        response: Response = self.client.post(self.url, data=self.valid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("data", response.data)
+        self.assertEqual(response.data["data"]["title"], self.valid_payload["title"])
+        mock_create_task.assert_called_once()
+
+    def test_create_task_returns_400_when_title_is_missing(self):
+        invalid_payload = self.valid_payload.copy()
+        del invalid_payload["title"]
+
+        response = self.client.post(self.url, data=invalid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["status"], "validation_failed")
+        self.assertEqual(response.data["statusCode"], 400)
+        self.assertTrue(any(err["field"] == "title" for err in response.data["errors"]))
+
+    def test_create_task_returns_400_when_title_blank(self):
+        invalid_payload = self.valid_payload.copy()
+        invalid_payload["title"] = " "
+
+        response = self.client.post(self.url, data=invalid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(any(err["field"] == "title" for err in response.data["errors"]))
+
+    def test_create_task_returns_400_for_invalid_priority(self):
+        invalid_payload = self.valid_payload.copy()
+        invalid_payload["priority"] = "SUPER"
+
+        response = self.client.post(self.url, data=invalid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(any(err["field"] == "priority" for err in response.data["errors"]))
+
+    def test_create_task_returns_400_for_invalid_status(self):
+        invalid_payload = self.valid_payload.copy()
+        invalid_payload["status"] = "WORKING"
+
+        response = self.client.post(self.url, data=invalid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(any(err["field"] == "status" for err in response.data["errors"]))
+
+    def test_create_task_returns_400_when_label_ids_are_not_objectids(self):
+        invalid_payload = self.valid_payload.copy()
+        invalid_payload["labels"] = ["invalid_id"]
+
+        response = self.client.post(self.url, data=invalid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(any(err["field"] == "labels" for err in response.data["errors"]))
+
+    def test_create_task_returns_400_when_dueAt_is_past(self):
+        invalid_payload = self.valid_payload.copy()
+        invalid_payload["dueAt"] = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat().replace("+00:00", "Z")
+
+        response = self.client.post(self.url, data=invalid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(any(err["field"] == "dueAt" for err in response.data["errors"]))
+
+    
+    @patch("todo.services.task_service.TaskService.create_task")
+    def test_create_task_handles_blank_assignee_as_null(self, mock_create_task):
+        blank_assignee_payload = self.valid_payload.copy()
+        blank_assignee_payload["assignee"] = ""
+
+        task_dto = TaskDTO(
+            id="abc123",
+            displayId="#2",
+            title=blank_assignee_payload["title"],
+            description=blank_assignee_payload["description"],
+            priority=TaskPriority[blank_assignee_payload["priority"]],
+            status=TaskStatus[blank_assignee_payload["status"]],
+            assignee=None,
+            isAcknowledged=False,
+            labels=[],
+            startedAt=None,
+            dueAt=datetime.fromisoformat(blank_assignee_payload["dueAt"].replace("Z", "+00:00")),
+            createdAt=datetime.now(timezone.utc),
+            updatedAt=None,
+            createdBy=UserDTO(id="system", name="SYSTEM"),
+            updatedBy=None
+        )
+
+        mock_create_task.return_value = CreateTaskResponse(data=task_dto)
+
+        response = self.client.post(self.url, data=blank_assignee_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIsNone(response.data["data"].get("assignee"))
+
+    @patch("todo.services.task_service.TaskService.create_task")
+    def test_create_task_returns_500_on_internal_error(self, mock_create_task):
+        mock_create_task.side_effect = Exception("Database exploded")
+
+        response = self.client.post(self.url, data=self.valid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data["status"], "internal_server_error")
+        self.assertEqual(response.data["statusCode"], 500)
+        self.assertIn("An unexpected error occurred", response.data["errorMessage"])
+
+
+
+

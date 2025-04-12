@@ -18,20 +18,18 @@ class TaskModelTest(TestCase):
         self.assertFalse(task.isDeleted)  # Default value
 
     def test_task_model_throws_error_when_missing_required_fields(self):
-        incomplete_data = self.valid_task_data.copy()
-        required_fields = ["title", "createdAt", "createdBy"]
-        for field_name in required_fields:
-            del incomplete_data[field_name]
+        required_fields = [ "title", "createdAt", "createdBy"]
 
-        with self.assertRaises(ValidationError) as context:
-            TaskModel(**incomplete_data)
+        for field in required_fields:
+            with self.subTest(f"missing field: {field}"):
+                incomplete_data = self.valid_task_data.copy()
+                incomplete_data.pop(field, None)
 
-        missing_fields_count = 0
-        for error in context.exception.errors():
-            self.assertEqual(error.get("type"), "missing")
-            self.assertIn(error.get("loc")[0], required_fields)
-            missing_fields_count += 1
-        self.assertEqual(missing_fields_count, len(required_fields))
+                with self.assertRaises(ValidationError) as context:
+                    TaskModel(**incomplete_data)
+
+                error_fields = [e["loc"][0] for e in context.exception.errors()]
+                self.assertIn(field, error_fields)
 
     def test_task_model_throws_error_when_invalid_enum_value(self):
         invalid_data = self.valid_task_data.copy()

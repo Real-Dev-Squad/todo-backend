@@ -55,10 +55,13 @@ class TaskRepository(MongoRepository):
                         last_task = tasks_collection.find_one(sort=[("displayId", DESCENDING)], session=session)
 
                         if last_task and "displayId" in last_task:
-                            last_number = int(last_task["displayId"].split("-")[-1])
-                            task.displayId = f"TASK-{last_number + 1:06d}"
+                            try:
+                                last_number = int(str(last_task["displayId"]).lstrip("#"))
+                            except (ValueError, AttributeError):
+                                last_number = 0
+                            task.displayId = f"#{last_number + 1}"
                         else:
-                            task.displayId = "TASK-0001"
+                            task.displayId = "#1"
 
                         task.createdAt = datetime.now(timezone.utc)
                         task.updatedAt = None

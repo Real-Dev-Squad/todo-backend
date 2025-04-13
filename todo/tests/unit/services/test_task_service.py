@@ -2,6 +2,7 @@ from unittest.mock import Mock, patch, MagicMock
 from unittest import TestCase
 from django.core.paginator import Page, Paginator, EmptyPage
 from django.core.exceptions import ValidationError
+from datetime import datetime, timedelta, timezone
 
 from todo.dto.responses.get_tasks_response import GetTasksResponse
 from todo.dto.responses.paginated_response import LinksData
@@ -9,7 +10,11 @@ from todo.dto.user_dto import UserDTO
 from todo.services.task_service import TaskService, PaginationConfig
 from todo.dto.task_dto import TaskDTO
 from todo.tests.fixtures.task import tasks_models
+from todo.dto.task_dto import CreateTaskDTO
+from todo.constants.task import TaskPriority, TaskStatus
+from todo.models.task import TaskModel
 from todo.tests.fixtures.label import label_models
+
 
 
 class TaskServiceTests(TestCase):
@@ -177,3 +182,27 @@ class TaskServiceTests(TestCase):
         self.assertIsInstance(response, GetTasksResponse)
         self.assertEqual(len(response.tasks), 0)
         self.assertIsNone(response.links)
+
+    @patch("todo.services.task_service.TaskRepository.create")
+    @patch("todo.services.task_service.TaskService.prepare_task_dto")
+    def test_create_task_successfully_creates_task(self, mock_prepare_dto, mock_create):
+        dto = CreateTaskDTO(
+        title="Test Task",
+        description="This is a test",
+        priority= TaskPriority.HIGH,
+        status=TaskStatus.TODO,
+        assignee="user123",
+        labels=[],
+        dueAt=datetime.now(timezone.utc) + timedelta(days=1)
+        )
+
+        mock_task_model = MagicMock(spec=TaskModel)
+        mock_create.return_value = mock_task_model
+        mock_task_dto = MagicMock(spec=TaskDTO)
+        mock_prepare_dto.return_value = mock_task_dto
+
+        result = TaskService.create_task(dto)
+
+        mock_create.assert_called_once()
+        mock_prepare_dto.assert_called_once_with(mock_task_model)
+        self.assertEqual(result.data, mock_task_dto)

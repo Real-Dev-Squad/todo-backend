@@ -42,3 +42,29 @@ class TaskModelTest(TestCase):
         for error in context.exception.errors():
             invalid_field_names.append(error.get("loc")[0])
         self.assertEqual(invalid_field_names, ["priority", "status"])
+
+    def test_task_model_defaults_are_set_correctly(self):
+        minimal_data = {
+            "title": "Minimal Task",
+            "createdAt": self.valid_task_data["createdAt"],
+            "createdBy": self.valid_task_data["createdBy"],
+        }
+        task = TaskModel(**minimal_data)
+
+        self.assertEqual(task.priority, TaskPriority.LOW)
+        self.assertEqual(task.status, TaskStatus.TODO)
+        self.assertFalse(task.isAcknowledged)
+        self.assertFalse(task.isDeleted)
+
+    def test_task_model_allows_none_for_optional_fields(self):
+        data = self.valid_task_data.copy()
+        optional_fields = ["description", "assignee", "labels", "dueAt", "updatedBy", "updatedAt", "deferredDetails"]
+        
+        for field in optional_fields:
+            data[field] = None
+        
+        task = TaskModel(**data)
+        self.assertIsNone(task.description)
+        self.assertIsNone(task.assignee)
+        self.assertIsNone(task.dueAt)
+

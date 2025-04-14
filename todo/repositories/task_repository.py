@@ -6,6 +6,7 @@ from typing import List
 from todo.models.task import TaskModel
 from todo.repositories.common.mongo_repository import MongoRepository
 
+
 class TaskRepository(MongoRepository):
     collection_name = TaskModel.collection_name
 
@@ -32,7 +33,6 @@ class TaskRepository(MongoRepository):
         tasks_cursor = tasks_collection.find()
         return [TaskModel(**task) for task in tasks_cursor]
 
-    
     @classmethod
     def create(cls, task: TaskModel) -> TaskModel:
         """
@@ -71,8 +71,8 @@ class TaskRepository(MongoRepository):
 
                         task.id = insert_result.inserted_id
                         return task
-                    
+
                 except DuplicateKeyError:
                     continue
-                
+
         raise ValueError("Failed to create task with a unique displayId after 3 attempts.")

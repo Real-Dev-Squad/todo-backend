@@ -16,7 +16,6 @@ from todo.models.task import TaskModel
 from todo.tests.fixtures.label import label_models
 
 
-
 class TaskServiceTests(TestCase):
     @patch("todo.services.task_service.reverse_lazy", return_value="/v1/tasks")
     def setUp(self, mock_reverse_lazy):
@@ -187,13 +186,13 @@ class TaskServiceTests(TestCase):
     @patch("todo.services.task_service.TaskService.prepare_task_dto")
     def test_create_task_successfully_creates_task(self, mock_prepare_dto, mock_create):
         dto = CreateTaskDTO(
-        title="Test Task",
-        description="This is a test",
-        priority= TaskPriority.HIGH,
-        status=TaskStatus.TODO,
-        assignee="user123",
-        labels=[],
-        dueAt=datetime.now(timezone.utc) + timedelta(days=1)
+            title="Test Task",
+            description="This is a test",
+            priority=TaskPriority.HIGH,
+            status=TaskStatus.TODO,
+            assignee="user123",
+            labels=[],
+            dueAt=datetime.now(timezone.utc) + timedelta(days=1),
         )
 
         mock_task_model = MagicMock(spec=TaskModel)

@@ -144,17 +144,16 @@ class TaskService:
     @classmethod
     def prepare_user_dto(cls, user_id: str) -> UserDTO:
         return UserDTO(id=user_id, name="SYSTEM")
-    
-    @classmethod
-    def create_task(cls, dto:CreateTaskDTO) -> CreateTaskResponse:
 
+    @classmethod
+    def create_task(cls, dto: CreateTaskDTO) -> CreateTaskResponse:
         now = datetime.now(timezone.utc)
         started_at = now if dto.status == TaskStatus.IN_PROGRESS else None
 
         task = TaskModel(
             title=dto.title,
-            description = dto.description,
-            priority= dto.priority,
+            description=dto.description,
+            priority=dto.priority,
             status=dto.status,
             assignee=dto.assignee,
             labels=dto.labels,
@@ -163,7 +162,7 @@ class TaskService:
             createdAt=now,
             isAcknowledged=False,
             isDeleted=False,
-            createdBy="system" # placeholder, will be user_id when auth is in place
+            createdBy="system",  # placeholder, will be user_id when auth is in place
         )
 
         created_task = TaskRepository.create(task)

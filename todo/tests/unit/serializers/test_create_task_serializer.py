@@ -3,6 +3,7 @@ from unittest import TestCase
 from todo.serializers.create_task_serializer import CreateTaskSerializer
 from datetime import datetime, timedelta, timezone
 
+
 class CreateTaskSerializerTest(TestCase):
     def setUp(self):
         self.valid_data = {
@@ -12,11 +13,11 @@ class CreateTaskSerializerTest(TestCase):
             "status": "TODO",
             "assignee": "dev001",
             "labels": [],
-            "dueAt": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat().replace("+00:00", "Z")
+            "dueAt": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat().replace("+00:00", "Z"),
         }
 
     def test_serializer_validates_correct_data(self):
-        serializer = CreateTaskSerializer(data = self.valid_data)
+        serializer = CreateTaskSerializer(data=self.valid_data)
         self.assertTrue(serializer.is_valid())
 
     def test_serializer_fails_without_title(self):

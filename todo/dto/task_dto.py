@@ -27,6 +27,7 @@ class TaskDTO(BaseModel):
     class Config:
         json_encoders = {TaskPriority: lambda x: x.name}
 
+
 class CreateTaskDTO(BaseModel):
     title: str
     description: str | None = None

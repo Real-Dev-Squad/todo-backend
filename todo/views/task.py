@@ -23,13 +23,13 @@ class TaskView(APIView):
 
         return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
 
-    def post(self, request:Request):
+    def post(self, request: Request):
         """
         Create a new task.
-        
+
         Args:
             request: HTTP request containing task data
-            
+
         Returns:
             Response: HTTP response with created task data or error details
         """
@@ -42,11 +42,8 @@ class TaskView(APIView):
             dto = CreateTaskDTO(**serializer.validated_data)
             response: CreateTaskResponse = TaskService.create_task(dto)
 
-            return Response(
-                data=response.model_dump(mode="json"), 
-                status=status.HTTP_201_CREATED
-                )
-        
+            return Response(data=response.model_dump(mode="json"), status=status.HTTP_201_CREATED)
+
         except Exception as e:
             return Response(
                 data={
@@ -55,9 +52,9 @@ class TaskView(APIView):
                     "errorMessage": "An unexpected error occurred",
                     "errors": [{"detail": str(e)}] if settings.DEBUG else [{"detail": "Internal server error"}],
                 },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-    
+
     def _handle_validation_errors(self, errors):
         formatted_errors = []
         for field, messages in errors.items():
@@ -66,13 +63,13 @@ class TaskView(APIView):
                     formatted_errors.append({"field": field, "message": str(message)})
             else:
                 formatted_errors.append({"field": field, "message": str(messages)})
-        
+
         return Response(
-                {
-                    "status": "validation_failed",
-                    "statusCode": 400,
-                    "errorMessage": "Validation Error",
-                    "errors": formatted_errors
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            {
+                "status": "validation_failed",
+                "statusCode": 400,
+                "errorMessage": "Validation Error",
+                "errors": formatted_errors,
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )

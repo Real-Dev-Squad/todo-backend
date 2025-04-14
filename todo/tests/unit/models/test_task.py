@@ -18,7 +18,7 @@ class TaskModelTest(TestCase):
         self.assertFalse(task.isDeleted)  # Default value
 
     def test_task_model_throws_error_when_missing_required_fields(self):
-        required_fields = [ "title", "createdAt", "createdBy"]
+        required_fields = ["title", "createdAt", "createdBy"]
 
         for field in required_fields:
             with self.subTest(f"missing field: {field}"):
@@ -59,12 +59,11 @@ class TaskModelTest(TestCase):
     def test_task_model_allows_none_for_optional_fields(self):
         data = self.valid_task_data.copy()
         optional_fields = ["description", "assignee", "labels", "dueAt", "updatedBy", "updatedAt", "deferredDetails"]
-        
+
         for field in optional_fields:
             data[field] = None
-        
+
         task = TaskModel(**data)
         self.assertIsNone(task.description)
         self.assertIsNone(task.assignee)
         self.assertIsNone(task.dueAt)
-

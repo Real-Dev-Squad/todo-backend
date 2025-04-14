@@ -126,6 +126,7 @@ class TaskViewTest(TestCase):
         error_detail = str(response.data)
         self.assertTrue("page" in error_detail or "limit" in error_detail)
 
+
 class CreateTaskViewTests(APISimpleTestCase):
     def setUp(self):
         self.client = APIClient()
@@ -138,7 +139,7 @@ class CreateTaskViewTests(APISimpleTestCase):
             "status": "IN_PROGRESS",
             "assignee": "developer1",
             "labels": [],
-            "dueAt": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat().replace("+00:00", "Z")
+            "dueAt": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat().replace("+00:00", "Z"),
         }
 
     @patch("todo.services.task_service.TaskService.create_task")
@@ -158,7 +159,7 @@ class CreateTaskViewTests(APISimpleTestCase):
             createdAt=datetime.now(timezone.utc),
             updatedAt=None,
             createdBy=UserDTO(id="system", name="SYSTEM"),
-            updatedBy=None
+            updatedBy=None,
         )
 
         mock_create_task.return_value = CreateTaskResponse(data=task_dto)
@@ -226,7 +227,6 @@ class CreateTaskViewTests(APISimpleTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertTrue(any(err["field"] == "dueAt" for err in response.data["errors"]))
 
-    
     @patch("todo.services.task_service.TaskService.create_task")
     def test_create_task_handles_blank_assignee_as_null(self, mock_create_task):
         blank_assignee_payload = self.valid_payload.copy()
@@ -247,7 +247,7 @@ class CreateTaskViewTests(APISimpleTestCase):
             createdAt=datetime.now(timezone.utc),
             updatedAt=None,
             createdBy=UserDTO(id="system", name="SYSTEM"),
-            updatedBy=None
+            updatedBy=None,
         )
 
         mock_create_task.return_value = CreateTaskResponse(data=task_dto)
@@ -267,7 +267,3 @@ class CreateTaskViewTests(APISimpleTestCase):
         self.assertEqual(response.data["status"], "internal_server_error")
         self.assertEqual(response.data["statusCode"], 500)
         self.assertIn("An unexpected error occurred", response.data["errorMessage"])
-
-
-
-

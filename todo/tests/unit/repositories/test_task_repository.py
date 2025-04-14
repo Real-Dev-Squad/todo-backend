@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from todo.models.task import TaskModel
 from todo.repositories.task_repository import TaskRepository
+from todo.constants.task import TaskPriority, TaskStatus
 from todo.tests.fixtures.task import tasks_db_data
 
 
@@ -78,8 +79,8 @@ class TaskRepositoryCreateTests(TestCase):
             self.task = TaskModel(
                 title="Test Task",
                 description="Sample",
-                priority=1,
-                status="TODO",
+                priority= TaskPriority.LOW,
+                status=TaskStatus.TODO,
                 assignee="user123",
                 labels=[],
                 createdAt=datetime.now(timezone.utc),
@@ -101,8 +102,8 @@ class TaskRepositoryCreateTests(TestCase):
 
             task = TaskModel(
             title="Happy path task",
-            priority=1,
-            status="TODO",
+            priority=TaskPriority.LOW,
+            status=TaskStatus.TODO,
             createdAt=datetime.now(timezone.utc),
             createdBy="system"
             )
@@ -133,8 +134,8 @@ class TaskRepositoryCreateTests(TestCase):
 
             task = TaskModel(
                 title="Retry Task",
-                priority=1,
-                status="TODO",
+                priority=TaskPriority.LOW,
+                status=TaskStatus.TODO,
                 createdAt=datetime.now(timezone.utc),
                 createdBy="system"
             )
@@ -159,8 +160,8 @@ class TaskRepositoryCreateTests(TestCase):
 
             task = TaskModel(
                 title="Failing Task",
-                priority=1,
-                status="TODO",
+                priority=TaskPriority.LOW,
+                status=TaskStatus.TODO,
                 createdAt=datetime.now(timezone.utc),
                 createdBy="system"
             )

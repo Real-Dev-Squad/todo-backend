@@ -11,6 +11,7 @@ from todo.dto.task_dto import TaskDTO, CreateTaskDTO
 from todo.dto.user_dto import UserDTO
 from todo.dto.responses.get_tasks_response import GetTasksResponse
 from todo.dto.responses.create_task_response import CreateTaskResponse
+from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.dto.responses.paginated_response import LinksData
 from todo.models.task import TaskModel
 from todo.repositories.task_repository import TaskRepository
@@ -146,15 +147,14 @@ class TaskService:
         return UserDTO(id=user_id, name="SYSTEM")
     
     @classmethod
-    def create_task(cls, dto:CreateTaskDTO) -> CreateTaskResponse:
-
+    def create_task(cls, dto: CreateTaskDTO) -> CreateTaskResponse:
         now = datetime.now(timezone.utc)
         started_at = now if dto.status == TaskStatus.IN_PROGRESS else None
 
         task = TaskModel(
             title=dto.title,
-            description = dto.description,
-            priority= dto.priority,
+            description=dto.description,
+            priority=dto.priority,
             status=dto.status,
             assignee=dto.assignee,
             labels=dto.labels,
@@ -163,11 +163,25 @@ class TaskService:
             createdAt=now,
             isAcknowledged=False,
             isDeleted=False,
-            createdBy="system" # placeholder, will be user_id when auth is in place
+            createdBy="system"
         )
 
-        created_task = TaskRepository.create(task)
+        try:
+            created_task = TaskRepository.create(task)
+        except ValueError as e:
+            if isinstance(e.args[0], ApiErrorResponse):
+                raise e
+            raise ValueError(ApiErrorResponse(
+                statusCode=500,
+                message="Repository Error",
+                errors=[
+                    ApiErrorDetail(
+                        source={ApiErrorSource.PARAMETER: "task_repository"},
+                        title="Unexpected Error",
+                        detail=str(e) if settings.DEBUG else "Internal server error"
+                    )
+                ]
+            ))
 
         task_dto = cls.prepare_task_dto(created_task)
-
         return CreateTaskResponse(data=task_dto)

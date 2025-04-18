@@ -8,6 +8,7 @@ from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer
 from todo.serializers.create_task_serializer import CreateTaskSerializer
 from todo.services.task_service import TaskService
 from todo.dto.task_dto import CreateTaskDTO
+from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.dto.responses.create_task_response import CreateTaskResponse
 
 
@@ -47,32 +48,54 @@ class TaskView(APIView):
                 status=status.HTTP_201_CREATED
                 )
         
-        except Exception as e:
-            return Response(
-                data={
-                    "status": "internal_server_error",
-                    "statusCode": 500,
-                    "errorMessage": "An unexpected error occurred",
-                    "errors": [{"detail": str(e)}] if settings.DEBUG else [{"detail": "Internal server error"}],
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        except ValueError as e:
+                if isinstance(e.args[0], ApiErrorResponse):
+                    error_response = e.args[0]
+                    return Response(
+                    data=error_response.model_dump(mode="json"),
+                    status=error_response.statusCode
+                    )
+
+                fallback_response = ApiErrorResponse(
+                    statusCode=500,
+                    message="An unexpected error occurred",
+                    errors=[
+                        {"detail": str(e)} if settings.DEBUG else {"detail": "Internal server error"}
+                    ]
+                )
+                return Response(
+                    data=fallback_response.model_dump(mode="json"),
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
     
     def _handle_validation_errors(self, errors):
         formatted_errors = []
         for field, messages in errors.items():
             if isinstance(messages, list):
                 for message in messages:
-                    formatted_errors.append({"field": field, "message": str(message)})
+                    formatted_errors.append(
+                        ApiErrorDetail(
+                            source={ApiErrorSource.PARAMETER: field},
+                            title="Validation Error",
+                            detail=str(message)
+                        )
+                    )
             else:
-                formatted_errors.append({"field": field, "message": str(messages)})
+                formatted_errors.append(
+                    ApiErrorDetail(
+                        source={ApiErrorSource.PARAMETER: field},
+                        title="Validation Error",
+                        detail=str(messages)
+                    )
+                )
+        
+        error_response = ApiErrorResponse(
+            statusCode=400,
+            message="Validation Error",
+            errors=formatted_errors
+        )
         
         return Response(
-                {
-                    "status": "validation_failed",
-                    "statusCode": 400,
-                    "errorMessage": "Validation Error",
-                    "errors": formatted_errors
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            data=error_response.model_dump(mode="json"),
+            status=status.HTTP_400_BAD_REQUEST
+        )

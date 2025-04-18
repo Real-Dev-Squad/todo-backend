@@ -1,6 +1,5 @@
 from pymongo import DESCENDING
 from datetime import datetime, timezone
-from pymongo.errors import DuplicateKeyError
 from typing import List
 
 from todo.models.task import TaskModel
@@ -36,8 +35,7 @@ class TaskRepository(MongoRepository):
     @classmethod
     def create(cls, task: TaskModel) -> TaskModel:
         """
-        Creates a new task in the repository with a unique displayId, inside a transaction.
-        Retries if displayId conflicts occur.
+        Creates a new task in the repository with a unique displayId, using atomic counter operations.
 
         Args:
             task (TaskModel): Task to create
@@ -49,30 +47,33 @@ class TaskRepository(MongoRepository):
         client = cls.get_client()
 
         with client.start_session() as session:
-            for _ in range(3):
                 try:
                     with session.start_transaction():
-                        last_task = tasks_collection.find_one(sort=[("displayId", DESCENDING)], session=session)
+                    # Atomically increment and get the next counter value
+                        db = client.get_database()
+                        counter_result = db.counters.find_one_and_update(
+                            {"_id": "taskDisplayId"},
+                            {"$inc": {"seq": 1}},
+                            return_document=True,
+                            session=session
+                        )
 
-                        if last_task and "displayId" in last_task:
-                            try:
-                                last_number = int(str(last_task["displayId"]).lstrip("#"))
-                            except (ValueError, AttributeError):
-                                last_number = 0
-                            task.displayId = f"#{last_number + 1}"
+                        if not counter_result:
+                            db.counters.insert_one({"_id": "taskDisplayId", "seq": 1}, session=session)
+                            next_number = 1
                         else:
-                            task.displayId = "#1"
-
+                            next_number = counter_result["seq"]
+                        
+                        task.displayId = f"#{next_number}"
                         task.createdAt = datetime.now(timezone.utc)
                         task.updatedAt = None
 
                         task_dict = task.model_dump(mode="json", by_alias=True, exclude_none=True)
                         insert_result = tasks_collection.insert_one(task_dict, session=session)
-
+                
                         task.id = insert_result.inserted_id
                         return task
+                
+                except Exception as e:
+                    raise ValueError(f"Failed to create task: {str(e)}")
 
-                except DuplicateKeyError:
-                    continue
-
-        raise ValueError("Failed to create task with a unique displayId after 3 attempts.")

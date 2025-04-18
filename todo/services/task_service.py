@@ -151,6 +151,24 @@ class TaskService:
         now = datetime.now(timezone.utc)
         started_at = now if dto.status == TaskStatus.IN_PROGRESS else None
 
+        if dto.labels:
+            existing_labels = LabelRepository.list_by_ids(dto.labels)
+            if len(existing_labels) != len(dto.labels):
+                found_ids = [str(label.id) for label in existing_labels]
+                missing_ids = [label_id for label_id in dto.labels if label_id not in found_ids]
+
+                raise ValueError(ApiErrorResponse(
+                    statusCode=400,
+                    message="Invalid Labels",
+                    errors=[
+                        ApiErrorDetail(
+                            source={ApiErrorSource.PARAMETER: "labels"},
+                            title="Invalid Label IDs",
+                            detail=f"The following label IDs do not exist: {', '.join(missing_ids)}"
+                        )
+                    ]
+                ))
+
         task = TaskModel(
             title=dto.title,
             description=dto.description,
@@ -163,11 +181,13 @@ class TaskService:
             createdAt=now,
             isAcknowledged=False,
             isDeleted=False,
-            createdBy="system"
+            createdBy="system" # placeholder, will be user_id when auth is in place
         )
 
         try:
             created_task = TaskRepository.create(task)
+            task_dto = cls.prepare_task_dto(created_task)
+            return CreateTaskResponse(data=task_dto)
         except ValueError as e:
             if isinstance(e.args[0], ApiErrorResponse):
                 raise e
@@ -182,6 +202,15 @@ class TaskService:
                     )
                 ]
             ))
-
-        task_dto = cls.prepare_task_dto(created_task)
-        return CreateTaskResponse(data=task_dto)
+        except Exception as e:
+            raise ValueError(ApiErrorResponse(
+                statusCode=500,
+                message="Server Error",
+                errors=[
+                    ApiErrorDetail(
+                        source={ApiErrorSource.PARAMETER: "server"},
+                        title="Unexpected Error",
+                        detail=str(e) if settings.DEBUG else "Internal server error"
+                    )
+                ]
+            ))

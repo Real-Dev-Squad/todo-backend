@@ -1,6 +1,5 @@
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
-from pymongo.errors import DuplicateKeyError
 from pymongo.collection import Collection
 from bson import ObjectId
 from datetime import datetime, timezone
@@ -93,9 +92,13 @@ class TaskRepositoryCreateTests(TestCase):
         mock_session = MagicMock()
         mock_get_client.return_value.start_session.return_value.__enter__.return_value = mock_session
 
-        mock_collection = MagicMock()
-        mock_collection.find_one.return_value = {"displayId": "#7"}
+        mock_db = MagicMock()
+        mock_get_client.return_value.get_database.return_value = mock_db
 
+        mock_counter_result = {"_id": "taskDisplayId", "seq": 42}
+        mock_db.counters.find_one_and_update.return_value = mock_counter_result
+
+        mock_collection = MagicMock()
         inserted_id = ObjectId()
         mock_collection.insert_one.return_value.inserted_id = inserted_id
         mock_get_collection.return_value = mock_collection
@@ -109,56 +112,57 @@ class TaskRepositoryCreateTests(TestCase):
         )
 
         created_task = TaskRepository.create(task)
-        self.assertEqual(created_task.displayId, "#8")
+
+        self.assertEqual(created_task.displayId, f"#{mock_counter_result['seq']}")
         self.assertEqual(created_task.id, inserted_id)
         self.assertIsNotNone(created_task.createdAt)
+
+        mock_db.counters.find_one_and_update.assert_called_once()
         mock_collection.insert_one.assert_called_once()
 
     @patch("todo.repositories.task_repository.TaskRepository.get_client")
     @patch("todo.repositories.task_repository.TaskRepository.get_collection")
-    def test_create_task_retries_on_duplicate_key_error_and_succeeds(self, mock_get_collection, mock_get_client):
+    def test_create_task_creates_counter_if_not_exists(self, mock_get_collection, mock_get_client):
         mock_session = MagicMock()
         mock_get_client.return_value.start_session.return_value.__enter__.return_value = mock_session
 
-        inserted_id = ObjectId("67fc07a2ea341cb10d0015d8")
+        mock_db = MagicMock()
+        mock_get_client.return_value.get_database.return_value = mock_db
+
+        mock_db.counters.find_one_and_update.return_value = None
+
         mock_collection = MagicMock()
-
-        # First call raises DuplicateKeyError, second call returns successful insert
-        duplicate_error = DuplicateKeyError("duplicate")
-        successful_insert_result = MagicMock()
-        successful_insert_result.inserted_id = inserted_id
-        mock_collection.insert_one.side_effect = [duplicate_error, successful_insert_result]
-
-        mock_collection.find_one.return_value = {"displayId": "#5"}
+        inserted_id = ObjectId()
+        mock_collection.insert_one.return_value.inserted_id = inserted_id
         mock_get_collection.return_value = mock_collection
 
         task = TaskModel(
-            title="Retry Task",
+            title="First task with no counter",
             priority=TaskPriority.LOW,
             status=TaskStatus.TODO,
             createdAt=datetime.now(timezone.utc),
             createdBy="system",
         )
 
-        result = TaskRepository.create(task)
+        created_task = TaskRepository.create(task)
 
-        self.assertEqual(result.id, inserted_id)
-        self.assertEqual(result.displayId, "#6")
-        self.assertEqual(mock_collection.insert_one.call_count, 2)
+        mock_db.counters.insert_one.assert_called_once_with({"_id": "taskDisplayId", "seq": 1}, session=mock_session)
+
+        self.assertEqual(created_task.displayId, "#1")
+        self.assertEqual(created_task.id, inserted_id)
 
     @patch("todo.repositories.task_repository.TaskRepository.get_client")
     @patch("todo.repositories.task_repository.TaskRepository.get_collection")
-    def test_create_task_fails_after_max_retries_on_duplicate_key_error(self, mock_get_collection, mock_get_client):
+    def test_create_task_handles_exception(self, mock_get_collection, mock_get_client):
         mock_session = MagicMock()
         mock_get_client.return_value.start_session.return_value.__enter__.return_value = mock_session
 
-        mock_collection = MagicMock()
-        mock_collection.find_one.return_value = {"displayId": "#9"}
-        mock_collection.insert_one.side_effect = DuplicateKeyError("duplicate")
-        mock_get_collection.return_value = mock_collection
+        mock_db = MagicMock()
+        mock_get_client.return_value.get_database.return_value = mock_db
+        mock_db.counters.find_one_and_update.side_effect = Exception("Database error")
 
         task = TaskModel(
-            title="Failing Task",
+            title="Task that will fail",
             priority=TaskPriority.LOW,
             status=TaskStatus.TODO,
             createdAt=datetime.now(timezone.utc),
@@ -168,5 +172,4 @@ class TaskRepositoryCreateTests(TestCase):
         with self.assertRaises(ValueError) as context:
             TaskRepository.create(task)
 
-        self.assertIn("Failed to create task with a unique displayId", str(context.exception))
-        self.assertEqual(mock_collection.insert_one.call_count, 3)
+        self.assertIn("Failed to create task", str(context.exception))

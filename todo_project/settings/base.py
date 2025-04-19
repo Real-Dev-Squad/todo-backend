@@ -15,8 +15,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-MONGODB_URI = os.getenv("MONGODB_URI")
-DB_NAME = os.getenv("DB_NAME")
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/todo-app")
+DB_NAME = os.getenv("DB_NAME", "todo-app")
 # Application definition
 
 INSTALLED_APPS = [

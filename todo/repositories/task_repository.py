@@ -1,4 +1,3 @@
-from pymongo import DESCENDING
 from datetime import datetime, timezone
 from typing import List
 
@@ -47,33 +46,29 @@ class TaskRepository(MongoRepository):
         client = cls.get_client()
 
         with client.start_session() as session:
-                try:
-                    with session.start_transaction():
+            try:
+                with session.start_transaction():
                     # Atomically increment and get the next counter value
-                        db = client.get_database()
-                        counter_result = db.counters.find_one_and_update(
-                            {"_id": "taskDisplayId"},
-                            {"$inc": {"seq": 1}},
-                            return_document=True,
-                            session=session
-                        )
+                    db = client.get_database()
+                    counter_result = db.counters.find_one_and_update(
+                        {"_id": "taskDisplayId"}, {"$inc": {"seq": 1}}, return_document=True, session=session
+                    )
 
-                        if not counter_result:
-                            db.counters.insert_one({"_id": "taskDisplayId", "seq": 1}, session=session)
-                            next_number = 1
-                        else:
-                            next_number = counter_result["seq"]
-                        
-                        task.displayId = f"#{next_number}"
-                        task.createdAt = datetime.now(timezone.utc)
-                        task.updatedAt = None
+                    if not counter_result:
+                        db.counters.insert_one({"_id": "taskDisplayId", "seq": 1}, session=session)
+                        next_number = 1
+                    else:
+                        next_number = counter_result["seq"]
 
-                        task_dict = task.model_dump(mode="json", by_alias=True, exclude_none=True)
-                        insert_result = tasks_collection.insert_one(task_dict, session=session)
-                
-                        task.id = insert_result.inserted_id
-                        return task
-                
-                except Exception as e:
-                    raise ValueError(f"Failed to create task: {str(e)}")
+                    task.displayId = f"#{next_number}"
+                    task.createdAt = datetime.now(timezone.utc)
+                    task.updatedAt = None
 
+                    task_dict = task.model_dump(mode="json", by_alias=True, exclude_none=True)
+                    insert_result = tasks_collection.insert_one(task_dict, session=session)
+
+                    task.id = insert_result.inserted_id
+                    return task
+
+            except Exception as e:
+                raise ValueError(f"Failed to create task: {str(e)}")

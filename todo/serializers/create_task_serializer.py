@@ -3,6 +3,7 @@ from bson import ObjectId
 from datetime import datetime, timezone
 from todo.constants.task import TaskPriority, TaskStatus
 
+
 class CreateTaskSerializer(serializers.Serializer):
     title = serializers.CharField(required=True, allow_blank=False)
     description = serializers.CharField(required=False, allow_blank=True, allow_null=True)
@@ -28,20 +29,20 @@ class CreateTaskSerializer(serializers.Serializer):
         if not value.strip():
             raise serializers.ValidationError("Title must not be blank.")
         return value
-    
+
     def validate_labels(self, value):
         for label_id in value:
             if not ObjectId.is_valid(label_id):
                 raise serializers.ValidationError(f"{label_id} is not a valid ObjectId.")
         return value
-    
+
     def validate_dueAt(self, value):
         if value is not None:
             now = datetime.now(timezone.utc)
             if value <= now:
                 raise serializers.ValidationError("Due date must be in the future.")
         return value
-    
+
     def validate_assignee(self, value):
         if isinstance(value, str) and not value.strip():
             return None

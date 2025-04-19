@@ -10,9 +10,8 @@ class TodoConfig(AppConfig):
     def ready(self):
         """Initialize application components when Django starts"""
         from todo_project.db.init import initialize_database
-        
+
         try:
             initialize_database()
         except Exception as e:
             logger.error(f"Failed to initialize database: {str(e)}")
-

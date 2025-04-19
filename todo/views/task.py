@@ -24,13 +24,13 @@ class TaskView(APIView):
 
         return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
 
-    def post(self, request:Request):
+    def post(self, request: Request):
         """
         Create a new task.
-        
+
         Args:
             request: HTTP request containing task data
-            
+
         Returns:
             Response: HTTP response with created task data or error details
         """
@@ -43,31 +43,22 @@ class TaskView(APIView):
             dto = CreateTaskDTO(**serializer.validated_data)
             response: CreateTaskResponse = TaskService.create_task(dto)
 
-            return Response(
-                data=response.model_dump(mode="json"), 
-                status=status.HTTP_201_CREATED
-                )
-        
-        except ValueError as e:
-                if isinstance(e.args[0], ApiErrorResponse):
-                    error_response = e.args[0]
-                    return Response(
-                    data=error_response.model_dump(mode="json"),
-                    status=error_response.statusCode
-                    )
+            return Response(data=response.model_dump(mode="json"), status=status.HTTP_201_CREATED)
 
-                fallback_response = ApiErrorResponse(
-                    statusCode=500,
-                    message="An unexpected error occurred",
-                    errors=[
-                        {"detail": str(e)} if settings.DEBUG else {"detail": "Internal server error"}
-                    ]
-                )
-                return Response(
-                    data=fallback_response.model_dump(mode="json"),
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-    
+        except ValueError as e:
+            if isinstance(e.args[0], ApiErrorResponse):
+                error_response = e.args[0]
+                return Response(data=error_response.model_dump(mode="json"), status=error_response.statusCode)
+
+            fallback_response = ApiErrorResponse(
+                statusCode=500,
+                message="An unexpected error occurred",
+                errors=[{"detail": str(e)} if settings.DEBUG else {"detail": "Internal server error"}],
+            )
+            return Response(
+                data=fallback_response.model_dump(mode="json"), status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
     def _handle_validation_errors(self, errors):
         formatted_errors = []
         for field, messages in errors.items():
@@ -75,27 +66,16 @@ class TaskView(APIView):
                 for message in messages:
                     formatted_errors.append(
                         ApiErrorDetail(
-                            source={ApiErrorSource.PARAMETER: field},
-                            title="Validation Error",
-                            detail=str(message)
+                            source={ApiErrorSource.PARAMETER: field}, title="Validation Error", detail=str(message)
                         )
                     )
             else:
                 formatted_errors.append(
                     ApiErrorDetail(
-                        source={ApiErrorSource.PARAMETER: field},
-                        title="Validation Error",
-                        detail=str(messages)
+                        source={ApiErrorSource.PARAMETER: field}, title="Validation Error", detail=str(messages)
                     )
                 )
-        
-        error_response = ApiErrorResponse(
-            statusCode=400,
-            message="Validation Error",
-            errors=formatted_errors
-        )
-        
-        return Response(
-            data=error_response.model_dump(mode="json"),
-            status=status.HTTP_400_BAD_REQUEST
-        )
+
+        error_response = ApiErrorResponse(statusCode=400, message="Validation Error", errors=formatted_errors)
+
+        return Response(data=error_response.model_dump(mode="json"), status=status.HTTP_400_BAD_REQUEST)

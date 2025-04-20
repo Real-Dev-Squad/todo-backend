@@ -12,6 +12,7 @@ from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, 
 from todo.dto.responses.create_task_response import CreateTaskResponse
 from todo.constants.messages import ApiErrors
 
+
 class TaskView(APIView):
     def get(self, request: Request):
         """
@@ -66,7 +67,9 @@ class TaskView(APIView):
                 for message in messages:
                     formatted_errors.append(
                         ApiErrorDetail(
-                            source={ApiErrorSource.PARAMETER: field}, title=ApiErrors.VALIDATION_ERROR, detail=str(message)
+                            source={ApiErrorSource.PARAMETER: field},
+                            title=ApiErrors.VALIDATION_ERROR,
+                            detail=str(message),
                         )
                     )
             else:

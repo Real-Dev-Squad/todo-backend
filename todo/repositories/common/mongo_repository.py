@@ -22,7 +22,7 @@ class MongoRepository(ABC):
     @classmethod
     def get_client(cls):
         return cls.database_manager._get_database_client()
-    
+
     @classmethod
     def get_database(cls):
         return cls.database_manager.get_database()

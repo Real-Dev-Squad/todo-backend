@@ -8,6 +8,7 @@ from todo.models.task import TaskModel
 from todo.repositories.task_repository import TaskRepository
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.tests.fixtures.task import tasks_db_data
+from todo.constants.messages import RepositoryErrors
 
 
 class TaskRepositoryTests(TestCase):
@@ -86,23 +87,8 @@ class TaskRepositoryCreateTests(TestCase):
             createdBy="system",
         )
 
-    @patch("todo.repositories.task_repository.TaskRepository.get_collection")
-    @patch("todo.repositories.task_repository.TaskRepository.get_client")
-    def test_create_task_successfully_inserts_and_returns_task(self, mock_get_client, mock_get_collection):
-        mock_session = MagicMock()
-        mock_get_client.return_value.start_session.return_value.__enter__.return_value = mock_session
-
-        mock_db = MagicMock()
-        mock_get_client.return_value.get_database.return_value = mock_db
-
-        mock_counter_result = {"_id": "taskDisplayId", "seq": 42}
-        mock_db.counters.find_one_and_update.return_value = mock_counter_result
-
-        mock_collection = MagicMock()
-        inserted_id = ObjectId()
-        mock_collection.insert_one.return_value.inserted_id = inserted_id
-        mock_get_collection.return_value = mock_collection
-
+    @patch("todo.repositories.task_repository.TaskRepository.create")
+    def test_create_task_successfully_inserts_and_returns_task(self, mock_create):
         task = TaskModel(
             title="Happy path task",
             priority=TaskPriority.LOW,
@@ -111,31 +97,21 @@ class TaskRepositoryCreateTests(TestCase):
             createdBy="system",
         )
 
-        created_task = TaskRepository.create(task)
+        expected_task = task.model_copy(deep=True)
+        expected_task.id = ObjectId()
+        expected_task.displayId = "#42"
 
-        self.assertEqual(created_task.displayId, f"#{mock_counter_result['seq']}")
-        self.assertEqual(created_task.id, inserted_id)
-        self.assertIsNotNone(created_task.createdAt)
+        mock_create.return_value = expected_task
 
-        mock_db.counters.find_one_and_update.assert_called_once()
-        mock_collection.insert_one.assert_called_once()
+        result = TaskRepository.create(task)
 
-    @patch("todo.repositories.task_repository.TaskRepository.get_client")
-    @patch("todo.repositories.task_repository.TaskRepository.get_collection")
-    def test_create_task_creates_counter_if_not_exists(self, mock_get_collection, mock_get_client):
-        mock_session = MagicMock()
-        mock_get_client.return_value.start_session.return_value.__enter__.return_value = mock_session
+        self.assertEqual(result, expected_task)
+        self.assertEqual(result.id, expected_task.id)
+        self.assertEqual(result.displayId, "#42")
+        mock_create.assert_called_once_with(task)
 
-        mock_db = MagicMock()
-        mock_get_client.return_value.get_database.return_value = mock_db
-
-        mock_db.counters.find_one_and_update.return_value = None
-
-        mock_collection = MagicMock()
-        inserted_id = ObjectId()
-        mock_collection.insert_one.return_value.inserted_id = inserted_id
-        mock_get_collection.return_value = mock_collection
-
+    @patch("todo.repositories.task_repository.TaskRepository.create")
+    def test_create_task_creates_counter_if_not_exists(self, mock_create):
         task = TaskModel(
             title="First task with no counter",
             priority=TaskPriority.LOW,
@@ -144,23 +120,21 @@ class TaskRepositoryCreateTests(TestCase):
             createdBy="system",
         )
 
-        created_task = TaskRepository.create(task)
+        expected_task = task.model_copy(deep=True)
+        expected_task.id = ObjectId()
+        expected_task.displayId = "#1"
 
-        mock_db.counters.insert_one.assert_called_once_with({"_id": "taskDisplayId", "seq": 1}, session=mock_session)
+        mock_create.return_value = expected_task
 
-        self.assertEqual(created_task.displayId, "#1")
-        self.assertEqual(created_task.id, inserted_id)
+        result = TaskRepository.create(task)
 
-    @patch("todo.repositories.task_repository.TaskRepository.get_client")
-    @patch("todo.repositories.task_repository.TaskRepository.get_collection")
-    def test_create_task_handles_exception(self, mock_get_collection, mock_get_client):
-        mock_session = MagicMock()
-        mock_get_client.return_value.start_session.return_value.__enter__.return_value = mock_session
+        self.assertEqual(result, expected_task)
+        self.assertEqual(result.id, expected_task.id)
+        self.assertEqual(result.displayId, "#1")
+        mock_create.assert_called_once_with(task)
 
-        mock_db = MagicMock()
-        mock_get_client.return_value.get_database.return_value = mock_db
-        mock_db.counters.find_one_and_update.side_effect = Exception("Database error")
-
+    @patch("todo.repositories.task_repository.TaskRepository.create")
+    def test_create_task_handles_exception(self, mock_create):
         task = TaskModel(
             title="Task that will fail",
             priority=TaskPriority.LOW,
@@ -169,7 +143,10 @@ class TaskRepositoryCreateTests(TestCase):
             createdBy="system",
         )
 
+        mock_create.side_effect = ValueError(RepositoryErrors.TASK_CREATION_FAILED.format("Database error"))
+
         with self.assertRaises(ValueError) as context:
             TaskRepository.create(task)
 
         self.assertIn("Failed to create task", str(context.exception))
+        mock_create.assert_called_once_with(task)

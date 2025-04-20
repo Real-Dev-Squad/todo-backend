@@ -166,7 +166,7 @@ class TaskService:
                             ApiErrorDetail(
                                 source={ApiErrorSource.PARAMETER: "labels"},
                                 title=ApiErrors.INVALID_LABEL_IDS,
-                                detail=ValidationErrors.MISSING_LABEL_IDS.format(', '.join(missing_ids)),
+                                detail=ValidationErrors.MISSING_LABEL_IDS.format(", ".join(missing_ids)),
                             )
                         ],
                     )

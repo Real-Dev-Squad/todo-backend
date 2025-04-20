@@ -17,6 +17,7 @@ from todo.models.task import TaskModel
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.label_repository import LabelRepository
 from todo.constants.task import TaskStatus
+from todo.constants.messages import ApiErrors, ValidationErrors
 from django.conf import settings
 
 
@@ -160,12 +161,12 @@ class TaskService:
                 raise ValueError(
                     ApiErrorResponse(
                         statusCode=400,
-                        message="Invalid Labels",
+                        message=ApiErrors.INVALID_LABELS,
                         errors=[
                             ApiErrorDetail(
                                 source={ApiErrorSource.PARAMETER: "labels"},
-                                title="Invalid Label IDs",
-                                detail=f"The following label IDs do not exist: {', '.join(missing_ids)}",
+                                title=ApiErrors.INVALID_LABEL_IDS,
+                                detail=ValidationErrors.MISSING_LABEL_IDS.format(', '.join(missing_ids)),
                             )
                         ],
                     )
@@ -196,12 +197,12 @@ class TaskService:
             raise ValueError(
                 ApiErrorResponse(
                     statusCode=500,
-                    message="Repository Error",
+                    message=ApiErrors.REPOSITORY_ERROR,
                     errors=[
                         ApiErrorDetail(
                             source={ApiErrorSource.PARAMETER: "task_repository"},
-                            title="Unexpected Error",
-                            detail=str(e) if settings.DEBUG else "Internal server error",
+                            title=ApiErrors.UNEXPECTED_ERROR,
+                            detail=str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR,
                         )
                     ],
                 )
@@ -210,12 +211,12 @@ class TaskService:
             raise ValueError(
                 ApiErrorResponse(
                     statusCode=500,
-                    message="Server Error",
+                    message=ApiErrors.SERVER_ERROR,
                     errors=[
                         ApiErrorDetail(
                             source={ApiErrorSource.PARAMETER: "server"},
-                            title="Unexpected Error",
-                            detail=str(e) if settings.DEBUG else "Internal server error",
+                            title=ApiErrors.UNEXPECTED_ERROR,
+                            detail=str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR,
                         )
                     ],
                 )

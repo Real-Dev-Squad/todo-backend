@@ -3,6 +3,7 @@ from typing import List
 
 from todo.models.task import TaskModel
 from todo.repositories.common.mongo_repository import MongoRepository
+from todo.constants.messages import RepositoryErrors
 
 
 class TaskRepository(MongoRepository):
@@ -71,4 +72,4 @@ class TaskRepository(MongoRepository):
                     return task
 
             except Exception as e:
-                raise ValueError(f"Failed to create task: {str(e)}")
+                raise ValueError(RepositoryErrors.TASK_CREATION_FAILED.format(str(e)))

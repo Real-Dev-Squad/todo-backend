@@ -1,5 +1,6 @@
 from django.apps import AppConfig
 import logging
+from todo.constants.messages import RepositoryErrors
 import sys
 
 logger = logging.getLogger(__name__)
@@ -20,4 +21,4 @@ class TodoConfig(AppConfig):
         try:
             initialize_database()
         except Exception as e:
-            logger.error(f"Failed to initialize database: {str(e)}")
+            logger.error(RepositoryErrors.DB_INIT_FAILED.format(str(e)))

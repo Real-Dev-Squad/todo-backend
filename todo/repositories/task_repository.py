@@ -49,7 +49,7 @@ class TaskRepository(MongoRepository):
             try:
                 with session.start_transaction():
                     # Atomically increment and get the next counter value
-                    db = client.get_database()
+                    db = cls.get_database()
                     counter_result = db.counters.find_one_and_update(
                         {"_id": "taskDisplayId"}, {"$inc": {"seq": 1}}, return_document=True, session=session
                     )

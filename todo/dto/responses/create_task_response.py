@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 from todo.dto.task_dto import TaskDTO
-
+from todo.constants.messages import AppMessages
 
 class CreateTaskResponse(BaseModel):
     statusCode: int = 201
-    successMessage: str = "Task created successfully"
+    successMessage: str = AppMessages.TASK_CREATED
     data: TaskDTO

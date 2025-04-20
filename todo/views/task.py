@@ -10,7 +10,7 @@ from todo.services.task_service import TaskService
 from todo.dto.task_dto import CreateTaskDTO
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.dto.responses.create_task_response import CreateTaskResponse
-
+from todo.constants.messages import ApiErrors
 
 class TaskView(APIView):
     def get(self, request: Request):
@@ -52,8 +52,8 @@ class TaskView(APIView):
 
             fallback_response = ApiErrorResponse(
                 statusCode=500,
-                message="An unexpected error occurred",
-                errors=[{"detail": str(e)} if settings.DEBUG else {"detail": "Internal server error"}],
+                message=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
+                errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}],
             )
             return Response(
                 data=fallback_response.model_dump(mode="json"), status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -66,16 +66,16 @@ class TaskView(APIView):
                 for message in messages:
                     formatted_errors.append(
                         ApiErrorDetail(
-                            source={ApiErrorSource.PARAMETER: field}, title="Validation Error", detail=str(message)
+                            source={ApiErrorSource.PARAMETER: field}, title=ApiErrors.VALIDATION_ERROR, detail=str(message)
                         )
                     )
             else:
                 formatted_errors.append(
                     ApiErrorDetail(
-                        source={ApiErrorSource.PARAMETER: field}, title="Validation Error", detail=str(messages)
+                        source={ApiErrorSource.PARAMETER: field}, title=ApiErrors.VALIDATION_ERROR, detail=str(messages)
                     )
                 )
 
-        error_response = ApiErrorResponse(statusCode=400, message="Validation Error", errors=formatted_errors)
+        error_response = ApiErrorResponse(statusCode=400, message=ApiErrors.VALIDATION_ERROR, errors=formatted_errors)
 
         return Response(data=error_response.model_dump(mode="json"), status=status.HTTP_400_BAD_REQUEST)

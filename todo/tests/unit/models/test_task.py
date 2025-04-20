@@ -18,20 +18,18 @@ class TaskModelTest(TestCase):
         self.assertFalse(task.isDeleted)  # Default value
 
     def test_task_model_throws_error_when_missing_required_fields(self):
-        incomplete_data = self.valid_task_data.copy()
         required_fields = ["title", "createdAt", "createdBy"]
-        for field_name in required_fields:
-            del incomplete_data[field_name]
 
-        with self.assertRaises(ValidationError) as context:
-            TaskModel(**incomplete_data)
+        for field in required_fields:
+            with self.subTest(f"missing field: {field}"):
+                incomplete_data = self.valid_task_data.copy()
+                incomplete_data.pop(field, None)
 
-        missing_fields_count = 0
-        for error in context.exception.errors():
-            self.assertEqual(error.get("type"), "missing")
-            self.assertIn(error.get("loc")[0], required_fields)
-            missing_fields_count += 1
-        self.assertEqual(missing_fields_count, len(required_fields))
+                with self.assertRaises(ValidationError) as context:
+                    TaskModel(**incomplete_data)
+
+                error_fields = [e["loc"][0] for e in context.exception.errors()]
+                self.assertIn(field, error_fields)
 
     def test_task_model_throws_error_when_invalid_enum_value(self):
         invalid_data = self.valid_task_data.copy()
@@ -44,3 +42,28 @@ class TaskModelTest(TestCase):
         for error in context.exception.errors():
             invalid_field_names.append(error.get("loc")[0])
         self.assertEqual(invalid_field_names, ["priority", "status"])
+
+    def test_task_model_defaults_are_set_correctly(self):
+        minimal_data = {
+            "title": "Minimal Task",
+            "createdAt": self.valid_task_data["createdAt"],
+            "createdBy": self.valid_task_data["createdBy"],
+        }
+        task = TaskModel(**minimal_data)
+
+        self.assertEqual(task.priority, TaskPriority.LOW)
+        self.assertEqual(task.status, TaskStatus.TODO)
+        self.assertFalse(task.isAcknowledged)
+        self.assertFalse(task.isDeleted)
+
+    def test_task_model_allows_none_for_optional_fields(self):
+        data = self.valid_task_data.copy()
+        optional_fields = ["description", "assignee", "labels", "dueAt", "updatedBy", "updatedAt", "deferredDetails"]
+
+        for field in optional_fields:
+            data[field] = None
+
+        task = TaskModel(**data)
+        self.assertIsNone(task.description)
+        self.assertIsNone(task.assignee)
+        self.assertIsNone(task.dueAt)

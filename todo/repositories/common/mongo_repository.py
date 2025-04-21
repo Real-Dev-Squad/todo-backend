@@ -18,3 +18,11 @@ class MongoRepository(ABC):
         if cls.collection is None:
             cls.collection = cls.database_manager.get_collection(cls.collection_name)
         return cls.collection
+
+    @classmethod
+    def get_client(cls):
+        return cls.database_manager._get_database_client()
+
+    @classmethod
+    def get_database(cls):
+        return cls.database_manager.get_database()

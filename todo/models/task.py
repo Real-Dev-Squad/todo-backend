@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import ClassVar, List
 from datetime import datetime
 
@@ -24,13 +24,13 @@ class TaskModel(Document):
     collection_name: ClassVar[str] = "tasks"
 
     id: PyObjectId | None = Field(None, alias="_id")
-    displayId: str
+    displayId: str | None = None
     title: str
     description: str | None = None
-    priority: TaskPriority | None = None
-    status: TaskStatus | None = None
+    priority: TaskPriority | None = TaskPriority.LOW
+    status: TaskStatus | None = TaskStatus.TODO
     assignee: str | None = None
-    isAcknowledged: bool | None = None
+    isAcknowledged: bool = False
     labels: List[PyObjectId] | None = []
     isDeleted: bool = False
     deferredDetails: DeferredDetailsModel | None = None
@@ -40,3 +40,5 @@ class TaskModel(Document):
     updatedAt: datetime | None = None
     createdBy: str
     updatedBy: str | None = None
+
+    model_config = ConfigDict(ser_enum="value")

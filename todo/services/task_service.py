@@ -4,15 +4,20 @@ from django.core.paginator import Paginator, EmptyPage
 from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from urllib.parse import urlencode
+from datetime import datetime, timezone
 
 from todo.dto.label_dto import LabelDTO
-from todo.dto.task_dto import TaskDTO
+from todo.dto.task_dto import TaskDTO, CreateTaskDTO
 from todo.dto.user_dto import UserDTO
 from todo.dto.responses.get_tasks_response import GetTasksResponse
+from todo.dto.responses.create_task_response import CreateTaskResponse
+from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.dto.responses.paginated_response import LinksData
 from todo.models.task import TaskModel
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.label_repository import LabelRepository
+from todo.constants.task import TaskStatus
+from todo.constants.messages import ApiErrors, ValidationErrors
 from django.conf import settings
 
 
@@ -141,3 +146,78 @@ class TaskService:
     @classmethod
     def prepare_user_dto(cls, user_id: str) -> UserDTO:
         return UserDTO(id=user_id, name="SYSTEM")
+
+    @classmethod
+    def create_task(cls, dto: CreateTaskDTO) -> CreateTaskResponse:
+        now = datetime.now(timezone.utc)
+        started_at = now if dto.status == TaskStatus.IN_PROGRESS else None
+
+        if dto.labels:
+            existing_labels = LabelRepository.list_by_ids(dto.labels)
+            if len(existing_labels) != len(dto.labels):
+                found_ids = [str(label.id) for label in existing_labels]
+                missing_ids = [label_id for label_id in dto.labels if label_id not in found_ids]
+
+                raise ValueError(
+                    ApiErrorResponse(
+                        statusCode=400,
+                        message=ApiErrors.INVALID_LABELS,
+                        errors=[
+                            ApiErrorDetail(
+                                source={ApiErrorSource.PARAMETER: "labels"},
+                                title=ApiErrors.INVALID_LABEL_IDS,
+                                detail=ValidationErrors.MISSING_LABEL_IDS.format(", ".join(missing_ids)),
+                            )
+                        ],
+                    )
+                )
+
+        task = TaskModel(
+            title=dto.title,
+            description=dto.description,
+            priority=dto.priority,
+            status=dto.status,
+            assignee=dto.assignee,
+            labels=dto.labels,
+            dueAt=dto.dueAt,
+            startedAt=started_at,
+            createdAt=now,
+            isAcknowledged=False,
+            isDeleted=False,
+            createdBy="system",  # placeholder, will be user_id when auth is in place
+        )
+
+        try:
+            created_task = TaskRepository.create(task)
+            task_dto = cls.prepare_task_dto(created_task)
+            return CreateTaskResponse(data=task_dto)
+        except ValueError as e:
+            if isinstance(e.args[0], ApiErrorResponse):
+                raise e
+            raise ValueError(
+                ApiErrorResponse(
+                    statusCode=500,
+                    message=ApiErrors.REPOSITORY_ERROR,
+                    errors=[
+                        ApiErrorDetail(
+                            source={ApiErrorSource.PARAMETER: "task_repository"},
+                            title=ApiErrors.UNEXPECTED_ERROR,
+                            detail=str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR,
+                        )
+                    ],
+                )
+            )
+        except Exception as e:
+            raise ValueError(
+                ApiErrorResponse(
+                    statusCode=500,
+                    message=ApiErrors.SERVER_ERROR,
+                    errors=[
+                        ApiErrorDetail(
+                            source={ApiErrorSource.PARAMETER: "server"},
+                            title=ApiErrors.UNEXPECTED_ERROR,
+                            detail=str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR,
+                        )
+                    ],
+                )
+            )

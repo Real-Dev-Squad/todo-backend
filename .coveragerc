@@ -1,0 +1,7 @@
+[coverage:run]
+# This section tells coverage to ignore certain files or directories
+omit =
+    */__init__.py
+    todo_project/wsgi.py
+    manage.py
+    */tests/*

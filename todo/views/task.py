@@ -66,7 +66,9 @@ class TaskView(APIView):
                 for message in messages:
                     formatted_errors.append(
                         ApiErrorDetail(
-                            source={ApiErrorSource.PARAMETER: field}, title=ApiErrors.VALIDATION_ERROR, detail=str(message)
+                            source={ApiErrorSource.PARAMETER: field},
+                            title=ApiErrors.VALIDATION_ERROR,
+                            detail=str(message),
                         )
                     )
             else:

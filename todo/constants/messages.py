@@ -1,7 +1,7 @@
 # Application Messages
 class AppMessages:
     TASK_CREATED = "Task created successfully"
-
+    
 # Repository error messages
 class RepositoryErrors:
     TASK_CREATION_FAILED = "Failed to create task: {0}"
@@ -18,7 +18,7 @@ class ApiErrors:
     INVALID_LABEL_IDS = "Invalid Label IDs"
     PAGE_NOT_FOUND = "Requested page exceeds available results"
     UNEXPECTED_ERROR_OCCURRED = "An unexpected error occurred"
-    
+
 # Validation error messages
 class ValidationErrors:
     BLANK_TITLE = "Title must not be blank."

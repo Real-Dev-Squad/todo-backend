@@ -1,6 +1,7 @@
 from django.apps import AppConfig
 import logging
 from todo.constants.messages import RepositoryErrors
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -10,6 +11,11 @@ class TodoConfig(AppConfig):
 
     def ready(self):
         """Initialize application components when Django starts"""
+
+        if "test" in sys.argv:
+            logger.info("Test mode detected - skipping database initialization")
+            return
+
         from todo_project.db.init import initialize_database
 
         try:

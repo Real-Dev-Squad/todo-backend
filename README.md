@@ -4,7 +4,7 @@
 1. Install pyenv
     - For Mac/Linux - https://github.com/pyenv/pyenv?tab=readme-ov-file#installation
     - For Windows - https://github.com/pyenv-win/pyenv-win/blob/master/docs/installation.md#chocolatey
-2. Install the configured python version (3.12.7) using pyenv by running the command
+2. Install the configured python version (3.11.5) using pyenv by running the command
     - For Mac/Linux
         ```
         pyenv install
@@ -38,9 +38,10 @@
     ```
 6. Create a `.env` file in the root directory, and copy the content from the `.env.example` file to it
 7. Install [docker](https://docs.docker.com/get-docker/) and [docker compose](https://docs.docker.com/compose/install/)
-8. Start MongoDB using docker
+8. Set up MongoDB with replica set support using the provided script:
     ```
-    docker-compose up -d db
+    chmod +x dev-setup.sh
+    ./dev-setup.sh
     ```
 9. Start the development server by running the command
     ```
@@ -71,6 +72,32 @@
     }
     ```
 4. On making changes to code and saving, live reload will work in this case as well
+
+## Daily development workflow
+After the initial setup, for daily development you only need to:
+
+1. Make sure MongoDB is running (if it's not already):
+   ```
+   docker-compose up -d db
+   ```
+
+2. Start the Django development server:
+   ```
+   python manage.py runserver
+   ```
+
+## After running docker-compose down
+If you've run `docker-compose down` and need to restart your development environment:
+
+1. Run the setup script to reinitialize MongoDB with replica set:
+   ```
+   ./dev-setup.sh
+   ```
+
+2. Start your Django application:
+   ```
+   python manage.py runserver
+   ```
 
 ## Command reference
 1. To run the tests, run the following command

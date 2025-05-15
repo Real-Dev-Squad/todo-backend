@@ -12,6 +12,7 @@ from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, 
 from todo.dto.responses.create_task_response import CreateTaskResponse
 from todo.constants.messages import ApiErrors
 
+
 class TaskView(APIView):
     def get(self, request: Request):
         """

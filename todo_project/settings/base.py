@@ -15,10 +15,17 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-MONGODB_URI = os.getenv("MONGODB_URI")
-DB_NAME = os.getenv("DB_NAME")
-# Application definition
+# MongoDB Connection Settings
+mongodb_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 
+if "replicaSet" not in mongodb_uri:
+    MONGODB_URI = f"{mongodb_uri}/?replicaSet=rs0"
+else:
+    MONGODB_URI = mongodb_uri
+
+DB_NAME = os.getenv("DB_NAME", "todo-app")
+
+# Application definition
 INSTALLED_APPS = [
     "rest_framework",
     "todo",

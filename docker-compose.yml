@@ -6,7 +6,7 @@ services:
     container_name: todo-django-app
     command: python manage.py runserver 0.0.0.0:8000
     environment:
-      MONGODB_URI: mongodb://db:27017
+      MONGODB_URI: mongodb://db:27017/?replicaSet=rs0
       DB_NAME: todo-app
     volumes:
       - .:/app
@@ -22,18 +22,12 @@ services:
       - "27017:27017"
     volumes:
       - ./mongo_data:/data/db
+      - ./mongo_logs:/var/log/mongodb
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "'db.runCommand({ping:1})'"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 15s
-
-    #to enable replica set, requirement for enabling transactions
-    command: >
-      sh -c "
-        mongod --replSet rs0 --bind_ip_all --logpath /var/log/mongodb.log --logappend &
-        sleep 5 &&
-        mongosh --eval 'try { rs.initiate() } catch(e) { print(e) }' &&
-        tail -f /var/log/mongodb.log
-      "
+    # Modified command to use the mounted log directory
+    command: mongod --replSet rs0 --bind_ip_all --logpath /var/log/mongodb/mongodb.log --logappend

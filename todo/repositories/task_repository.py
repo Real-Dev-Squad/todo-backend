@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import List
+from bson import ObjectId
 
 from todo.models.task import TaskModel
 from todo.repositories.common.mongo_repository import MongoRepository
@@ -73,3 +74,20 @@ class TaskRepository(MongoRepository):
 
             except Exception as e:
                 raise ValueError(RepositoryErrors.TASK_CREATION_FAILED.format(str(e)))
+
+    @classmethod
+    def get_by_id(cls, task_id: str) -> TaskModel | None:
+        """
+        Get a task by its ID from the repository.
+
+        Args:
+            task_id (str): The ID of the task to retrieve.
+
+        Returns:
+            TaskModel | None: The task model if found, otherwise None.
+        """
+        tasks_collection = cls.get_collection()
+        task_data = tasks_collection.find_one({"_id": ObjectId(task_id)})
+        if task_data:
+            return TaskModel(**task_data)
+        return None

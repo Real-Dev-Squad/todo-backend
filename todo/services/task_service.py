@@ -186,7 +186,7 @@ class TaskService:
                 )
 
         task = TaskModel(
-            _id=None,
+            id=None,
             title=dto.title,
             description=dto.description,
             priority=dto.priority,

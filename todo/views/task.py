@@ -6,11 +6,13 @@ from django.conf import settings
 
 from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer
 from todo.serializers.create_task_serializer import CreateTaskSerializer
+from todo.serializers.add_label_serializer import AddLabelSerializer
 from todo.services.task_service import TaskService
 from todo.dto.task_dto import CreateTaskDTO
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.dto.responses.create_task_response import CreateTaskResponse
 from todo.constants.messages import ApiErrors
+from todo.models.common.pyobjectid import PyObjectId
 
 class TaskView(APIView):
     def get(self, request: Request):
@@ -44,6 +46,51 @@ class TaskView(APIView):
             response: CreateTaskResponse = TaskService.create_task(dto)
 
             return Response(data=response.model_dump(mode="json"), status=status.HTTP_201_CREATED)
+
+        except ValueError as e:
+            if isinstance(e.args[0], ApiErrorResponse):
+                error_response = e.args[0]
+                return Response(data=error_response.model_dump(mode="json"), status=error_response.statusCode)
+
+            fallback_response = ApiErrorResponse(
+                statusCode=500,
+                message=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
+                errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}],
+            )
+            return Response(
+                data=fallback_response.model_dump(mode="json"), status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def post_label(self, request: Request, task_id: str):
+        """
+        Add a label to a task.
+
+        Args:
+            request: HTTP request containing label data
+            task_id: ID of the task to add the label to
+
+        Returns:
+            Response: HTTP response with success or error details
+        """
+        try:
+            task_id = PyObjectId(task_id)
+        except Exception:
+            return Response(
+                data=ApiErrorResponse(
+                    statusCode=400,
+                    message="Invalid task ID format",
+                    errors=[{"detail": "The provided task ID is not valid"}]
+                ).model_dump(mode="json"),
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = AddLabelSerializer(data=request.data)
+        if not serializer.is_valid():
+            return self._handle_validation_errors(serializer.errors)
+
+        try:
+            TaskService.add_label_to_task(task_id, serializer.validated_data["label_id"])
+            return Response(status=status.HTTP_200_OK)
 
         except ValueError as e:
             if isinstance(e.args[0], ApiErrorResponse):

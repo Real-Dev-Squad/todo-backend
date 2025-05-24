@@ -94,3 +94,31 @@
     ```
     ruff check --fix
     ```
+
+## API Documentation
+
+### Tasks
+
+#### Add Label to Task
+```
+POST /v1/tasks/{task_id}/labels
+
+Add a label to an existing task.
+
+Request Body:
+{
+    "label_id": "string"  // ID of the label to add
+}
+
+Responses:
+200 OK - Label added successfully
+400 Bad Request - Invalid input (e.g., invalid label ID format)
+404 Not Found - Task or label not found
+500 Internal Server Error - Unexpected server error
+
+Example:
+POST /v1/tasks/123/labels
+{
+    "label_id": "456"
+}
+```

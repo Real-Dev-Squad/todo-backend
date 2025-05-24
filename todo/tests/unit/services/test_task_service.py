@@ -14,6 +14,9 @@ from todo.tests.fixtures.task import tasks_models
 from todo.tests.fixtures.label import label_models
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.models.task import TaskModel
+from todo.exceptions.task_exceptions import TaskNotFoundException
+from bson.errors import InvalidId as BsonInvalidId
+from todo.constants.messages import ApiErrors
 
 
 class TaskServiceTests(TestCase):
@@ -205,3 +208,41 @@ class TaskServiceTests(TestCase):
         mock_create.assert_called_once()
         mock_prepare_dto.assert_called_once_with(mock_task_model)
         self.assertEqual(result.data, mock_task_dto)
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskService.prepare_task_dto")
+    def test_get_task_by_id_success(self, mock_prepare_task_dto: Mock, mock_repo_get_by_id: Mock):
+        task_id = "validtaskid123"
+        mock_task_model = MagicMock(spec=TaskModel)
+        mock_repo_get_by_id.return_value = mock_task_model
+
+        mock_dto = MagicMock(spec=TaskDTO)
+        mock_prepare_task_dto.return_value = mock_dto
+
+        result_dto = TaskService.get_task_by_id(task_id)
+
+        mock_repo_get_by_id.assert_called_once_with(task_id)
+        mock_prepare_task_dto.assert_called_once_with(mock_task_model)
+        self.assertEqual(result_dto, mock_dto)
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    def test_get_task_by_id_not_found(self, mock_repo_get_by_id: Mock):
+        task_id = "nonexistenttaskid456"
+        mock_repo_get_by_id.return_value = None
+
+        with self.assertRaises(TaskNotFoundException) as context:
+            TaskService.get_task_by_id(task_id)
+
+        self.assertEqual(str(context.exception), ApiErrors.TASK_NOT_FOUND.format(task_id))
+        mock_repo_get_by_id.assert_called_once_with(task_id)
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    def test_get_task_by_id_invalid_id_format(self, mock_repo_get_by_id: Mock):
+        task_id = "invalid-id-format"
+        mock_repo_get_by_id.side_effect = BsonInvalidId("Invalid ObjectId")
+
+        with self.assertRaises(ValueError) as context:
+            TaskService.get_task_by_id(task_id)
+
+        self.assertEqual(str(context.exception), ApiErrors.INVALID_TASK_ID_FORMAT_DETAIL)
+        mock_repo_get_by_id.assert_called_once_with(task_id)

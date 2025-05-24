@@ -55,3 +55,10 @@ REST_FRAMEWORK = {
         "MAX_PAGE_LIMIT": 200,
     },
 }
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
+    }
+}

@@ -10,13 +10,62 @@ from todo.services.task_service import TaskService
 from todo.dto.task_dto import CreateTaskDTO
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.dto.responses.create_task_response import CreateTaskResponse
+from todo.dto.responses.get_task_by_id_response import GetTaskByIdResponse
+from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.constants.messages import ApiErrors
 
+
 class TaskView(APIView):
-    def get(self, request: Request):
+    def get(self, request: Request, task_id: str | None = None):
         """
-        Retrieve a paginated list of tasks.
+        Retrieve a paginated list of tasks or a single task by ID.
         """
+        if task_id:
+            try:
+                task_dto = TaskService.get_task_by_id(task_id)
+                response_data = GetTaskByIdResponse(data=task_dto)
+                return Response(data=response_data.model_dump(mode="json"), status=status.HTTP_200_OK)
+            except TaskNotFoundException as e:
+                error_response = ApiErrorResponse(
+                    statusCode=status.HTTP_404_NOT_FOUND,
+                    message=ApiErrors.TASK_NOT_FOUND_TITLE,
+                    errors=[
+                        ApiErrorDetail(
+                            source={ApiErrorSource.PATH: "task_id"},
+                            title=ApiErrors.TASK_NOT_FOUND_TITLE,
+                            detail=str(e),
+                        )
+                    ],
+                )
+                return Response(
+                    data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_404_NOT_FOUND
+                )
+            except ValueError as e:
+                error_response = ApiErrorResponse(
+                    statusCode=status.HTTP_400_BAD_REQUEST,
+                    message=ApiErrors.INVALID_TASK_ID_FORMAT,
+                    errors=[
+                        ApiErrorDetail(
+                            source={ApiErrorSource.PATH: "task_id"},
+                            title=ApiErrors.VALIDATION_ERROR,
+                            detail=str(e),
+                        )
+                    ],
+                )
+                return Response(
+                    data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_400_BAD_REQUEST
+                )
+            except Exception as e:
+                fallback_response = ApiErrorResponse(
+                    statusCode=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    message=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
+                    errors=[ApiErrorDetail(detail=str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR)],
+                )
+                return Response(
+                    data=fallback_response.model_dump(mode="json", exclude_none=True),
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
         query = GetTaskQueryParamsSerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
 

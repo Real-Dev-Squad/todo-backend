@@ -7,6 +7,7 @@ class ApiErrorSource(Enum):
     PARAMETER = "parameter"
     POINTER = "pointer"
     HEADER = "header"
+    PATH = "path"
 
 
 class ApiErrorDetail(BaseModel):

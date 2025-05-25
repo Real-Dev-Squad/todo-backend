@@ -1,17 +1,20 @@
 from unittest import TestCase
 from unittest.mock import Mock, patch
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.views import APIView
+from django.conf import settings
 
 from todo.exceptions.exception_handler import handle_exception, format_validation_errors
 from todo.dto.responses.error_response import ApiErrorDetail, ApiErrorSource
+from todo.constants.messages import ApiErrors
 
 
 class ExceptionHandlerTests(TestCase):
     @patch("todo.exceptions.exception_handler.format_validation_errors")
     def test_returns_400_for_validation_error(self, mock_format_validation_errors: Mock):
-        validation_error = ValidationError(detail={"field": ["error message"]})
+        validation_error = DRFValidationError(detail={"field": ["error message"]})
         mock_format_validation_errors.return_value = [
             ApiErrorDetail(detail="error message", source={ApiErrorSource.PARAMETER: "field"})
         ]
@@ -29,11 +32,38 @@ class ExceptionHandlerTests(TestCase):
 
         mock_format_validation_errors.assert_called_once_with(validation_error.detail)
 
-    def test_uses_default_handler_for_non_validation_error(self):
-        generic_exception = ValueError("Something went wrong")
+    def test_custom_handler_formats_generic_exception(self):
+        request = None
+        context = {"request": request, "view": APIView()}
+        error_message = "A truly generic error occurred"
+        exception = Exception(error_message)
 
-        response = handle_exception(generic_exception, {})
-        self.assertIsNone(response)
+        with patch("todo.exceptions.exception_handler.drf_exception_handler") as mock_drf_handler:
+            mock_drf_handler.return_value = None
+
+            response = handle_exception(exception, context)
+
+            self.assertIsNotNone(response)
+            self.assertIsInstance(response, Response)
+            self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            self.assertIsInstance(response.data, dict)
+
+            expected_detail_obj_in_list = ApiErrorDetail(
+                detail=error_message if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR,
+                title=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
+            )
+            expected_main_message = ApiErrors.UNEXPECTED_ERROR_OCCURRED
+
+            self.assertEqual(response.data.get("statusCode"), status.HTTP_500_INTERNAL_SERVER_ERROR)
+            self.assertEqual(response.data.get("message"), expected_main_message)
+            self.assertIsInstance(response.data.get("errors"), list)
+
+            if response.data.get("errors"):
+                self.assertEqual(len(response.data["errors"]), 1)
+                actual_error_detail_dict = response.data["errors"][0]
+                self.assertEqual(actual_error_detail_dict.get("detail"), expected_detail_obj_in_list.detail)
+                self.assertEqual(actual_error_detail_dict.get("title"), expected_detail_obj_in_list.title)
 
 
 class FormatValidationErrorsTests(TestCase):

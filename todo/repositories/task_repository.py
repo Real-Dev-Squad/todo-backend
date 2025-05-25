@@ -77,15 +77,6 @@ class TaskRepository(MongoRepository):
 
     @classmethod
     def get_by_id(cls, task_id: str) -> TaskModel | None:
-        """
-        Get a task by its ID from the repository.
-
-        Args:
-            task_id (str): The ID of the task to retrieve.
-
-        Returns:
-            TaskModel | None: The task model if found, otherwise None.
-        """
         tasks_collection = cls.get_collection()
         task_data = tasks_collection.find_one({"_id": ObjectId(task_id)})
         if task_data:

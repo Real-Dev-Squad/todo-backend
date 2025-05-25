@@ -1,36 +1,128 @@
 from typing import List
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.views import exception_handler
+from rest_framework.views import exception_handler as drf_exception_handler
 from rest_framework.utils.serializer_helpers import ReturnDict
+from django.conf import settings
+from bson.errors import InvalidId as BsonInvalidId
 
 from todo.dto.responses.error_response import ApiErrorDetail, ApiErrorResponse, ApiErrorSource
-
-
-def handle_exception(exc, context):
-    if isinstance(exc, ValidationError):
-        return Response(
-            ApiErrorResponse(
-                statusCode=status.HTTP_400_BAD_REQUEST,
-                message="Invalid request",
-                errors=format_validation_errors(exc.detail),
-            ).model_dump(mode="json", exclude_none=True),
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    return exception_handler(exc, context)
+from todo.constants.messages import ApiErrors
+from todo.exceptions.task_exceptions import TaskNotFoundException
 
 
 def format_validation_errors(errors) -> List[ApiErrorDetail]:
     formatted_errors = []
     if isinstance(errors, ReturnDict | dict):
         for field, messages in errors.items():
-            if isinstance(messages, list):
-                for message in messages:
-                    formatted_errors.append(ApiErrorDetail(detail=message, source={ApiErrorSource.PARAMETER: field}))
-            elif isinstance(messages, dict):
-                nested_errors = format_validation_errors(messages)
-                formatted_errors.extend(nested_errors)
-            else:
-                formatted_errors.append(ApiErrorDetail(detail=messages, source={ApiErrorSource.PARAMETER: field}))
+            details = messages if isinstance(messages, list) else [messages]
+            for message_detail in details:
+                if isinstance(message_detail, dict):
+                    nested_errors = format_validation_errors(message_detail)
+                    formatted_errors.extend(nested_errors)
+                else:
+                    formatted_errors.append(
+                        ApiErrorDetail(detail=str(message_detail), source={ApiErrorSource.PARAMETER: field})
+                    )
+    elif isinstance(errors, list):
+        for message_detail in errors:
+            formatted_errors.append(ApiErrorDetail(detail=str(message_detail)))
     return formatted_errors
+
+
+def handle_exception(exc, context):
+    response = drf_exception_handler(exc, context)
+    task_id = context.get("kwargs", {}).get("task_id")
+
+    error_list = []
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    determined_message = ApiErrors.UNEXPECTED_ERROR_OCCURRED
+
+    if isinstance(exc, TaskNotFoundException):
+        status_code = status.HTTP_404_NOT_FOUND
+        detail_message_str = str(exc)
+        determined_message = detail_message_str
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.PATH: "task_id"} if task_id else None,
+                title=detail_message_str,
+                detail=detail_message_str,
+            )
+        )
+    elif isinstance(exc, BsonInvalidId):
+        status_code = status.HTTP_400_BAD_REQUEST
+        determined_message = ApiErrors.INVALID_TASK_ID_FORMAT
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.PATH: "task_id"} if task_id else None,
+                title=ApiErrors.VALIDATION_ERROR,
+                detail=ApiErrors.INVALID_TASK_ID_FORMAT,
+            )
+        )
+    elif (
+        isinstance(exc, ValueError)
+        and hasattr(exc, "args")
+        and exc.args
+        and (exc.args[0] == ApiErrors.INVALID_TASK_ID_FORMAT or exc.args[0] == "Invalid ObjectId format")
+    ):
+        status_code = status.HTTP_400_BAD_REQUEST
+        determined_message = ApiErrors.INVALID_TASK_ID_FORMAT
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.PATH: "task_id"} if task_id else None,
+                title=ApiErrors.VALIDATION_ERROR,
+                detail=ApiErrors.INVALID_TASK_ID_FORMAT,
+            )
+        )
+    elif (
+        isinstance(exc, ValueError) and hasattr(exc, "args") and exc.args and isinstance(exc.args[0], ApiErrorResponse)
+    ):
+        api_error_response = exc.args[0]
+        return Response(
+            data=api_error_response.model_dump(mode="json", exclude_none=True), status=api_error_response.statusCode
+        )
+    elif isinstance(exc, DRFValidationError):
+        status_code = status.HTTP_400_BAD_REQUEST
+        determined_message = "Invalid request"
+        error_list = format_validation_errors(exc.detail)
+        if not error_list and exc.detail:
+            error_list.append(ApiErrorDetail(detail=str(exc.detail), title=ApiErrors.VALIDATION_ERROR))
+
+    else:
+        if response is not None:
+            status_code = response.status_code
+            if isinstance(response.data, dict) and "detail" in response.data:
+                detail_str = str(response.data["detail"])
+                determined_message = detail_str
+                error_list.append(ApiErrorDetail(detail=detail_str, title=detail_str))
+            elif isinstance(response.data, list):
+                for item_error in response.data:
+                    error_list.append(ApiErrorDetail(detail=str(item_error), title=determined_message))
+            else:
+                error_list.append(
+                    ApiErrorDetail(
+                        detail=str(response.data) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR,
+                        title=determined_message,
+                    )
+                )
+        else:
+            error_list.append(
+                ApiErrorDetail(
+                    detail=str(exc) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR, title=determined_message
+                )
+            )
+
+    if not error_list and not (
+        isinstance(exc, ValueError) and hasattr(exc, "args") and exc.args and isinstance(exc.args[0], ApiErrorResponse)
+    ):
+        default_detail_str = str(exc) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR
+
+        error_list.append(ApiErrorDetail(detail=default_detail_str, title=determined_message))
+
+    final_response_data = ApiErrorResponse(
+        statusCode=status_code,
+        message=determined_message,
+        errors=error_list,
+    )
+    return Response(data=final_response_data.model_dump(mode="json", exclude_none=True), status=status_code)

@@ -58,7 +58,7 @@ class TaskService:
                 return GetTasksResponse(
                     tasks=[],
                     links=None,
-                    error={"message": "Requested page exceeds available results", "code": "PAGE_NOT_FOUND"},
+                    error={"message": ApiErrors.PAGE_NOT_FOUND, "code": "PAGE_NOT_FOUND"},
                 )
 
         except ValidationError as e:
@@ -66,7 +66,7 @@ class TaskService:
 
         except Exception:
             return GetTasksResponse(
-                tasks=[], links=None, error={"message": "An unexpected error occurred", "code": "INTERNAL_ERROR"}
+                tasks=[], links=None, error={"message": ApiErrors.UNEXPECTED_ERROR_OCCURRED, "code": "INTERNAL_ERROR"}
             )
 
     @classmethod
@@ -153,8 +153,8 @@ class TaskService:
     def get_task_by_id(cls, task_id: str) -> TaskDTO:
         try:
             task_model = TaskRepository.get_by_id(task_id)
-        except InvalidId:
-            raise ValueError(ApiErrors.INVALID_TASK_ID_FORMAT_DETAIL)
+        except InvalidId as e_bson:
+            raise ValueError(ApiErrors.INVALID_TASK_ID_FORMAT) from e_bson
 
         if not task_model:
             raise TaskNotFoundException(ApiErrors.TASK_NOT_FOUND.format(task_id))

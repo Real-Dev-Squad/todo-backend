@@ -21,9 +21,7 @@ class ApiErrors:
     PAGE_NOT_FOUND = "Requested page exceeds available results"
     UNEXPECTED_ERROR_OCCURRED = "An unexpected error occurred"
     TASK_NOT_FOUND = "Task with ID {0} not found."
-    TASK_NOT_FOUND_TITLE = "Task Not Found"
-    INVALID_TASK_ID_FORMAT = "Invalid Task ID Format"
-    INVALID_TASK_ID_FORMAT_DETAIL = "Task ID is not in a valid format."
+    INVALID_TASK_ID_FORMAT = "Task ID is not in a valid format."
 
 
 # Validation error messages

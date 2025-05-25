@@ -8,7 +8,7 @@ from django.conf import settings
 from datetime import datetime, timedelta, timezone
 from bson.objectid import ObjectId
 
-from todo.views.task import TaskView
+from todo.views.task import TaskListView
 from todo.dto.user_dto import UserDTO
 from todo.dto.task_dto import TaskDTO
 from todo.dto.responses.get_tasks_response import GetTasksResponse
@@ -89,24 +89,24 @@ class TaskViewTests(APISimpleTestCase):
     @patch("todo.services.task_service.TaskService.get_task_by_id")
     def test_get_single_task_not_found(self, mock_get_task_by_id: Mock):
         non_existent_task_id = str(ObjectId())
-        error_message = ApiErrors.TASK_NOT_FOUND.format(non_existent_task_id)
-        mock_get_task_by_id.side_effect = TaskNotFoundException(error_message)
+        expected_error_message = ApiErrors.TASK_NOT_FOUND.format(non_existent_task_id)
+        mock_get_task_by_id.side_effect = TaskNotFoundException(expected_error_message)
 
         response = self.client.get(reverse("task_detail", args=[non_existent_task_id]))
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data["statusCode"], status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data["message"], ApiErrors.TASK_NOT_FOUND_TITLE)
+        self.assertEqual(response.data["message"], expected_error_message)
         self.assertEqual(len(response.data["errors"]), 1)
         self.assertEqual(response.data["errors"][0]["source"], {"path": "task_id"})
-        self.assertEqual(response.data["errors"][0]["title"], ApiErrors.TASK_NOT_FOUND_TITLE)
-        self.assertEqual(response.data["errors"][0]["detail"], error_message)
+        self.assertEqual(response.data["errors"][0]["title"], expected_error_message)
+        self.assertEqual(response.data["errors"][0]["detail"], expected_error_message)
         mock_get_task_by_id.assert_called_once_with(non_existent_task_id)
 
     @patch("todo.services.task_service.TaskService.get_task_by_id")
     def test_get_single_task_invalid_id_format(self, mock_get_task_by_id: Mock):
         invalid_task_id = "invalid-id-string"
-        mock_get_task_by_id.side_effect = ValueError(ApiErrors.INVALID_TASK_ID_FORMAT_DETAIL)
+        mock_get_task_by_id.side_effect = ValueError(ApiErrors.INVALID_TASK_ID_FORMAT)
 
         response = self.client.get(reverse("task_detail", args=[invalid_task_id]))
 
@@ -116,7 +116,7 @@ class TaskViewTests(APISimpleTestCase):
         self.assertEqual(len(response.data["errors"]), 1)
         self.assertEqual(response.data["errors"][0]["source"], {"path": "task_id"})
         self.assertEqual(response.data["errors"][0]["title"], ApiErrors.VALIDATION_ERROR)
-        self.assertEqual(response.data["errors"][0]["detail"], ApiErrors.INVALID_TASK_ID_FORMAT_DETAIL)
+        self.assertEqual(response.data["errors"][0]["detail"], ApiErrors.INVALID_TASK_ID_FORMAT)
         mock_get_task_by_id.assert_called_once_with(invalid_task_id)
 
     @patch("todo.services.task_service.TaskService.get_task_by_id")
@@ -136,7 +136,7 @@ class TaskViewTests(APISimpleTestCase):
 class TaskViewTest(TestCase):
     def setUp(self):
         self.factory = APIRequestFactory()
-        self.view = TaskView.as_view()
+        self.view = TaskListView.as_view()
 
     @patch("todo.services.task_service.TaskService.get_tasks")
     def test_get_tasks_with_default_pagination(self, mock_get_tasks):

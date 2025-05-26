@@ -240,7 +240,7 @@ class TaskServiceTests(TestCase):
     @patch.object(TaskRepository, "get_by_id", side_effect=InvalidId("Invalid ObjectId"))
     def test_get_task_by_id_invalid_id_format(self, mock_get_by_id):
         invalid_id = "invalid_id"
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(TaskNotFoundException) as context:
             TaskService.get_task_by_id(invalid_id)
 
         self.assertEqual(str(context.exception), ApiErrors.INVALID_TASK_ID_FORMAT)

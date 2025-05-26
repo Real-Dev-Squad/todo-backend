@@ -62,12 +62,12 @@ class TaskDetailAPIIntegrationTest(APITestCase):
         url = reverse("task_detail", args=[invalid_task_id])
         response = self.client.get(url)
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data["message"], ApiErrors.INVALID_TASK_ID_FORMAT)
         self.assertEqual(len(response.data["errors"]), 1)
         error_detail_obj = response.data["errors"][0]
         self.assertEqual(error_detail_obj["detail"], ApiErrors.INVALID_TASK_ID_FORMAT)
         self.assertIn(ApiErrorSource.PATH.value, error_detail_obj["source"])
         self.assertEqual(error_detail_obj["source"][ApiErrorSource.PATH.value], "task_id")
-        self.assertEqual(error_detail_obj["title"], ApiErrors.VALIDATION_ERROR)
+        self.assertEqual(error_detail_obj["title"], ApiErrors.INVALID_TASK_ID_FORMAT)
         mock_actual_get_task_by_id.assert_called_once_with(invalid_task_id)

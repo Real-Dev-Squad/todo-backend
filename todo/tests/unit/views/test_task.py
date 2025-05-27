@@ -17,7 +17,7 @@ from todo.tests.fixtures.task import task_dtos
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.dto.responses.get_task_by_id_response import GetTaskByIdResponse
 from todo.exceptions.task_exceptions import TaskNotFoundException
-from todo.constants.messages import ApiErrors
+from todo.constants.messages import ValidationErrors, ApiErrors
 
 
 class TaskViewTests(APISimpleTestCase):
@@ -89,7 +89,7 @@ class TaskViewTests(APISimpleTestCase):
     @patch("todo.services.task_service.TaskService.get_task_by_id")
     def test_get_single_task_not_found(self, mock_get_task_by_id: Mock):
         non_existent_task_id = str(ObjectId())
-        expected_error_message = ApiErrors.TASK_NOT_FOUND.format(non_existent_task_id)
+        expected_error_message = ValidationErrors.TASK_NOT_FOUND.format(non_existent_task_id)
         mock_get_task_by_id.side_effect = TaskNotFoundException(expected_error_message)
 
         response = self.client.get(reverse("task_detail", args=[non_existent_task_id]))
@@ -106,17 +106,17 @@ class TaskViewTests(APISimpleTestCase):
     @patch("todo.services.task_service.TaskService.get_task_by_id")
     def test_get_single_task_invalid_id_format(self, mock_get_task_by_id: Mock):
         invalid_task_id = "invalid-id-string"
-        mock_get_task_by_id.side_effect = ValueError(ApiErrors.INVALID_TASK_ID_FORMAT)
+        mock_get_task_by_id.side_effect = ValueError(ValidationErrors.INVALID_TASK_ID_FORMAT)
 
         response = self.client.get(reverse("task_detail", args=[invalid_task_id]))
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["statusCode"], status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["message"], ApiErrors.INVALID_TASK_ID_FORMAT)
+        self.assertEqual(response.data["message"], ValidationErrors.INVALID_TASK_ID_FORMAT)
         self.assertEqual(len(response.data["errors"]), 1)
         self.assertEqual(response.data["errors"][0]["source"], {"path": "task_id"})
         self.assertEqual(response.data["errors"][0]["title"], ApiErrors.VALIDATION_ERROR)
-        self.assertEqual(response.data["errors"][0]["detail"], ApiErrors.INVALID_TASK_ID_FORMAT)
+        self.assertEqual(response.data["errors"][0]["detail"], ValidationErrors.INVALID_TASK_ID_FORMAT)
         mock_get_task_by_id.assert_called_once_with(invalid_task_id)
 
     @patch("todo.services.task_service.TaskService.get_task_by_id")

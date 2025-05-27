@@ -16,7 +16,7 @@ from todo.constants.task import TaskPriority, TaskStatus
 from todo.models.task import TaskModel
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from bson.errors import InvalidId
-from todo.constants.messages import ApiErrors
+from todo.constants.messages import ValidationErrors
 from todo.repositories.task_repository import TaskRepository
 
 
@@ -234,7 +234,7 @@ class TaskServiceTests(TestCase):
         with self.assertRaises(TaskNotFoundException) as context:
             TaskService.get_task_by_id(task_id)
 
-        self.assertEqual(str(context.exception), ApiErrors.TASK_NOT_FOUND.format(task_id))
+        self.assertEqual(str(context.exception), ValidationErrors.TASK_NOT_FOUND.format(task_id))
         mock_repo_get_by_id.assert_called_once_with(task_id)
 
     @patch.object(TaskRepository, "get_by_id", side_effect=InvalidId("Invalid ObjectId"))
@@ -243,5 +243,5 @@ class TaskServiceTests(TestCase):
         with self.assertRaises(TaskNotFoundException) as context:
             TaskService.get_task_by_id(invalid_id)
 
-        self.assertEqual(str(context.exception), ApiErrors.INVALID_TASK_ID_FORMAT)
+        self.assertEqual(str(context.exception), ValidationErrors.INVALID_TASK_ID_FORMAT)
         mock_get_by_id.assert_called_once_with(invalid_id)

@@ -154,12 +154,12 @@ class TaskService:
         try:
             task_model = TaskRepository.get_by_id(task_id)
             if not task_model:
-                raise TaskNotFoundException(ApiErrors.TASK_NOT_FOUND.format(task_id))
+                raise TaskNotFoundException(ValidationErrors.TASK_NOT_FOUND.format(task_id))
             return cls.prepare_task_dto(task_model)
         except InvalidId as e_bson:
-            raise TaskNotFoundException(ApiErrors.INVALID_TASK_ID_FORMAT) from e_bson
+            raise TaskNotFoundException(ValidationErrors.INVALID_TASK_ID_FORMAT) from e_bson
         except Exception as e:
-            raise TaskNotFoundException(ApiErrors.TASK_NOT_FOUND.format(task_id)) from e
+            raise TaskNotFoundException(ValidationErrors.TASK_NOT_FOUND.format(task_id)) from e
 
     @classmethod
     def create_task(cls, dto: CreateTaskDTO) -> CreateTaskResponse:

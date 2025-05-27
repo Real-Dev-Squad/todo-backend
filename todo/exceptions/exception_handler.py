@@ -8,7 +8,7 @@ from django.conf import settings
 from bson.errors import InvalidId as BsonInvalidId
 
 from todo.dto.responses.error_response import ApiErrorDetail, ApiErrorResponse, ApiErrorSource
-from todo.constants.messages import ApiErrors
+from todo.constants.messages import ApiErrors, ValidationErrors
 from todo.exceptions.task_exceptions import TaskNotFoundException
 
 
@@ -52,27 +52,27 @@ def handle_exception(exc, context):
         )
     elif isinstance(exc, BsonInvalidId):
         status_code = status.HTTP_400_BAD_REQUEST
-        determined_message = ApiErrors.INVALID_TASK_ID_FORMAT
+        determined_message = ValidationErrors.INVALID_TASK_ID_FORMAT
         error_list.append(
             ApiErrorDetail(
                 source={ApiErrorSource.PATH: "task_id"} if task_id else None,
                 title=ApiErrors.VALIDATION_ERROR,
-                detail=ApiErrors.INVALID_TASK_ID_FORMAT,
+                detail=ValidationErrors.INVALID_TASK_ID_FORMAT,
             )
         )
     elif (
         isinstance(exc, ValueError)
         and hasattr(exc, "args")
         and exc.args
-        and (exc.args[0] == ApiErrors.INVALID_TASK_ID_FORMAT or exc.args[0] == "Invalid ObjectId format")
+        and (exc.args[0] == ValidationErrors.INVALID_TASK_ID_FORMAT or exc.args[0] == "Invalid ObjectId format")
     ):
         status_code = status.HTTP_400_BAD_REQUEST
-        determined_message = ApiErrors.INVALID_TASK_ID_FORMAT
+        determined_message = ValidationErrors.INVALID_TASK_ID_FORMAT
         error_list.append(
             ApiErrorDetail(
                 source={ApiErrorSource.PATH: "task_id"} if task_id else None,
                 title=ApiErrors.VALIDATION_ERROR,
-                detail=ApiErrors.INVALID_TASK_ID_FORMAT,
+                detail=ValidationErrors.INVALID_TASK_ID_FORMAT,
             )
         )
     elif (

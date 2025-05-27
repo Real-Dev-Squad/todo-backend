@@ -157,7 +157,7 @@ class TaskService:
                 raise TaskNotFoundException(ApiErrors.TASK_NOT_FOUND.format(task_id))
             return cls.prepare_task_dto(task_model)
         except InvalidId as e_bson:
-            raise TaskNotFoundException(ValidationErrors.INVALID_TASK_ID_FORMAT) from e_bson
+            raise e_bson
         except Exception as e:
             raise TaskNotFoundException(ApiErrors.TASK_NOT_FOUND.format(task_id)) from e
 

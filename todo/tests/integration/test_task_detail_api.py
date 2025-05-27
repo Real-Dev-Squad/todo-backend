@@ -5,7 +5,7 @@ from django.urls import reverse
 from bson import ObjectId
 
 from todo.services.task_service import TaskService
-from todo.constants.messages import ValidationErrors
+from todo.constants.messages import ValidationErrors, ApiErrors
 from todo.dto.responses.error_response import ApiErrorSource
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.tests.fixtures.task import task_dtos
@@ -62,12 +62,15 @@ class TaskDetailAPIIntegrationTest(APITestCase):
         url = reverse("task_detail", args=[invalid_task_id])
         response = self.client.get(url)
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["message"], ValidationErrors.INVALID_TASK_ID_FORMAT)
+        self.assertIsNotNone(response.data.get("errors"))
         self.assertEqual(len(response.data["errors"]), 1)
-        error_detail_obj = response.data["errors"][0]
-        self.assertEqual(error_detail_obj["detail"], ValidationErrors.INVALID_TASK_ID_FORMAT)
-        self.assertIn(ApiErrorSource.PATH.value, error_detail_obj["source"])
-        self.assertEqual(error_detail_obj["source"][ApiErrorSource.PATH.value], "task_id")
-        self.assertEqual(error_detail_obj["title"], ValidationErrors.INVALID_TASK_ID_FORMAT)
+
+        error_obj = response.data["errors"][0]
+        self.assertEqual(error_obj["detail"], ValidationErrors.INVALID_TASK_ID_FORMAT)
+        self.assertIn(ApiErrorSource.PATH.value, error_obj["source"])
+        self.assertEqual(error_obj["source"][ApiErrorSource.PATH.value], "task_id")
+        self.assertEqual(error_obj["title"], ApiErrors.VALIDATION_ERROR)
+
         mock_actual_get_task_by_id.assert_called_once_with(invalid_task_id)

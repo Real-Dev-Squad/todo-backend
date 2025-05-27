@@ -158,8 +158,6 @@ class TaskService:
             return cls.prepare_task_dto(task_model)
         except InvalidId as e_bson:
             raise e_bson
-        except Exception as e:
-            raise TaskNotFoundException(ApiErrors.TASK_NOT_FOUND.format(task_id)) from e
 
     @classmethod
     def create_task(cls, dto: CreateTaskDTO) -> CreateTaskResponse:

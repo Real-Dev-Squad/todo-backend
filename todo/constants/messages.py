@@ -20,6 +20,7 @@ class ApiErrors:
     INVALID_LABEL_IDS = "Invalid Label IDs"
     PAGE_NOT_FOUND = "Requested page exceeds available results"
     UNEXPECTED_ERROR_OCCURRED = "An unexpected error occurred"
+    TASK_NOT_FOUND = "Task with ID {0} not found."
 
 
 # Validation error messages
@@ -31,5 +32,4 @@ class ValidationErrors:
     LIMIT_POSITIVE = "Limit must be a positive integer"
     MAX_LIMIT_EXCEEDED = "Maximum limit of {0} exceeded"
     MISSING_LABEL_IDS = "The following label ID(s) do not exist: {0}."
-    TASK_NOT_FOUND = "Task with ID {0} not found."
     INVALID_TASK_ID_FORMAT = "Please enter a valid Task ID format."

@@ -89,7 +89,7 @@ class TaskViewTests(APISimpleTestCase):
     @patch("todo.services.task_service.TaskService.get_task_by_id")
     def test_get_single_task_not_found(self, mock_get_task_by_id: Mock):
         non_existent_task_id = str(ObjectId())
-        expected_error_message = ValidationErrors.TASK_NOT_FOUND.format(non_existent_task_id)
+        expected_error_message = ApiErrors.TASK_NOT_FOUND.format(non_existent_task_id)
         mock_get_task_by_id.side_effect = TaskNotFoundException(expected_error_message)
 
         response = self.client.get(reverse("task_detail", args=[non_existent_task_id]))

@@ -90,7 +90,7 @@ class TaskViewTests(APISimpleTestCase):
     def test_get_single_task_not_found(self, mock_get_task_by_id: Mock):
         non_existent_task_id = str(ObjectId())
         expected_error_message = ApiErrors.TASK_NOT_FOUND.format(non_existent_task_id)
-        mock_get_task_by_id.side_effect = TaskNotFoundException(expected_error_message)
+        mock_get_task_by_id.side_effect = TaskNotFoundException(task_id=non_existent_task_id)
 
         response = self.client.get(reverse("task_detail", args=[non_existent_task_id]))
 
@@ -99,7 +99,7 @@ class TaskViewTests(APISimpleTestCase):
         self.assertEqual(response.data["message"], expected_error_message)
         self.assertEqual(len(response.data["errors"]), 1)
         self.assertEqual(response.data["errors"][0]["source"], {"path": "task_id"})
-        self.assertEqual(response.data["errors"][0]["title"], expected_error_message)
+        self.assertEqual(response.data["errors"][0]["title"], ApiErrors.RESOURCE_NOT_FOUND_TITLE)
         self.assertEqual(response.data["errors"][0]["detail"], expected_error_message)
         mock_get_task_by_id.assert_called_once_with(non_existent_task_id)
 

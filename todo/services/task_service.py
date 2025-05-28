@@ -154,7 +154,7 @@ class TaskService:
         try:
             task_model = TaskRepository.get_by_id(task_id)
             if not task_model:
-                raise TaskNotFoundException(ApiErrors.TASK_NOT_FOUND.format(task_id))
+                raise TaskNotFoundException(task_id)
             return cls.prepare_task_dto(task_model)
         except BsonInvalidId as exc:
             raise ValueError(ValidationErrors.INVALID_TASK_ID_FORMAT) from exc

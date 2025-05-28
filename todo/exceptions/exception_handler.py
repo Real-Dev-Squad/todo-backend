@@ -46,7 +46,7 @@ def handle_exception(exc, context):
         error_list.append(
             ApiErrorDetail(
                 source={ApiErrorSource.PATH: "task_id"} if task_id else None,
-                title=detail_message_str,
+                title=ApiErrors.RESOURCE_NOT_FOUND_TITLE,
                 detail=detail_message_str,
             )
         )

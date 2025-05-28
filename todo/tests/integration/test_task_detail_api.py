@@ -46,14 +46,14 @@ class TaskDetailAPIIntegrationTest(APITestCase):
     @patch("todo.services.task_service.TaskService.get_task_by_id")
     def test_get_task_by_id_not_found(self, mock_get_task_by_id):
         non_existent_id = str(ObjectId())
-        mock_get_task_by_id.side_effect = TaskNotFoundException("Task not found")
+        mock_get_task_by_id.side_effect = TaskNotFoundException()
 
         url = reverse("task_detail", args=[non_existent_id])
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         error_detail = response.data.get("errors", [{}])[0].get("detail")
-        self.assertEqual(error_detail, "Task not found")
+        self.assertEqual(error_detail, "Task not found.")
         mock_get_task_by_id.assert_called_once_with(non_existent_id)
 
     @patch.object(TaskService, "get_task_by_id", wraps=TaskService.get_task_by_id)

@@ -221,3 +221,45 @@ class TaskService:
                     ],
                 )
             )
+
+    @staticmethod
+    def add_label_to_task(task_id: PyObjectId, label_id: PyObjectId) -> None:
+        """
+        Add a label to a task.
+
+        Args:
+            task_id: The ID of the task
+            label_id: The ID of the label to add
+
+        Raises:
+            ValueError: If the task or label doesn't exist
+        """
+        from todo.repositories.task_repository import TaskRepository
+        from todo.repositories.label_repository import LabelRepository
+
+        # Check if task exists
+        task = TaskRepository.get_by_id(task_id)
+        if not task:
+            raise ValueError(ApiErrorResponse(
+                statusCode=404,
+                message="Task not found",
+                errors=[{"detail": f"Task with ID {task_id} does not exist"}]
+            ))
+
+        # Check if label exists
+        label = LabelRepository.get_by_id(label_id)
+        if not label:
+            raise ValueError(ApiErrorResponse(
+                statusCode=404,
+                message="Label not found",
+                errors=[{"detail": f"Label with ID {label_id} does not exist"}]
+            ))
+
+        # Initialize labels list if None
+        if task.labels is None:
+            task.labels = []
+
+        # Add label if not already present
+        if label_id not in task.labels:
+            task.labels.append(label_id)
+            TaskRepository.update(task)

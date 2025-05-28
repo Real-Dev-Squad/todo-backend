@@ -157,7 +157,7 @@ class TaskService:
                 raise TaskNotFoundException(task_id)
             return cls.prepare_task_dto(task_model)
         except BsonInvalidId as exc:
-            raise ValueError(ValidationErrors.INVALID_TASK_ID_FORMAT) from exc
+            raise exc
 
     @classmethod
     def create_task(cls, dto: CreateTaskDTO) -> CreateTaskResponse:

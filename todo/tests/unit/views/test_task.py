@@ -315,3 +315,22 @@ class TaskDeleteViewTests(APISimpleTestCase):
         mock_delete_task.assert_called_once_with(self.valid_task_id)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.data, None)
+
+    @patch("todo.services.task_service.TaskService.delete_task")
+    def test_delete_task_returns_404_when_not_found(self, mock_delete_task: Mock):
+        from todo.exceptions.task_exceptions import TaskNotFoundException
+        mock_delete_task.side_effect = TaskNotFoundException(
+            self.valid_task_id)
+
+        response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("Task Not Found", response.data["message"])
+
+    def test_delete_task_returns_400_for_invalid_id_format(self):
+        invalid_url = reverse("task_detail", kwargs={"task_id": "invalid-id"})
+
+        response = self.client.delete(invalid_url)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Invalid Task ID", response.data["message"])

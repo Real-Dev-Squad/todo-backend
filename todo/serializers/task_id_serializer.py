@@ -11,5 +11,6 @@ class TaskIdSerializer(serializers.Serializer):
         try:
             ObjectId(value)
         except InvalidId:
-            raise serializers.ValidationError(ValidationErrors.INVALID_TASK_ID_FORMAT)
+            raise serializers.ValidationError(
+                ValidationErrors.INVALID_TASK_ID_FORMAT)
         return value

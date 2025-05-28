@@ -20,7 +20,7 @@ from todo.constants.task import TaskStatus
 from todo.constants.messages import ApiErrors, ValidationErrors
 from django.conf import settings
 from todo.exceptions.task_exceptions import TaskNotFoundException
-from bson.errors import InvalidId
+from bson.errors import InvalidId as BsonInvalidId
 
 
 @dataclass
@@ -156,8 +156,8 @@ class TaskService:
             if not task_model:
                 raise TaskNotFoundException(ApiErrors.TASK_NOT_FOUND.format(task_id))
             return cls.prepare_task_dto(task_model)
-        except InvalidId as e_bson:
-            raise e_bson
+        except BsonInvalidId as exc:
+            raise ValueError(ValidationErrors.INVALID_TASK_ID_FORMAT) from exc
 
     @classmethod
     def create_task(cls, dto: CreateTaskDTO) -> CreateTaskResponse:

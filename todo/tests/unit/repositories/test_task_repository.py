@@ -205,3 +205,28 @@ class TaskRepositoryCreateTests(TestCase):
 
         self.assertIn("Failed to create task", str(context.exception))
         mock_create.assert_called_once_with(task)
+
+
+class TaskRepositoryDeleteTests(TestCase):
+    def setUp(self):
+        self.patcher_get_collection = patch("todo.repositories.task_repository.TaskRepository.get_collection")
+        self.mock_get_collection = self.patcher_get_collection.start()
+        self.mock_collection = MagicMock()
+        self.mock_get_collection.return_value = self.mock_collection
+
+    def tearDown(self):
+        self.patcher_get_collection.stop()
+
+    def test_delete_by_id_returns_deleted_task(self):
+        task_dict = tasks_db_data[0].copy()
+        fake_id = ObjectId()
+        task_dict["_id"] = fake_id
+
+        self.mock_collection.find_one_and_delete.return_value = task_dict
+
+        deleted_task = TaskRepository.delete_by_id(str(fake_id))
+
+        self.assertIsNotNone(deleted_task)
+        self.assertEqual(deleted_task.id, fake_id)
+        self.assertEqual(deleted_task.title, task_dict["title"])
+        self.mock_collection.find_one_and_delete.assert_called_once_with({"_id": fake_id})

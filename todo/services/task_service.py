@@ -5,7 +5,6 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from urllib.parse import urlencode
 from datetime import datetime, timezone
-
 from todo.dto.label_dto import LabelDTO
 from todo.dto.task_dto import TaskDTO, CreateTaskDTO
 from todo.dto.user_dto import UserDTO
@@ -234,3 +233,9 @@ class TaskService:
                     ],
                 )
             )
+
+    @classmethod
+    def delete_task(cls, task_id: str) -> None:
+        deleted_task_model = TaskRepository.delete_by_id(task_id)
+        if deleted_task_model is None:
+            raise TaskNotFoundException(task_id=task_id)

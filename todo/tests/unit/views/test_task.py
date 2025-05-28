@@ -20,7 +20,7 @@ from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.constants.messages import ValidationErrors, ApiErrors
 
 
-class TaskViewTests(APISimpleTestCase):
+class TaskListViewTests(APISimpleTestCase):
     def setUp(self):
         self.client = APIClient()
         self.url = reverse("tasks")
@@ -57,7 +57,7 @@ class TaskViewTests(APISimpleTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         expected_response = {
             "statusCode": 400,
-            "message": "Invalid request",
+            "message": "Invalid Task ID",
             "errors": [
                 {"source": {"parameter": "page"}, "detail": "A valid integer is required."},
                 {"source": {"parameter": "limit"}, "detail": "limit must be greater than or equal to 1"},
@@ -133,7 +133,7 @@ class TaskViewTests(APISimpleTestCase):
         mock_get_task_by_id.assert_called_once_with(task_id)
 
 
-class TaskViewTest(TestCase):
+class TaskListViewTest(TestCase):
     def setUp(self):
         self.factory = APIRequestFactory()
         self.view = TaskListView.as_view()
@@ -300,3 +300,18 @@ class CreateTaskViewTests(APISimpleTestCase):
             self.assertIn("An unexpected error occurred", str(response.data))
         except Exception as e:
             self.assertEqual(str(e), "Database exploded")
+
+
+class TaskDeleteViewTests(APISimpleTestCase):
+    def setUp(self):
+        self.valid_task_id = str(ObjectId())
+        self.url = reverse("task_detail", kwargs={"task_id": self.valid_task_id})
+
+    @patch("todo.services.task_service.TaskService.delete_task")
+    def test_delete_task_returns_204_on_success(self, mock_delete_task: Mock):
+        mock_delete_task.return_value = None
+
+        response = self.client.delete(self.url)
+        mock_delete_task.assert_called_once_with(self.valid_task_id)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data, None)

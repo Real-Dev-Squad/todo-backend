@@ -25,11 +25,10 @@ class ExceptionHandlerTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         expected_response = {
             "statusCode": 400,
-            "message": "Invalid request",
+            "message": "Invalid Task ID",
             "errors": [{"source": {"parameter": "field"}, "detail": "error message"}],
         }
         self.assertDictEqual(response.data, expected_response)
-
         mock_format_validation_errors.assert_called_once_with(validation_error.detail)
 
     def test_custom_handler_formats_generic_exception(self):

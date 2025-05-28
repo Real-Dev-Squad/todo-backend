@@ -82,3 +82,11 @@ class TaskRepository(MongoRepository):
         if task_data:
             return TaskModel(**task_data)
         return None
+
+    @classmethod
+    def delete_by_id(cls, task_id: str) -> TaskModel | None:
+        tasks_collection = cls.get_collection()
+        task_data = tasks_collection.find_one_and_delete({"_id": ObjectId(task_id)})
+        if task_data:
+            return TaskModel(**task_data)
+        return None

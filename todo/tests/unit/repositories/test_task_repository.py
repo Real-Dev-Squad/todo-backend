@@ -207,26 +207,52 @@ class TaskRepositoryCreateTests(TestCase):
         mock_create.assert_called_once_with(task)
 
 
-class TaskRepositoryDeleteTests(TestCase):
+class TestRepositoryDeleteTaskById(TestCase):
     def setUp(self):
-        self.patcher_get_collection = patch("todo.repositories.task_repository.TaskRepository.get_collection")
-        self.mock_get_collection = self.patcher_get_collection.start()
-        self.mock_collection = MagicMock()
-        self.mock_get_collection.return_value = self.mock_collection
+        self.task_id = tasks_db_data[0]["id"]
+        self.mock_task_data = tasks_db_data[0]
 
-    def tearDown(self):
-        self.patcher_get_collection.stop()
+    @patch("todo.repositories.task_repository.TaskRepository.get_collection")
+    def test_delete_task_success_when_isDeleted_false(self, mock_get_collection):
+        mock_collection = MagicMock()
+        mock_get_collection.return_value = mock_collection
+        mock_collection.find_one_and_update.return_value = self.mock_task_data
 
-    def test_delete_by_id_returns_deleted_task(self):
-        task_dict = tasks_db_data[0].copy()
-        fake_id = ObjectId()
-        task_dict["_id"] = fake_id
+        result = TaskRepository.delete_by_id(self.task_id)
 
-        self.mock_collection.find_one_and_delete.return_value = task_dict
+        self.assertIsInstance(result, TaskModel)
+        self.assertEqual(result.title, tasks_db_data[0]["title"])
+        mock_collection.find_one_and_update.assert_called_once_with(
+            {
+                "_id": ObjectId(self.task_id),
+                "$or": [{"isDeleted": False}, {"isDeleted": {"$exists": False}}],
+            },
+            {"$set": {"isDeleted": True}},
+            return_document=True,
+        )
 
-        deleted_task = TaskRepository.delete_by_id(str(fake_id))
+    @patch("todo.repositories.task_repository.TaskRepository.get_collection")
+    def test_delete_task_success_when_isDeleted_missing(self, mock_get_collection):
+        mock_data = self.mock_task_data.copy()
+        mock_data.pop("isDeleted")
 
-        self.assertIsNotNone(deleted_task)
-        self.assertEqual(deleted_task.id, fake_id)
-        self.assertEqual(deleted_task.title, task_dict["title"])
-        self.mock_collection.find_one_and_delete.assert_called_once_with({"_id": fake_id})
+        mock_collection = MagicMock()
+        mock_get_collection.return_value = mock_collection
+        mock_collection.find_one_and_update.return_value = mock_data
+
+        result = TaskRepository.delete_by_id(self.task_id)
+        self.assertIsInstance(result, TaskModel)
+
+    @patch("todo.repositories.task_repository.TaskRepository.get_collection")
+    def test_delete_task_returns_none_when_already_deleted(self, mock_get_collection):
+        mock_collection = MagicMock()
+        mock_get_collection.return_value = mock_collection
+        mock_collection.find_one_and_update.return_value = None
+
+        result = TaskRepository.delete_by_id(self.task_id)
+        self.assertIsNone(result)
+
+    def test_delete_task_invalid_object_id_raises_exception(self):
+        invalid_id = "not-valid-id"
+        with self.assertRaises(Exception):
+            TaskRepository.delete_by_id(invalid_id)

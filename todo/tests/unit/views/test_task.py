@@ -57,7 +57,7 @@ class TaskListViewTests(APISimpleTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         expected_response = {
             "statusCode": 400,
-            "message": "Invalid Task ID",
+            "message": "Invalid request",
             "errors": [
                 {"source": {"parameter": "page"}, "detail": "A valid integer is required."},
                 {"source": {"parameter": "limit"}, "detail": "limit must be greater than or equal to 1"},
@@ -325,7 +325,7 @@ class TaskDeleteViewTests(APISimpleTestCase):
         response = self.client.delete(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertIn("Task Not Found", response.data["message"])
+        self.assertIn(ApiErrors.TASK_NOT_FOUND.format(self.valid_task_id), response.data["message"])
 
     def test_delete_task_returns_400_for_invalid_id_format(self):
         invalid_url = reverse("task_detail", kwargs={"task_id": "invalid-id"})
@@ -333,4 +333,4 @@ class TaskDeleteViewTests(APISimpleTestCase):
         response = self.client.delete(invalid_url)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Invalid Task ID", response.data["message"])
+        self.assertIn(ValidationErrors.INVALID_TASK_ID_FORMAT, response.data["message"])

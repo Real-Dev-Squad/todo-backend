@@ -14,7 +14,7 @@ from todo.exceptions.task_exceptions import TaskNotFoundException
 
 def format_validation_errors(errors) -> List[ApiErrorDetail]:
     formatted_errors = []
-    if isinstance(errors, (ReturnDict, dict)):
+    if isinstance(errors, ReturnDict | dict):
         for field, messages in errors.items():
             details = messages if isinstance(messages, list) else [messages]
             for message_detail in details:

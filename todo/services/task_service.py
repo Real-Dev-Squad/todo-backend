@@ -236,6 +236,9 @@ class TaskService:
 
     @classmethod
     def delete_task(cls, task_id: str) -> None:
-        deleted_task_model = TaskRepository.delete_by_id(task_id)
-        if deleted_task_model is None:
-            raise TaskNotFoundException(task_id=task_id)
+        try:
+            deleted_task_model = TaskRepository.delete_by_id(task_id)
+            if deleted_task_model is None:
+                raise TaskNotFoundException(task_id)
+        except BsonInvalidId as exc:
+            raise exc

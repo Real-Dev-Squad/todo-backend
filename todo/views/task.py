@@ -5,7 +5,6 @@ from rest_framework.request import Request
 from django.conf import settings
 from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer
 from todo.serializers.create_task_serializer import CreateTaskSerializer
-from todo.serializers.task_id_serializer import TaskIdSerializer
 from todo.services.task_service import TaskService
 from todo.dto.task_dto import CreateTaskDTO
 from todo.dto.responses.create_task_response import CreateTaskResponse
@@ -95,8 +94,5 @@ class TaskDetailView(APIView):
         return Response(data=response_data.model_dump(mode="json"), status=status.HTTP_200_OK)
 
     def delete(self, request: Request, task_id: str):
-        serializer = TaskIdSerializer(data={"task_id": task_id})
-        serializer.is_valid(raise_exception=True)
-        validated_task_id = serializer.validated_data["task_id"]
-        TaskService.delete_task(validated_task_id)
+        TaskService.delete_task(task_id)
         return Response(status=status.HTTP_204_NO_CONTENT)

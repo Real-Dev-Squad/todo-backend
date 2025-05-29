@@ -16,8 +16,7 @@ class ExceptionHandlerTests(TestCase):
     def test_returns_400_for_validation_error(self, mock_format_validation_errors: Mock):
         validation_error = DRFValidationError(detail={"field": ["error message"]})
         mock_format_validation_errors.return_value = [
-            ApiErrorDetail(detail="error message", source={
-                           ApiErrorSource.PARAMETER: "field"})
+            ApiErrorDetail(detail="error message", source={ApiErrorSource.PARAMETER: "field"})
         ]
 
         response = handle_exception(validation_error, {})
@@ -26,12 +25,11 @@ class ExceptionHandlerTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         expected_response = {
             "statusCode": 400,
-            "message": "Invalid Task ID",
+            "message": "Invalid request",
             "errors": [{"source": {"parameter": "field"}, "detail": "error message"}],
         }
         self.assertDictEqual(response.data, expected_response)
-        mock_format_validation_errors.assert_called_once_with(
-            validation_error.detail)
+        mock_format_validation_errors.assert_called_once_with(validation_error.detail)
 
     def test_custom_handler_formats_generic_exception(self):
         request = None
@@ -71,10 +69,8 @@ class FormatValidationErrorsTests(TestCase):
     def test_formats_flat_validation_errors(self):
         errors = {"field": ["error message 1", "error message 2"]}
         expected_result = [
-            ApiErrorDetail(detail="error message 1", source={
-                           ApiErrorSource.PARAMETER: "field"}),
-            ApiErrorDetail(detail="error message 2", source={
-                           ApiErrorSource.PARAMETER: "field"}),
+            ApiErrorDetail(detail="error message 1", source={ApiErrorSource.PARAMETER: "field"}),
+            ApiErrorDetail(detail="error message 2", source={ApiErrorSource.PARAMETER: "field"}),
         ]
 
         result = format_validation_errors(errors)
@@ -89,10 +85,8 @@ class FormatValidationErrorsTests(TestCase):
             }
         }
         expected_result = [
-            ApiErrorDetail(detail="child error message", source={
-                           ApiErrorSource.PARAMETER: "child_field"}),
-            ApiErrorDetail(detail="deep error message", source={
-                           ApiErrorSource.PARAMETER: "deep_field"}),
+            ApiErrorDetail(detail="child error message", source={ApiErrorSource.PARAMETER: "child_field"}),
+            ApiErrorDetail(detail="deep error message", source={ApiErrorSource.PARAMETER: "deep_field"}),
         ]
 
         result = format_validation_errors(errors)
@@ -101,8 +95,7 @@ class FormatValidationErrorsTests(TestCase):
 
     def test_formats_non_list_dict_validation_error(self):
         errors = {"field": "Not a list or dict"}
-        expected_result = [ApiErrorDetail(detail="Not a list or dict", source={
-                                          ApiErrorSource.PARAMETER: "field"})]
+        expected_result = [ApiErrorDetail(detail="Not a list or dict", source={ApiErrorSource.PARAMETER: "field"})]
 
         result = format_validation_errors(errors)
 

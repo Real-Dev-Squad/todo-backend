@@ -86,7 +86,18 @@ class TaskRepository(MongoRepository):
     @classmethod
     def delete_by_id(cls, task_id: str) -> TaskModel | None:
         tasks_collection = cls.get_collection()
-        task_data = tasks_collection.find_one_and_delete({"_id": ObjectId(task_id)})
-        if task_data:
-            return TaskModel(**task_data)
+
+        deleted_task_data = tasks_collection.find_one_and_update(
+            {
+                "_id": ObjectId(task_id),
+                "$or": [{"isDeleted": False}, {"isDeleted": {"$exists": False}}],
+            },
+            {
+                "$set": {"isDeleted": True},
+            },
+            return_document=True,
+        )
+
+        if deleted_task_data:
+            return TaskModel(**deleted_task_data)
         return None

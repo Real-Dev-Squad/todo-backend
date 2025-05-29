@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import List
-from bson import ObjectId
+from bson import ObjectId, errors as bson_errors
+from pymongo import ReturnDocument
 
 from todo.models.task import TaskModel
 from todo.repositories.common.mongo_repository import MongoRepository
@@ -81,4 +82,31 @@ class TaskRepository(MongoRepository):
         task_data = tasks_collection.find_one({"_id": ObjectId(task_id)})
         if task_data:
             return TaskModel(**task_data)
+        return None
+
+    @classmethod
+    def update(cls, task_id: str, update_data: dict) -> TaskModel | None:
+        """
+        Updates a specific task by its ID with the given data.
+        """
+        tasks_collection = cls.get_collection()
+        try:
+            obj_id = ObjectId(task_id)
+        except bson_errors.InvalidId:
+            return None
+
+        update_data_with_timestamp = {**update_data, "updatedAt": datetime.now(timezone.utc)}
+
+        update_data_with_timestamp.pop("_id", None)
+        update_data_with_timestamp.pop("id", None)
+
+        if not update_data_with_timestamp:
+            pass
+
+        updated_task_doc = tasks_collection.find_one_and_update(
+            {"_id": obj_id}, {"$set": update_data_with_timestamp}, return_document=ReturnDocument.AFTER
+        )
+
+        if updated_task_doc:
+            return TaskModel(**updated_task_doc)
         return None

@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from urllib.parse import urlencode
 from datetime import datetime, timezone
+from rest_framework import status
 
 from todo.dto.label_dto import LabelDTO
 from todo.dto.task_dto import TaskDTO, CreateTaskDTO
@@ -14,9 +15,10 @@ from todo.dto.responses.create_task_response import CreateTaskResponse
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.dto.responses.paginated_response import LinksData
 from todo.models.task import TaskModel
+from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.label_repository import LabelRepository
-from todo.constants.task import TaskStatus
+from todo.constants.task import TaskStatus, TaskPriority
 from todo.constants.messages import ApiErrors, ValidationErrors
 from django.conf import settings
 from todo.exceptions.task_exceptions import TaskNotFoundException
@@ -158,6 +160,96 @@ class TaskService:
             return cls.prepare_task_dto(task_model)
         except BsonInvalidId as exc:
             raise exc
+
+    @classmethod
+    def update_task(cls, task_id: str, validated_data: dict, user_id: str = "system") -> TaskDTO:
+        current_task_model = TaskRepository.get_by_id(task_id)
+        if not current_task_model:
+            raise TaskNotFoundException(task_id)
+
+        update_payload = {}
+        has_updates = False
+
+        for field, value in validated_data.items():
+            if field == "labels":
+                if value is None:
+                    update_payload[field] = []
+                    has_updates = True
+                elif isinstance(value, list):
+                    label_object_ids = []
+                    invalid_format_ids = []
+                    for label_id_str in value:
+                        if not PyObjectId.is_valid(label_id_str):
+                            invalid_format_ids.append(label_id_str)
+                        else:
+                            label_object_ids.append(PyObjectId(label_id_str))
+
+                    if invalid_format_ids:
+                        raise ValueError(
+                            ApiErrorResponse(
+                                statusCode=status.HTTP_400_BAD_REQUEST,
+                                message=ApiErrors.INVALID_LABELS,
+                                errors=[
+                                    ApiErrorDetail(
+                                        source={ApiErrorSource.PARAMETER: "labels"},
+                                        title=ApiErrors.INVALID_LABEL_IDS,
+                                        detail=ValidationErrors.INVALID_OBJECT_ID.format(", ".join(invalid_format_ids)),
+                                    )
+                                ],
+                            )
+                        )
+
+                    if label_object_ids:
+                        existing_labels = LabelRepository.list_by_ids(label_object_ids)
+                        if len(existing_labels) != len(label_object_ids):
+                            found_db_ids_str = {str(label.id) for label in existing_labels}
+                            missing_ids_str = [
+                                str(py_id) for py_id in label_object_ids if str(py_id) not in found_db_ids_str
+                            ]
+                            raise ValueError(
+                                ApiErrorResponse(
+                                    statusCode=status.HTTP_400_BAD_REQUEST,
+                                    message=ApiErrors.INVALID_LABELS,
+                                    errors=[
+                                        ApiErrorDetail(
+                                            source={ApiErrorSource.PARAMETER: "labels"},
+                                            title=ApiErrors.INVALID_LABEL_IDS,
+                                            detail=ValidationErrors.MISSING_LABEL_IDS.format(
+                                                ", ".join(missing_ids_str)
+                                            ),
+                                        )
+                                    ],
+                                )
+                            )
+                    update_payload[field] = label_object_ids
+                    has_updates = True
+            elif field == "priority":
+                update_payload[field] = TaskPriority[value].value if value else None
+                has_updates = True
+            elif field == "status":
+                update_payload[field] = TaskStatus[value].value if value else None
+                has_updates = True
+            elif field in ["title", "description", "assignee", "dueAt", "startedAt", "isAcknowledged"]:
+                update_payload[field] = value
+                has_updates = True
+
+        if not has_updates:
+            return cls.prepare_task_dto(current_task_model)
+
+        update_payload["updatedBy"] = user_id
+
+        updated_task_model = TaskRepository.update(task_id, update_payload)
+
+        if not updated_task_model:
+            raise ValueError(
+                ApiErrorResponse(
+                    statusCode=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    message=ApiErrors.SERVER_ERROR,
+                    errors=[ApiErrorDetail(detail="Failed to save task updates.", title=ApiErrors.UNEXPECTED_ERROR)],
+                )
+            )
+
+        return cls.prepare_task_dto(updated_task_model)
 
     @classmethod
     def create_task(cls, dto: CreateTaskDTO) -> CreateTaskResponse:

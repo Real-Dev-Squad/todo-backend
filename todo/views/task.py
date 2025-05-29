@@ -6,6 +6,7 @@ from django.conf import settings
 
 from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer
 from todo.serializers.create_task_serializer import CreateTaskSerializer
+from todo.serializers.update_task_serializer import UpdateTaskSerializer
 from todo.services.task_service import TaskService
 from todo.dto.task_dto import CreateTaskDTO
 from todo.dto.responses.create_task_response import CreateTaskResponse
@@ -93,3 +94,19 @@ class TaskDetailView(APIView):
         task_dto = TaskService.get_task_by_id(task_id)
         response_data = GetTaskByIdResponse(data=task_dto)
         return Response(data=response_data.model_dump(mode="json"), status=status.HTTP_200_OK)
+
+    def patch(self, request: Request, task_id: str):
+        """
+        Partially updates a  task by its ID.
+
+        """
+        serializer = UpdateTaskSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        # This is a placeholder for the user ID, NEED TO IMPLEMENT THIS AFTER AUTHENTICATION
+        user_id_placeholder = "system_patch_user"
+
+        updated_task_dto = TaskService.update_task(
+            task_id=task_id, validated_data=serializer.validated_data, user_id=user_id_placeholder
+        )
+
+        return Response(data=updated_task_dto.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)

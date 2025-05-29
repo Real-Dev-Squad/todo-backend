@@ -1,8 +1,9 @@
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
 from pymongo.collection import Collection
-from bson import ObjectId
+from bson import ObjectId, errors as bson_errors
 from datetime import datetime, timezone
+import copy
 
 from todo.models.task import TaskModel
 from todo.repositories.task_repository import TaskRepository
@@ -13,7 +14,33 @@ from todo.constants.messages import RepositoryErrors
 
 class TaskRepositoryTests(TestCase):
     def setUp(self):
-        self.task_data = tasks_db_data
+        self.task_data = copy.deepcopy(tasks_db_data)
+
+        if tasks_db_data:
+            original_single_fixture = tasks_db_data[0]
+            self.task_db_data_fixture = copy.deepcopy(original_single_fixture)
+
+            if "_id" not in self.task_db_data_fixture or not isinstance(self.task_db_data_fixture["_id"], str):
+                self.task_db_data_fixture["_id"] = str(ObjectId())
+            self.task_db_data_fixture["_id"] = ObjectId(self.task_db_data_fixture["_id"])
+
+            self.task_db_data_fixture.setdefault("description", "Default description")
+            self.task_db_data_fixture.setdefault("assignee", None)
+            self.task_db_data_fixture.setdefault("labels", [])
+            self.task_db_data_fixture.setdefault("startedAt", None)
+            self.task_db_data_fixture.setdefault("dueAt", None)
+            self.task_db_data_fixture.setdefault("updatedAt", None)
+            self.task_db_data_fixture.setdefault("updatedBy", None)
+            self.task_db_data_fixture.setdefault("isAcknowledged", False)
+            self.task_db_data_fixture.setdefault("isDeleted", False)
+            self.task_db_data_fixture.setdefault("displayId", "#000")
+            self.task_db_data_fixture.setdefault("title", "Default Title")
+            self.task_db_data_fixture.setdefault("priority", TaskPriority.LOW)
+            self.task_db_data_fixture.setdefault("status", TaskStatus.TODO)
+            self.task_db_data_fixture.setdefault("createdAt", datetime.now(timezone.utc))
+            self.task_db_data_fixture.setdefault("createdBy", "system_test_user")
+        else:
+            self.task_db_data_fixture = None
 
         self.patcher_get_collection = patch("todo.repositories.task_repository.TaskRepository.get_collection")
         self.mock_get_collection = self.patcher_get_collection.start()
@@ -72,6 +99,34 @@ class TaskRepositoryTests(TestCase):
 
         self.assertEqual(result, [])
         self.mock_collection.find.assert_called_once()
+
+    def test_get_by_id_returns_task_model_when_found(self):
+        task_id_str = str(self.task_db_data_fixture["_id"])
+        self.mock_collection.find_one.return_value = self.task_db_data_fixture
+
+        result = TaskRepository.get_by_id(task_id_str)
+
+        self.assertIsInstance(result, TaskModel)
+        self.assertEqual(str(result.id), task_id_str)
+        self.assertEqual(result.title, self.task_db_data_fixture["title"])
+        self.mock_collection.find_one.assert_called_once_with({"_id": ObjectId(task_id_str)})
+
+    def test_get_by_id_returns_none_when_not_found(self):
+        task_id_str = str(ObjectId())
+        self.mock_collection.find_one.return_value = None
+
+        result = TaskRepository.get_by_id(task_id_str)
+
+        self.assertIsNone(result)
+        self.mock_collection.find_one.assert_called_once_with({"_id": ObjectId(task_id_str)})
+
+    def test_get_by_id_raises_invalid_id_for_malformed_id_string(self):
+        invalid_task_id_str = "this-is-not-a-valid-objectid"
+
+        with self.assertRaises(bson_errors.InvalidId):
+            TaskRepository.get_by_id(invalid_task_id_str)
+
+        self.mock_collection.find_one.assert_not_called()
 
 
 class TaskRepositoryCreateTests(TestCase):

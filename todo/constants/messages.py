@@ -1,11 +1,13 @@
 # Application Messages
 class AppMessages:
     TASK_CREATED = "Task created successfully"
-    
+
+
 # Repository error messages
 class RepositoryErrors:
     TASK_CREATION_FAILED = "Failed to create task: {0}"
     DB_INIT_FAILED = "Failed to initialize database: {0}"
+
 
 # API error messages
 class ApiErrors:
@@ -18,6 +20,10 @@ class ApiErrors:
     INVALID_LABEL_IDS = "Invalid Label IDs"
     PAGE_NOT_FOUND = "Requested page exceeds available results"
     UNEXPECTED_ERROR_OCCURRED = "An unexpected error occurred"
+    TASK_NOT_FOUND = "Task with ID {0} not found."
+    TASK_NOT_FOUND_GENERIC = "Task not found."
+    RESOURCE_NOT_FOUND_TITLE = "Resource Not Found"
+
 
 # Validation error messages
 class ValidationErrors:
@@ -27,4 +33,5 @@ class ValidationErrors:
     PAGE_POSITIVE = "Page must be a positive integer"
     LIMIT_POSITIVE = "Limit must be a positive integer"
     MAX_LIMIT_EXCEEDED = "Maximum limit of {0} exceeded"
-    MISSING_LABEL_IDS = "The following label IDs do not exist: {0}"
+    MISSING_LABEL_IDS = "The following label ID(s) do not exist: {0}."
+    INVALID_TASK_ID_FORMAT = "Please enter a valid Task ID format."

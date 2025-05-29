@@ -8,11 +8,14 @@ from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer
 from todo.serializers.create_task_serializer import CreateTaskSerializer
 from todo.services.task_service import TaskService
 from todo.dto.task_dto import CreateTaskDTO
-from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.dto.responses.create_task_response import CreateTaskResponse
+from todo.dto.responses.get_task_by_id_response import GetTaskByIdResponse
+
+from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.constants.messages import ApiErrors
 
-class TaskView(APIView):
+
+class TaskListView(APIView):
     def get(self, request: Request):
         """
         Retrieve a paginated list of tasks.
@@ -21,7 +24,6 @@ class TaskView(APIView):
         query.is_valid(raise_exception=True)
 
         response = TaskService.get_tasks(page=query.validated_data["page"], limit=query.validated_data["limit"])
-
         return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
 
     def post(self, request: Request):
@@ -81,3 +83,13 @@ class TaskView(APIView):
         error_response = ApiErrorResponse(statusCode=400, message=ApiErrors.VALIDATION_ERROR, errors=formatted_errors)
 
         return Response(data=error_response.model_dump(mode="json"), status=status.HTTP_400_BAD_REQUEST)
+
+
+class TaskDetailView(APIView):
+    def get(self, request: Request, task_id: str):
+        """
+        Retrieve a single task by ID.
+        """
+        task_dto = TaskService.get_task_by_id(task_id)
+        response_data = GetTaskByIdResponse(data=task_dto)
+        return Response(data=response_data.model_dump(mode="json"), status=status.HTTP_200_OK)

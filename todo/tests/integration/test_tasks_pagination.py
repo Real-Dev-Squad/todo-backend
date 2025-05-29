@@ -3,7 +3,7 @@ from unittest.mock import patch
 from django.conf import settings
 from rest_framework.test import APIRequestFactory
 
-from todo.views.task import TaskView
+from todo.views.task import TaskListView
 from todo.dto.responses.get_tasks_response import GetTasksResponse
 from todo.tests.fixtures.task import task_dtos
 
@@ -13,7 +13,7 @@ class TaskPaginationIntegrationTest(TestCase):
 
     def setUp(self):
         self.factory = APIRequestFactory()
-        self.view = TaskView.as_view()
+        self.view = TaskListView.as_view()
 
     @patch("todo.services.task_service.TaskService.get_tasks")
     def test_pagination_settings_integration(self, mock_get_tasks):

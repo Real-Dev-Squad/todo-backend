@@ -19,6 +19,8 @@ from todo.repositories.label_repository import LabelRepository
 from todo.constants.task import TaskStatus
 from todo.constants.messages import ApiErrors, ValidationErrors
 from django.conf import settings
+from todo.exceptions.task_exceptions import TaskNotFoundException
+from bson.errors import InvalidId as BsonInvalidId
 
 
 @dataclass
@@ -56,7 +58,7 @@ class TaskService:
                 return GetTasksResponse(
                     tasks=[],
                     links=None,
-                    error={"message": "Requested page exceeds available results", "code": "PAGE_NOT_FOUND"},
+                    error={"message": ApiErrors.PAGE_NOT_FOUND, "code": "PAGE_NOT_FOUND"},
                 )
 
         except ValidationError as e:
@@ -64,7 +66,7 @@ class TaskService:
 
         except Exception:
             return GetTasksResponse(
-                tasks=[], links=None, error={"message": "An unexpected error occurred", "code": "INTERNAL_ERROR"}
+                tasks=[], links=None, error={"message": ApiErrors.UNEXPECTED_ERROR_OCCURRED, "code": "INTERNAL_ERROR"}
             )
 
     @classmethod
@@ -148,6 +150,16 @@ class TaskService:
         return UserDTO(id=user_id, name="SYSTEM")
 
     @classmethod
+    def get_task_by_id(cls, task_id: str) -> TaskDTO:
+        try:
+            task_model = TaskRepository.get_by_id(task_id)
+            if not task_model:
+                raise TaskNotFoundException(task_id)
+            return cls.prepare_task_dto(task_model)
+        except BsonInvalidId as exc:
+            raise exc
+
+    @classmethod
     def create_task(cls, dto: CreateTaskDTO) -> CreateTaskResponse:
         now = datetime.now(timezone.utc)
         started_at = now if dto.status == TaskStatus.IN_PROGRESS else None
@@ -173,6 +185,7 @@ class TaskService:
                 )
 
         task = TaskModel(
+            id=None,
             title=dto.title,
             description=dto.description,
             priority=dto.priority,

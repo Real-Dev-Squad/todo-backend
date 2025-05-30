@@ -1,58 +1,43 @@
-import unittest
-from unittest.mock import patch, MagicMock
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APITestCase
 from bson import ObjectId
-from pymongo import ReturnDocument
-from todo.repositories.task_repository import TaskRepository
-from todo.models.task import TaskModel
-from todo.tests.fixtures.task import tasks_db_data
+from unittest.mock import patch
 
+from todo.exceptions.task_exceptions import TaskNotFoundException
+from todo.tests.fixtures.task import task_dtos
 
-class TestDeleteTaskById(unittest.TestCase):
+class TaskDeleteAPIIntegrationTest(APITestCase):
     def setUp(self):
-        self.task_id = tasks_db_data[0]["id"]
-        self.mock_task_data = tasks_db_data[0]
+        self.task_id = task_dtos[0].id
 
-    @patch("todo.repositories.task_repository.TaskRepository.get_collection")
-    def test_delete_task_success_when_isDeleted_false(self, mock_get_collection):
-        mock_collection = MagicMock()
-        mock_get_collection.return_value = mock_collection
-        mock_collection.find_one_and_update.return_value = self.mock_task_data
+    @patch("todo.repositories.task_repository.TaskRepository.delete_by_id")
+    def test_delete_task_success(self, mock_delete_by_id):
+        url = reverse("task_detail", args=[self.task_id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
-        result = TaskRepository.delete_by_id(self.task_id)
+    @patch("todo.repositories.task_repository.TaskRepository.delete_by_id")
+    def test_delete_task_not_found(self, mock_delete_by_id):
+        mock_delete_by_id.side_effect = TaskNotFoundException()
+        non_existent_id = str(ObjectId())
+        url = reverse("task_detail", args=[non_existent_id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        error_detail = response.data.get("errors", [{}])[0].get("detail")
+        self.assertEqual(error_detail, "Task not found.")
+        mock_delete_by_id.assert_called_once_with(non_existent_id)
 
-        self.assertIsInstance(result, TaskModel)
-        self.assertEqual(result.title, tasks_db_data[0]["title"])
-        mock_collection.find_one_and_update.assert_called_once_with(
-            {
-                "_id": ObjectId(self.task_id),
-                "$or": [{"isDeleted": False}, {"isDeleted": {"$exists": False}}],
-            },
-            {"$set": {"isDeleted": True}},
-            return_document=ReturnDocument.AFTER,
-        )
+    def test_delete_task_invalid_id_format(self):
+        invalid_task_id = "invalid-id"
+        url = reverse("task_detail", args=[invalid_task_id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["message"], "Please enter a valid Task ID format.")
+        self.assertIsNotNone(response.data.get("errors"))
+        self.assertEqual(len(response.data["errors"]), 1)
 
-    @patch("todo.repositories.task_repository.TaskRepository.get_collection")
-    def test_delete_task_success_when_isDeleted_missing(self, mock_get_collection):
-        mock_data = self.mock_task_data.copy()
-        mock_data.pop("isDeleted")
-
-        mock_collection = MagicMock()
-        mock_get_collection.return_value = mock_collection
-        mock_collection.find_one_and_update.return_value = mock_data
-
-        result = TaskRepository.delete_by_id(self.task_id)
-        self.assertIsInstance(result, TaskModel)
-
-    @patch("todo.repositories.task_repository.TaskRepository.get_collection")
-    def test_delete_task_returns_none_when_already_deleted(self, mock_get_collection):
-        mock_collection = MagicMock()
-        mock_get_collection.return_value = mock_collection
-        mock_collection.find_one_and_update.return_value = None
-
-        result = TaskRepository.delete_by_id(self.task_id)
-        self.assertIsNone(result)
-
-    def test_delete_task_invalid_object_id_raises_exception(self):
-        invalid_id = "not-valid-id"
-        with self.assertRaises(Exception):
-            TaskRepository.delete_by_id(invalid_id)
+        error_obj = response.data["errors"][0]
+        self.assertEqual(error_obj["detail"], "Please enter a valid Task ID format.")
+        self.assertEqual(error_obj["source"]["path"], "task_id")
+        self.assertEqual(error_obj["title"], "Validation Error")

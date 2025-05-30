@@ -1,3 +1,4 @@
+from bson import ObjectId
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -9,7 +10,6 @@ from todo.services.task_service import TaskService
 from todo.dto.task_dto import CreateTaskDTO
 from todo.dto.responses.create_task_response import CreateTaskResponse
 from todo.dto.responses.get_task_by_id_response import GetTaskByIdResponse
-
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.constants.messages import ApiErrors
 
@@ -94,5 +94,7 @@ class TaskDetailView(APIView):
         return Response(data=response_data.model_dump(mode="json"), status=status.HTTP_200_OK)
 
     def delete(self, request: Request, task_id: str):
+        ObjectId(task_id)
+
         TaskService.delete_task(task_id)
         return Response(status=status.HTTP_204_NO_CONTENT)

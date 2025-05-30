@@ -89,12 +89,13 @@ class TaskRepository(MongoRepository):
         tasks_collection = cls.get_collection()
 
         deleted_task_data = tasks_collection.find_one_and_update(
+            {"_id": ObjectId(task_id), "isDeleted": False},
             {
-                "_id": ObjectId(task_id),
-                "$or": [{"isDeleted": False}, {"isDeleted": {"$exists": False}}],
-            },
-            {
-                "$set": {"isDeleted": True},
+                "$set": {
+                    "isDeleted": True,
+                    "updatedAt": datetime.now(timezone.utc),
+                    "updatedBy": "system",
+                }  # TODO: modify to use actual user after auth implementation,
             },
             return_document=ReturnDocument.AFTER,
         )

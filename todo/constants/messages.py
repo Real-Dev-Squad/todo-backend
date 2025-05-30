@@ -4,16 +4,12 @@ class AppMessages:
 
 
 # Repository error messages
-
-
 class RepositoryErrors:
     TASK_CREATION_FAILED = "Failed to create task: {0}"
     DB_INIT_FAILED = "Failed to initialize database: {0}"
 
 
 # API error messages
-
-
 class ApiErrors:
     REPOSITORY_ERROR = "Repository Error"
     SERVER_ERROR = "Server Error"

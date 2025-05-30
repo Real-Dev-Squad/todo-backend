@@ -132,6 +132,60 @@ class TaskListViewTests(APISimpleTestCase):
         self.assertEqual(response.data["errors"][0]["detail"], ApiErrors.INTERNAL_SERVER_ERROR)
         mock_get_task_by_id.assert_called_once_with(task_id)
 
+        expected_response_obj = GetTaskByIdResponse(data=mock_task_data)
+
+        response = self.client.get(reverse("task_detail", args=[valid_task_id]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, expected_response_obj.model_dump(mode="json"))
+        mock_get_task_by_id.assert_called_once_with(valid_task_id)
+
+    @patch("todo.services.task_service.TaskService.get_task_by_id")
+    def test_get_single_task_not_found(self, mock_get_task_by_id: Mock):
+        non_existent_task_id = str(ObjectId())
+        expected_error_message = ApiErrors.TASK_NOT_FOUND.format(non_existent_task_id)
+        mock_get_task_by_id.side_effect = TaskNotFoundException(task_id=non_existent_task_id)
+
+        response = self.client.get(reverse("task_detail", args=[non_existent_task_id]))
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["statusCode"], status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["message"], expected_error_message)
+        self.assertEqual(len(response.data["errors"]), 1)
+        self.assertEqual(response.data["errors"][0]["source"], {"path": "task_id"})
+        self.assertEqual(response.data["errors"][0]["title"], ApiErrors.RESOURCE_NOT_FOUND_TITLE)
+        self.assertEqual(response.data["errors"][0]["detail"], expected_error_message)
+        mock_get_task_by_id.assert_called_once_with(non_existent_task_id)
+
+    @patch("todo.services.task_service.TaskService.get_task_by_id")
+    def test_get_single_task_invalid_id_format(self, mock_get_task_by_id: Mock):
+        invalid_task_id = "invalid-id-string"
+        mock_get_task_by_id.side_effect = ValueError(ValidationErrors.INVALID_TASK_ID_FORMAT)
+
+        response = self.client.get(reverse("task_detail", args=[invalid_task_id]))
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["statusCode"], status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["message"], ValidationErrors.INVALID_TASK_ID_FORMAT)
+        self.assertEqual(len(response.data["errors"]), 1)
+        self.assertEqual(response.data["errors"][0]["source"], {"path": "task_id"})
+        self.assertEqual(response.data["errors"][0]["title"], ApiErrors.VALIDATION_ERROR)
+        self.assertEqual(response.data["errors"][0]["detail"], ValidationErrors.INVALID_TASK_ID_FORMAT)
+        mock_get_task_by_id.assert_called_once_with(invalid_task_id)
+
+    @patch("todo.services.task_service.TaskService.get_task_by_id")
+    def test_get_single_task_unexpected_error(self, mock_get_task_by_id: Mock):
+        task_id = str(ObjectId())
+        mock_get_task_by_id.side_effect = Exception("Some random error")
+
+        response = self.client.get(reverse("task_detail", args=[task_id]))
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data["statusCode"], status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data["message"], ApiErrors.UNEXPECTED_ERROR_OCCURRED)
+        self.assertEqual(response.data["errors"][0]["detail"], ApiErrors.INTERNAL_SERVER_ERROR)
+        mock_get_task_by_id.assert_called_once_with(task_id)
+
 
 class TaskListViewTest(TestCase):
     def setUp(self):

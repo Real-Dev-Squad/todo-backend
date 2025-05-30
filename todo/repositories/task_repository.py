@@ -101,3 +101,4 @@ class TaskRepository(MongoRepository):
         if deleted_task_data:
             return TaskModel(**deleted_task_data)
         return None
+

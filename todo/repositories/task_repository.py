@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import List
 from bson import ObjectId
+from pymongo import ReturnDocument
 
 from todo.models.task import TaskModel
 from todo.repositories.common.mongo_repository import MongoRepository
@@ -95,10 +96,9 @@ class TaskRepository(MongoRepository):
             {
                 "$set": {"isDeleted": True},
             },
-            return_document=True,
+            return_document=ReturnDocument.AFTER,
         )
 
         if deleted_task_data:
             return TaskModel(**deleted_task_data)
         return None
-

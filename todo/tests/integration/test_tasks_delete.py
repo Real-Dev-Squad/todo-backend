@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 from bson import ObjectId
+from pymongo import ReturnDocument
 from todo.repositories.task_repository import TaskRepository
 from todo.models.task import TaskModel
 from todo.tests.fixtures.task import tasks_db_data
@@ -27,7 +28,7 @@ class TestDeleteTaskById(unittest.TestCase):
                 "$or": [{"isDeleted": False}, {"isDeleted": {"$exists": False}}],
             },
             {"$set": {"isDeleted": True}},
-            return_document=True,
+            return_document=ReturnDocument.AFTER,
         )
 
     @patch("todo.repositories.task_repository.TaskRepository.get_collection")

@@ -1,5 +1,6 @@
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
+from pymongo import ReturnDocument
 from pymongo.collection import Collection
 from bson import ObjectId, errors as bson_errors
 from datetime import datetime, timezone
@@ -228,7 +229,7 @@ class TestRepositoryDeleteTaskById(TestCase):
                 "$or": [{"isDeleted": False}, {"isDeleted": {"$exists": False}}],
             },
             {"$set": {"isDeleted": True}},
-            return_document=True,
+            return_document=ReturnDocument.AFTER,
         )
 
     @patch("todo.repositories.task_repository.TaskRepository.get_collection")

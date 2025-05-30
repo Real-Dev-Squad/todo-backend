@@ -29,6 +29,7 @@ class ExceptionHandlerTests(TestCase):
             "errors": [{"source": {"parameter": "field"}, "detail": "error message"}],
         }
         self.assertDictEqual(response.data, expected_response)
+
         mock_format_validation_errors.assert_called_once_with(validation_error.detail)
 
     def test_custom_handler_formats_generic_exception(self):

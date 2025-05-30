@@ -6,6 +6,7 @@ from django.urls import reverse_lazy
 from urllib.parse import urlencode
 from datetime import datetime, timezone
 from rest_framework import status
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from todo.dto.label_dto import LabelDTO
 from todo.dto.task_dto import TaskDTO, CreateTaskDTO
@@ -176,28 +177,7 @@ class TaskService:
                     update_payload[field] = []
                     has_updates = True
                 elif isinstance(value, list):
-                    label_object_ids = []
-                    invalid_format_ids = []
-                    for label_id_str in value:
-                        if not PyObjectId.is_valid(label_id_str):
-                            invalid_format_ids.append(label_id_str)
-                        else:
-                            label_object_ids.append(PyObjectId(label_id_str))
-
-                    if invalid_format_ids:
-                        raise ValueError(
-                            ApiErrorResponse(
-                                statusCode=status.HTTP_400_BAD_REQUEST,
-                                message=ApiErrors.INVALID_LABELS,
-                                errors=[
-                                    ApiErrorDetail(
-                                        source={ApiErrorSource.PARAMETER: "labels"},
-                                        title=ApiErrors.INVALID_LABEL_IDS,
-                                        detail=ValidationErrors.INVALID_OBJECT_ID.format(", ".join(invalid_format_ids)),
-                                    )
-                                ],
-                            )
-                        )
+                    label_object_ids = [PyObjectId(label_id_str) for label_id_str in value]
 
                     if label_object_ids:
                         existing_labels = LabelRepository.list_by_ids(label_object_ids)
@@ -206,20 +186,8 @@ class TaskService:
                             missing_ids_str = [
                                 str(py_id) for py_id in label_object_ids if str(py_id) not in found_db_ids_str
                             ]
-                            raise ValueError(
-                                ApiErrorResponse(
-                                    statusCode=status.HTTP_400_BAD_REQUEST,
-                                    message=ApiErrors.INVALID_LABELS,
-                                    errors=[
-                                        ApiErrorDetail(
-                                            source={ApiErrorSource.PARAMETER: "labels"},
-                                            title=ApiErrors.INVALID_LABEL_IDS,
-                                            detail=ValidationErrors.MISSING_LABEL_IDS.format(
-                                                ", ".join(missing_ids_str)
-                                            ),
-                                        )
-                                    ],
-                                )
+                            raise DRFValidationError(
+                                {"labels": [ValidationErrors.MISSING_LABEL_IDS.format(", ".join(missing_ids_str))]}
                             )
                     update_payload[field] = label_object_ids
                     has_updates = True

@@ -7,7 +7,7 @@ from todo.constants.messages import ValidationErrors
 
 
 class UpdateTaskSerializer(serializers.Serializer):
-    title = serializers.CharField(required=False, allow_blank=False, max_length=255)
+    title = serializers.CharField(required=False, allow_blank=True, max_length=255)
     description = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     priority = serializers.ChoiceField(
         required=False,

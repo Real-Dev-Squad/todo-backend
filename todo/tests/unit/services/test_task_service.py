@@ -400,21 +400,18 @@ class TaskServiceUpdateTests(TestCase):
 
     @patch("todo.services.task_service.TaskRepository.get_by_id")
     @patch("todo.services.task_service.TaskRepository.update")
-    def test_update_task_raises_value_error_if_repo_update_fails(self, mock_repo_update, mock_repo_get_by_id):
+    def test_update_task_raises_task_not_found_if_repo_update_fails(self, mock_repo_update, mock_repo_get_by_id):
         mock_repo_get_by_id.return_value = self.default_task_model
         mock_repo_update.return_value = None
 
-        validated_data = {"title": "A title that will fail to save"}
+        validated_data = {"title": "Updated Title"}
 
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(TaskNotFoundException) as context:
             TaskService.update_task(self.task_id_str, validated_data, self.user_id_str)
 
-        error_arg = context.exception.args[0]
-        self.assertEqual(error_arg.statusCode, 500)
-        self.assertIn("Failed to save task updates", str(error_arg.errors[0].detail))
-
+        self.assertEqual(str(context.exception), ApiErrors.TASK_NOT_FOUND.format(self.task_id_str))
         mock_repo_get_by_id.assert_called_once_with(self.task_id_str)
-        mock_repo_update.assert_called_once()
+        mock_repo_update.assert_called_once_with(self.task_id_str, {**validated_data, "updatedBy": self.user_id_str})
 
     @patch("todo.services.task_service.TaskRepository.get_by_id")
     @patch("todo.services.task_service.TaskRepository.update")

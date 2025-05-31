@@ -283,8 +283,10 @@ class TaskRepositoryUpdateTests(TestCase):
 
     def test_update_task_returns_none_for_invalid_task_id_format(self):
         invalid_id_str = "not-an-object-id"
-        result_task = TaskRepository.update(invalid_id_str, self.valid_update_data)
-        self.assertIsNone(result_task)
+
+        with self.assertRaises(bson_errors.InvalidId):
+            TaskRepository.update(invalid_id_str, self.valid_update_data)
+
         self.mock_collection.find_one_and_update.assert_not_called()
 
     def test_update_task_empty_update_data_does_not_call_find_one_and_update(self):

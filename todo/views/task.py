@@ -94,7 +94,7 @@ class TaskDetailView(APIView):
         return Response(data=response_data.model_dump(mode="json"), status=status.HTTP_200_OK)
 
     def delete(self, request: Request, task_id: str):
-        ObjectId(task_id)
+        task_id = ObjectId(task_id)
 
         TaskService.delete_task(task_id)
         return Response(status=status.HTTP_204_NO_CONTENT)

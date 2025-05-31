@@ -89,7 +89,7 @@ class TaskRepository(MongoRepository):
         tasks_collection = cls.get_collection()
 
         deleted_task_data = tasks_collection.find_one_and_update(
-            {"_id": ObjectId(task_id), "isDeleted": False},
+            {"_id": task_id, "isDeleted": False},
             {
                 "$set": {
                     "isDeleted": True,

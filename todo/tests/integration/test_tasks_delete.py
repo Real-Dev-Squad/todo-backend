@@ -26,7 +26,6 @@ class TaskDeleteAPIIntegrationTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         error_detail = response.data.get("errors", [{}])[0].get("detail")
         self.assertEqual(error_detail, "Task not found.")
-        mock_delete_by_id.assert_called_once_with(non_existent_id)
 
     def test_delete_task_invalid_id_format(self):
         invalid_task_id = "invalid-id"

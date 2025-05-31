@@ -312,7 +312,7 @@ class TaskDeleteViewTests(APISimpleTestCase):
         mock_delete_task.return_value = None
 
         response = self.client.delete(self.url)
-        mock_delete_task.assert_called_once_with(self.valid_task_id)
+        mock_delete_task.assert_called_once_with(ObjectId(self.valid_task_id))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.data, None)
 

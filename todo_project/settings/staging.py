@@ -1,9 +1,13 @@
-from .base import *
+# Staging specific settings
+from .base import (
+    JWT_COOKIE_SETTINGS,
+    MAIN_APP,
+    MIDDLEWARE,
+)
 
 DEBUG = False
-ALLOWED_HOSTS = ["https://services.realdevsquad.com/staging-todo/"]
+ALLOWED_HOSTS = ["staging-api.realdevsquad.com", "services.realdevsquad.com"]
 
-# Staging specific settings
 JWT_COOKIE_SETTINGS.update(
     {
         "RDS_SESSION_COOKIE_NAME": "rds-session-staging",
@@ -13,7 +17,6 @@ JWT_COOKIE_SETTINGS.update(
     }
 )
 
-# RDS Backend Integration for staging
 MAIN_APP.update(
     {
         "RDS_BACKEND_BASE_URL": "https://staging-api.realdevsquad.com",

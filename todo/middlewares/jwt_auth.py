@@ -29,7 +29,7 @@ class JWTAuthenticationMiddleware:
 
         except (TokenMissingError, TokenExpiredError, TokenInvalidError) as e:
             raise e
-        except Exception as e:
+        except Exception:
             raise TokenInvalidError()
 
     def _is_public_path(self, path: str) -> bool:

@@ -42,7 +42,7 @@ def verify_jwt_token(token: str) -> dict:
 
     except jwt.ExpiredSignatureError:
         raise TokenExpiredError()
-    except jwt.InvalidTokenError as e:
+    except jwt.InvalidTokenError:
         raise TokenInvalidError()
-    except Exception as e:
+    except Exception:
         raise TokenInvalidError()

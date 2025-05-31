@@ -5,7 +5,6 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from urllib.parse import urlencode
 from datetime import datetime, timezone
-from rest_framework import status
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from todo.dto.label_dto import LabelDTO
@@ -209,13 +208,7 @@ class TaskService:
         updated_task_model = TaskRepository.update(task_id, update_payload)
 
         if not updated_task_model:
-            raise ValueError(
-                ApiErrorResponse(
-                    statusCode=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    message=ApiErrors.SERVER_ERROR,
-                    errors=[ApiErrorDetail(detail="Failed to save task updates.", title=ApiErrors.UNEXPECTED_ERROR)],
-                )
-            )
+            raise TaskNotFoundException(task_id)
 
         return cls.prepare_task_dto(updated_task_model)
 

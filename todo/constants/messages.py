@@ -35,3 +35,13 @@ class ValidationErrors:
     MAX_LIMIT_EXCEEDED = "Maximum limit of {0} exceeded"
     MISSING_LABEL_IDS = "The following label ID(s) do not exist: {0}."
     INVALID_TASK_ID_FORMAT = "Please enter a valid Task ID format."
+
+
+# Auth messages
+class AuthErrorMessages:
+    TOKEN_MISSING = "Authentication token is required"
+    TOKEN_EXPIRED = "Authentication token has expired"
+    TOKEN_INVALID = "Invalid authentication token"
+    AUTHENTICATION_REQUIRED = "Authentication required"
+    TOKEN_EXPIRED_TITLE = "Token Expired"
+    INVALID_TOKEN_TITLE = "Invalid Token"

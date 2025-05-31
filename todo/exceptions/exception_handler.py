@@ -8,8 +8,9 @@ from django.conf import settings
 from bson.errors import InvalidId as BsonInvalidId
 
 from todo.dto.responses.error_response import ApiErrorDetail, ApiErrorResponse, ApiErrorSource
-from todo.constants.messages import ApiErrors, ValidationErrors
+from todo.constants.messages import ApiErrors, ValidationErrors, AuthErrorMessages
 from todo.exceptions.task_exceptions import TaskNotFoundException
+from .auth_exceptions import TokenExpiredError, TokenMissingError, TokenInvalidError
 
 
 def format_validation_errors(errors) -> List[ApiErrorDetail]:
@@ -39,7 +40,40 @@ def handle_exception(exc, context):
     status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     determined_message = ApiErrors.UNEXPECTED_ERROR_OCCURRED
 
-    if isinstance(exc, TaskNotFoundException):
+    if isinstance(exc, TokenExpiredError):
+        status_code = status.HTTP_401_UNAUTHORIZED
+        detail_message_str = str(exc)
+        determined_message = detail_message_str
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.HEADER: "Authorization"},
+                title=AuthErrorMessages.TOKEN_EXPIRED_TITLE,
+                detail=detail_message_str,
+            )
+        )
+    elif isinstance(exc, TokenMissingError):
+        status_code = status.HTTP_401_UNAUTHORIZED
+        detail_message_str = str(exc)
+        determined_message = detail_message_str
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.HEADER: "Authorization"},
+                title=AuthErrorMessages.AUTHENTICATION_REQUIRED,
+                detail=detail_message_str,
+            )
+        )
+    elif isinstance(exc, TokenInvalidError):
+        status_code = status.HTTP_401_UNAUTHORIZED
+        detail_message_str = str(exc)
+        determined_message = detail_message_str
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.HEADER: "Authorization"},
+                title=AuthErrorMessages.INVALID_TOKEN_TITLE,
+                detail=detail_message_str,
+            )
+        )
+    elif isinstance(exc, TaskNotFoundException):
         status_code = status.HTTP_404_NOT_FOUND
         detail_message_str = str(exc)
         determined_message = detail_message_str
@@ -88,7 +122,6 @@ def handle_exception(exc, context):
         error_list = format_validation_errors(exc.detail)
         if not error_list and exc.detail:
             error_list.append(ApiErrorDetail(detail=str(exc.detail), title=ApiErrors.VALIDATION_ERROR))
-
     else:
         if response is not None:
             status_code = response.status_code
@@ -117,7 +150,6 @@ def handle_exception(exc, context):
         isinstance(exc, ValueError) and hasattr(exc, "args") and exc.args and isinstance(exc.args[0], ApiErrorResponse)
     ):
         default_detail_str = str(exc) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR
-
         error_list.append(ApiErrorDetail(detail=default_detail_str, title=determined_message))
 
     final_response_data = ApiErrorResponse(

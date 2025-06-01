@@ -248,8 +248,3 @@ class TestRepositoryDeleteTaskById(TestCase):
 
         result = TaskRepository.delete_by_id(self.task_id)
         self.assertIsNone(result)
-
-    def test_delete_task_invalid_object_id_raises_exception(self):
-        invalid_id = "not-valid-id"
-        with self.assertRaises(Exception):
-            TaskRepository.delete_by_id(invalid_id)

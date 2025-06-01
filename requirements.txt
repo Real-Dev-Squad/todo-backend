@@ -20,3 +20,6 @@ ruff==0.7.1
 sqlparse==0.5.1
 typing_extensions==4.12.2
 virtualenv==20.27.0
+django-cors-headers==4.7.0
+cryptography==45.0.3
+PyJWT==2.10.1

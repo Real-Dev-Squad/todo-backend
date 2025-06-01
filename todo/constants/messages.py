@@ -37,3 +37,13 @@ class ValidationErrors:
     INVALID_TASK_ID_FORMAT = "Please enter a valid Task ID format."
     FUTURE_STARTED_AT = "The start date cannot be set in the future."
     INVALID_LABELS_STRUCTURE = "Labels must be provided as a list or tuple of ObjectId strings."
+
+
+# Auth messages
+class AuthErrorMessages:
+    TOKEN_MISSING = "Authentication token is required"
+    TOKEN_EXPIRED = "Authentication token has expired"
+    TOKEN_INVALID = "Invalid authentication token"
+    AUTHENTICATION_REQUIRED = "Authentication required"
+    TOKEN_EXPIRED_TITLE = "Token Expired"
+    INVALID_TOKEN_TITLE = "Invalid Token"

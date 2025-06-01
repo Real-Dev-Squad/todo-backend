@@ -3,8 +3,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from bson import ObjectId
 from unittest.mock import patch
-
-from todo.exceptions.task_exceptions import TaskNotFoundException
+from todo.constants.messages import ApiErrors
 from todo.tests.fixtures.task import task_dtos
 
 class TaskDeleteAPIIntegrationTest(APITestCase):
@@ -19,13 +18,13 @@ class TaskDeleteAPIIntegrationTest(APITestCase):
 
     @patch("todo.repositories.task_repository.TaskRepository.delete_by_id")
     def test_delete_task_not_found(self, mock_delete_by_id):
-        mock_delete_by_id.side_effect = TaskNotFoundException()
+        mock_delete_by_id.return_value = None
         non_existent_id = str(ObjectId())
         url = reverse("task_detail", args=[non_existent_id])
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         error_detail = response.data.get("errors", [{}])[0].get("detail")
-        self.assertEqual(error_detail, "Task not found.")
+        self.assertEqual(error_detail, ApiErrors.TASK_NOT_FOUND.format(non_existent_id))
 
     def test_delete_task_invalid_id_format(self):
         invalid_task_id = "invalid-id"

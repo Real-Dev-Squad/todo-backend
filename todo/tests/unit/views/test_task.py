@@ -19,7 +19,6 @@ from todo.dto.responses.get_task_by_id_response import GetTaskByIdResponse
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.constants.messages import ValidationErrors, ApiErrors
 
-
 class TaskViewTests(APISimpleTestCase):
     def setUp(self):
         self.client = APIClient()
@@ -310,7 +309,6 @@ class TaskDeleteViewTests(APISimpleTestCase):
     @patch("todo.services.task_service.TaskService.delete_task")
     def test_delete_task_returns_204_on_success(self, mock_delete_task: Mock):
         mock_delete_task.return_value = None
-
         response = self.client.delete(self.url)
         mock_delete_task.assert_called_once_with(ObjectId(self.valid_task_id))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
@@ -318,12 +316,8 @@ class TaskDeleteViewTests(APISimpleTestCase):
 
     @patch("todo.services.task_service.TaskService.delete_task")
     def test_delete_task_returns_404_when_not_found(self, mock_delete_task: Mock):
-        from todo.exceptions.task_exceptions import TaskNotFoundException
-
         mock_delete_task.side_effect = TaskNotFoundException(self.valid_task_id)
-
         response = self.client.delete(self.url)
-
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn(ApiErrors.TASK_NOT_FOUND.format(self.valid_task_id), response.data["message"])
 

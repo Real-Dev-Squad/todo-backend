@@ -239,3 +239,4 @@ class TaskService:
         deleted_task_model = TaskRepository.delete_by_id(task_id)
         if deleted_task_model is None:
             raise TaskNotFoundException(task_id)
+        return None

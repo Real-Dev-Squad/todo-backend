@@ -19,6 +19,7 @@ from todo.dto.responses.get_task_by_id_response import GetTaskByIdResponse
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.constants.messages import ValidationErrors, ApiErrors
 
+
 class TaskViewTests(APISimpleTestCase):
     def setUp(self):
         self.client = APIClient()

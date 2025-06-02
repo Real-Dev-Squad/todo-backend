@@ -6,6 +6,7 @@ from unittest.mock import patch
 from todo.constants.messages import ApiErrors
 from todo.tests.fixtures.task import task_dtos
 
+
 class TaskDeleteAPIIntegrationTest(APITestCase):
     def setUp(self):
         self.task_id = task_dtos[0].id

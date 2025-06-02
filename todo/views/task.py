@@ -99,18 +99,29 @@ class TaskDetailView(APIView):
         TaskService.delete_task(task_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+
     def patch(self, request: Request, task_id: str):
         """
         Partially updates a task by its ID.
 
         """
-        serializer = UpdateTaskSerializer(data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        # This is a placeholder for the user ID, NEED TO IMPLEMENT THIS AFTER AUTHENTICATION
-        user_id_placeholder = "system_patch_user"
+        try:
+            # Validate task_id is a valid ObjectId
+            task_id = ObjectId(task_id)
+            
+            serializer = UpdateTaskSerializer(data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            # This is a placeholder for the user ID, NEED TO IMPLEMENT THIS AFTER AUTHENTICATION
+            user_id_placeholder = "system_patch_user"
 
-        updated_task_dto = TaskService.update_task(
-            task_id=task_id, validated_data=serializer.validated_data, user_id=user_id_placeholder
-        )
+            updated_task_dto = TaskService.update_task(
+                task_id=str(task_id), validated_data=serializer.validated_data, user_id=user_id_placeholder
+            )
 
-        return Response(data=updated_task_dto.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
+            return Response(data=updated_task_dto.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
+        except BsonInvalidId:
+            return Response(
+                {"error": ValidationErrors.INVALID_TASK_ID_FORMAT},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+

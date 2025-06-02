@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from django.conf import settings
 from datetime import datetime, timedelta, timezone
 from bson.objectid import ObjectId
-
+from bson.errors import InvalidId as BsonInvalidId
 from todo.views.task import TaskListView
 from todo.dto.user_dto import UserDTO
 from todo.dto.task_dto import TaskDTO
@@ -18,7 +18,6 @@ from todo.constants.task import TaskPriority, TaskStatus
 from todo.dto.responses.get_task_by_id_response import GetTaskByIdResponse
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.constants.messages import ValidationErrors, ApiErrors
-
 
 class TaskViewTests(APISimpleTestCase):
     def setUp(self):
@@ -300,3 +299,32 @@ class CreateTaskViewTests(APISimpleTestCase):
             self.assertIn("An unexpected error occurred", str(response.data))
         except Exception as e:
             self.assertEqual(str(e), "Database exploded")
+
+
+class TaskDeleteViewTests(APISimpleTestCase):
+    def setUp(self):
+        self.valid_task_id = str(ObjectId())
+        self.url = reverse("task_detail", kwargs={"task_id": self.valid_task_id})
+
+    @patch("todo.services.task_service.TaskService.delete_task")
+    def test_delete_task_returns_204_on_success(self, mock_delete_task: Mock):
+        mock_delete_task.return_value = None
+        response = self.client.delete(self.url)
+        mock_delete_task.assert_called_once_with(ObjectId(self.valid_task_id))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data, None)
+
+    @patch("todo.services.task_service.TaskService.delete_task")
+    def test_delete_task_returns_404_when_not_found(self, mock_delete_task: Mock):
+        mock_delete_task.side_effect = TaskNotFoundException(self.valid_task_id)
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn(ApiErrors.TASK_NOT_FOUND.format(self.valid_task_id), response.data["message"])
+
+    @patch("todo.services.task_service.TaskService.delete_task")
+    def test_delete_task_returns_400_for_invalid_id_format(self, mock_delete_task: Mock):
+        mock_delete_task.side_effect = BsonInvalidId()
+        invalid_url = reverse("task_detail", kwargs={"task_id": "invalid-id"})
+        response = self.client.delete(invalid_url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(ValidationErrors.INVALID_TASK_ID_FORMAT, response.data["message"])

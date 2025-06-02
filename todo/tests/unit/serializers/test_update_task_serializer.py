@@ -186,3 +186,56 @@ class UpdateTaskSerializerTests(TestCase):
         serializer = UpdateTaskSerializer(data=data, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         self.assertEqual(serializer.validated_data["startedAt"], datetime.fromisoformat(date_val))
+
+    def test_started_at_validation_future_date(self):
+        future_started_at = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+        data = {"startedAt": future_started_at}
+        serializer = UpdateTaskSerializer(data=data, partial=True)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("startedAt", serializer.errors)
+        self.assertEqual(str(serializer.errors["startedAt"][0]), ValidationErrors.FUTURE_STARTED_AT)
+
+    def test_labels_validation_not_list_or_tuple(self):
+        data = {"labels": "not-a-list-or-tuple"}
+        serializer = UpdateTaskSerializer(data=data, partial=True)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("labels", serializer.errors)
+        self.assertEqual(str(serializer.errors["labels"][0]), 'Expected a list of items but got type "str".')
+
+    def test_labels_validation_multiple_invalid_object_ids(self):
+        invalid_id_1 = "invalid-id-1"
+        invalid_id_2 = "invalid-id-2"
+        data = {"labels": [self.valid_object_id_str, invalid_id_1, invalid_id_2]}
+        serializer = UpdateTaskSerializer(data=data, partial=True)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("labels", serializer.errors)
+
+        label_errors = serializer.errors["labels"]
+        self.assertIsInstance(label_errors, list)
+
+        self.assertEqual(len(label_errors), 2)
+        self.assertIn(ValidationErrors.INVALID_OBJECT_ID.format(invalid_id_1), label_errors)
+        self.assertIn(ValidationErrors.INVALID_OBJECT_ID.format(invalid_id_2), label_errors)
+
+    def test_labels_validation_mixed_valid_and_multiple_invalid_ids(self):
+        valid_id_1 = str(ObjectId())
+        invalid_id_1 = "bad-id-format-1"
+        valid_id_2 = str(ObjectId())
+        invalid_id_2 = "another-invalid"
+
+        data = {"labels": [valid_id_1, invalid_id_1, valid_id_2, invalid_id_2]}
+        serializer = UpdateTaskSerializer(data=data, partial=True)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("labels", serializer.errors)
+
+        label_errors = serializer.errors["labels"]
+        self.assertIsInstance(label_errors, list)
+        self.assertEqual(len(label_errors), 2)
+
+        expected_error_messages = [
+            ValidationErrors.INVALID_OBJECT_ID.format(invalid_id_1),
+            ValidationErrors.INVALID_OBJECT_ID.format(invalid_id_2),
+        ]
+
+        for msg in expected_error_messages:
+            self.assertIn(msg, label_errors)

@@ -35,20 +35,29 @@ class UpdateTaskSerializer(serializers.Serializer):
         return value
 
     def validate_labels(self, value):
-        if value is not None:
-            for label_id_str in value:
-                if not ObjectId.is_valid(label_id_str):
-                    raise serializers.ValidationError(ValidationErrors.INVALID_OBJECT_ID.format(label_id_str))
+        if not value:
+            return value
+
+        if not isinstance(value, (list, tuple)):
+            raise serializers.ValidationError(ValidationErrors.INVALID_LABELS_STRUCTURE)
+
+        invalid_ids = [label_id for label_id in value if not ObjectId.is_valid(label_id)]
+        if invalid_ids:
+            errors = [ValidationErrors.INVALID_OBJECT_ID.format(label_id) for label_id in invalid_ids]
+            raise serializers.ValidationError(errors)
+
         return value
 
     def validate_dueAt(self, value):
-        if value is not None:  # Allow dueAt to be set to null (cleared by passing null)
+        if value is not None:
             now = datetime.now(timezone.utc)
             if value <= now:
                 raise serializers.ValidationError(ValidationErrors.PAST_DUE_DATE)
         return value
 
     def validate_startedAt(self, value):
+        if value and value > datetime.now(timezone.utc):
+            raise serializers.ValidationError(ValidationErrors.FUTURE_STARTED_AT)
         return value
 
     def validate_assignee(self, value):

@@ -5,7 +5,6 @@ from pymongo.collection import Collection
 from bson import ObjectId, errors as bson_errors
 from datetime import datetime, timezone, timedelta
 import copy
-from pymongo import ReturnDocument
 
 from todo.models.task import TaskModel
 from todo.repositories.task_repository import TaskRepository

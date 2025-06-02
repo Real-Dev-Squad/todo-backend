@@ -7,8 +7,7 @@ from rest_framework.response import Response
 from django.conf import settings
 from datetime import datetime, timedelta, timezone
 from bson.objectid import ObjectId
-from bson.errors import InvalidId as BsonInvalidIdfrom bson.errors import InvalidId as BsonInvalidId
-
+from bson.errors import InvalidId as BsonInvalidId
 from todo.views.task import TaskListView
 from todo.dto.user_dto import UserDTO
 from todo.dto.task_dto import TaskDTO

@@ -97,9 +97,6 @@ class TaskRepository(MongoRepository):
         update_data_with_timestamp.pop("_id", None)
         update_data_with_timestamp.pop("id", None)
 
-        if not update_data_with_timestamp:
-            pass
-
         updated_task_doc = tasks_collection.find_one_and_update(
             {"_id": obj_id}, {"$set": update_data_with_timestamp}, return_document=ReturnDocument.AFTER
         )

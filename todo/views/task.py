@@ -97,7 +97,7 @@ class TaskDetailView(APIView):
 
     def patch(self, request: Request, task_id: str):
         """
-        Partially updates a  task by its ID.
+        Partially updates a task by its ID.
 
         """
         serializer = UpdateTaskSerializer(data=request.data, partial=True)

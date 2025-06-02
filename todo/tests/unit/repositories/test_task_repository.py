@@ -1,5 +1,6 @@
 from unittest import TestCase
-from unittest.mock import patch, MagicMock
+from unittest.mock import ANY, patch, MagicMock
+from pymongo import ReturnDocument
 from pymongo.collection import Collection
 from bson import ObjectId, errors as bson_errors
 from datetime import datetime, timezone, timedelta
@@ -318,3 +319,45 @@ class TaskRepositoryUpdateTests(TestCase):
         self.assertIn("title", set_payload)
         self.assertEqual(set_payload["title"], "Title with IDs")
         self.assertIn("updatedAt", set_payload)
+
+
+class TestRepositoryDeleteTaskById(TestCase):
+    def setUp(self):
+        self.task_id = tasks_db_data[0]["id"]
+        self.mock_task_data = tasks_db_data[0]
+        self.updated_task_data = self.mock_task_data.copy()
+        self.updated_task_data.update(
+            {
+                "isDeleted": True,
+                "updatedBy": "system",
+                "updatedAt": datetime.now(timezone.utc),
+            }
+        )
+
+    @patch("todo.repositories.task_repository.TaskRepository.get_collection")
+    def test_delete_task_success_when_isDeleted_false(self, mock_get_collection):
+        mock_collection = MagicMock()
+        mock_get_collection.return_value = mock_collection
+        mock_collection.find_one_and_update.return_value = self.updated_task_data
+
+        result = TaskRepository.delete_by_id(self.task_id)
+
+        self.assertIsInstance(result, TaskModel)
+        self.assertEqual(result.title, tasks_db_data[0]["title"])
+        self.assertTrue(result.isDeleted)
+        self.assertEqual(result.updatedBy, "system")
+        self.assertIsNotNone(result.updatedAt)
+        mock_collection.find_one_and_update.assert_called_once_with(
+            {"_id": ObjectId(self.task_id), "isDeleted": False},
+            {"$set": {"isDeleted": True, "updatedAt": ANY, "updatedBy": "system"}},
+            return_document=ReturnDocument.AFTER,
+        )
+
+    @patch("todo.repositories.task_repository.TaskRepository.get_collection")
+    def test_delete_task_returns_none_when_already_deleted(self, mock_get_collection):
+        mock_collection = MagicMock()
+        mock_get_collection.return_value = mock_collection
+        mock_collection.find_one_and_update.return_value = None
+
+        result = TaskRepository.delete_by_id(self.task_id)
+        self.assertIsNone(result)

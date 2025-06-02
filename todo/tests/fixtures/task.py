@@ -16,6 +16,7 @@ tasks_db_data = [
         "isAcknowledged": True,
         "labels": [ObjectId("67588c1ac2195684a575840c"), ObjectId("67478036eac9d93db7f59c35")],
         "createdAt": "2024-11-08T10:14:35",
+        "isDeleted": False,
         "updatedAt": "2024-11-08T15:14:35",
         "createdBy": "qMbT6M2GB65W7UHgJS4g",
         "updatedBy": "qMbT6M2GB65W7UHgJS4g",

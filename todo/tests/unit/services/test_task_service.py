@@ -252,6 +252,18 @@ class TaskServiceTests(TestCase):
         self.assertEqual(str(context.exception), "Invalid ObjectId")
         mock_get_by_id_repo_method.assert_called_once_with(invalid_id)
 
+    @patch("todo.services.task_service.TaskRepository.delete_by_id")
+    def test_delete_task_success(self, mock_delete_by_id):
+        mock_delete_by_id.return_value = {"id": "123", "title": "Sample Task"}
+        result = TaskService.delete_task("123")
+        self.assertIsNone(result)
+
+    @patch("todo.services.task_service.TaskRepository.delete_by_id")
+    def test_delete_task_not_found(self, mock_delete_by_id):
+        mock_delete_by_id.return_value = None
+        with self.assertRaises(TaskNotFoundException):
+            TaskService.delete_task("nonexistent_id")
+
 
 class TaskServiceUpdateTests(TestCase):
     def setUp(self):

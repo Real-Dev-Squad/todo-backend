@@ -296,7 +296,7 @@ class TaskRepositoryUpdateTests(TestCase):
         self.assertEqual(str(context.exception), "update_data must be a dictionary.")
         self.mock_collection.find_one_and_update.assert_not_called()
 
-    def test_update_task_empty_update_data_does_not_call_find_one_and_update(self):
+    def test_update_task_empty_update_data_still_calls_find_one_and_update(self):
         self.mock_collection.find_one_and_update.return_value = {**self.updated_doc_from_db, "title": "Original Title"}
 
         result_task = TaskRepository.update(self.task_id_str, {})

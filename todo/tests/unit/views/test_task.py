@@ -22,6 +22,7 @@ from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
 
+
 class TaskViewTests(APISimpleTestCase):
     def setUp(self):
         self.client = APIClient()

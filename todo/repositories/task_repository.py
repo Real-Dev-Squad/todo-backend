@@ -109,13 +109,19 @@ class TaskRepository(MongoRepository):
         """
         Updates a specific task by its ID with the given data.
         """
-        tasks_collection = cls.get_collection()
-        obj_id = ObjectId(task_id)
+        if not isinstance(update_data, dict):
+            raise ValueError("update_data must be a dictionary.")
+
+        try:
+            obj_id = ObjectId(task_id)
+        except Exception:
+            return None
 
         update_data_with_timestamp = {**update_data, "updatedAt": datetime.now(timezone.utc)}
-
         update_data_with_timestamp.pop("_id", None)
         update_data_with_timestamp.pop("id", None)
+
+        tasks_collection = cls.get_collection()
 
         updated_task_doc = tasks_collection.find_one_and_update(
             {"_id": obj_id}, {"$set": update_data_with_timestamp}, return_document=ReturnDocument.AFTER

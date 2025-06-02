@@ -110,7 +110,7 @@ class TaskDetailView(APIView):
         user_id_placeholder = "system_patch_user"
 
         updated_task_dto = TaskService.update_task(
-            task_id=task_id, validated_data=serializer.validated_data, user_id=user_id_placeholder
+            task_id=(task_id), validated_data=serializer.validated_data, user_id=user_id_placeholder
         )
 
         return Response(data=updated_task_dto.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)

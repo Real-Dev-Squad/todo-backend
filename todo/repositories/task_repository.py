@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import List
 from bson import ObjectId
+from pymongo import ReturnDocument
 
 from todo.models.task import TaskModel
 from todo.repositories.common.mongo_repository import MongoRepository
@@ -81,4 +82,24 @@ class TaskRepository(MongoRepository):
         task_data = tasks_collection.find_one({"_id": ObjectId(task_id)})
         if task_data:
             return TaskModel(**task_data)
+        return None
+
+    @classmethod
+    def delete_by_id(cls, task_id: str) -> TaskModel | None:
+        tasks_collection = cls.get_collection()
+
+        deleted_task_data = tasks_collection.find_one_and_update(
+            {"_id": task_id, "isDeleted": False},
+            {
+                "$set": {
+                    "isDeleted": True,
+                    "updatedAt": datetime.now(timezone.utc),
+                    "updatedBy": "system",
+                }  # TODO: modify to use actual user after auth implementation,
+            },
+            return_document=ReturnDocument.AFTER,
+        )
+
+        if deleted_task_data:
+            return TaskModel(**deleted_task_data)
         return None

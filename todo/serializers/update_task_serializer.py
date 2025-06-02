@@ -35,7 +35,7 @@ class UpdateTaskSerializer(serializers.Serializer):
         return value
 
     def validate_labels(self, value):
-        if not value:
+        if value is None:
             return value
 
         if not isinstance(value, (list, tuple)):

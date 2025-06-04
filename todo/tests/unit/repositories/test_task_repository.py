@@ -290,7 +290,6 @@ class TaskRepositoryUpdateTests(TestCase):
         self.mock_collection.find_one_and_update.assert_not_called()
 
     def test_update_task_raises_value_error_for_non_dict_update_data(self):
-        """Test that update raises ValueError if update_data is not a dictionary."""
         with self.assertRaises(ValueError) as context:
             TaskRepository.update(self.task_id_str, "not-a-dict")
         self.assertEqual(str(context.exception), "update_data must be a dictionary.")

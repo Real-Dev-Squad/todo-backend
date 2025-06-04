@@ -3,7 +3,7 @@ from unittest.mock import ANY, patch, MagicMock
 from pymongo import ReturnDocument
 from pymongo.collection import Collection
 from bson import ObjectId, errors as bson_errors
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import copy
 
 from todo.models.task import TaskModel
@@ -206,6 +206,124 @@ class TaskRepositoryCreateTests(TestCase):
 
         self.assertIn("Failed to create task", str(context.exception))
         mock_create.assert_called_once_with(task)
+
+
+class TaskRepositoryUpdateTests(TestCase):
+    def setUp(self):
+        self.patcher_get_collection = patch("todo.repositories.task_repository.TaskRepository.get_collection")
+        self.mock_get_collection = self.patcher_get_collection.start()
+        self.mock_collection = MagicMock(spec=Collection)
+        self.mock_get_collection.return_value = self.mock_collection
+
+        self.task_id_str = str(ObjectId())
+        self.task_id_obj = ObjectId(self.task_id_str)
+        self.valid_update_data = {
+            "title": "Updated Title",
+            "description": "Updated description",
+            "priority": TaskPriority.HIGH.value,
+            "status": TaskStatus.IN_PROGRESS.value,
+        }
+        self.updated_doc_from_db = {
+            "_id": self.task_id_obj,
+            "displayId": "#123",
+            "title": "Updated Title",
+            "description": "Updated description",
+            "priority": TaskPriority.HIGH.value,
+            "status": TaskStatus.IN_PROGRESS.value,
+            "assignee": "user1",
+            "labels": [],
+            "createdAt": datetime.now(timezone.utc) - timedelta(days=1),
+            "updatedAt": datetime.now(timezone.utc),
+            "createdBy": "system_user",
+            "updatedBy": "patch_user",
+            "isAcknowledged": False,
+            "isDeleted": False,
+        }
+
+    def tearDown(self):
+        self.patcher_get_collection.stop()
+
+    def test_update_task_success(self):
+        self.mock_collection.find_one_and_update.return_value = self.updated_doc_from_db
+
+        result_task = TaskRepository.update(self.task_id_str, self.valid_update_data)
+
+        self.assertIsNotNone(result_task)
+        self.assertIsInstance(result_task, TaskModel)
+        self.assertEqual(str(result_task.id), self.task_id_str)
+        self.assertEqual(result_task.title, self.valid_update_data["title"])
+        self.assertEqual(result_task.description, self.valid_update_data["description"])
+        self.assertIsNotNone(result_task.updatedAt)
+
+        args, kwargs = self.mock_collection.find_one_and_update.call_args
+        self.assertEqual(args[0], {"_id": self.task_id_obj})
+        self.assertEqual(kwargs["return_document"], ReturnDocument.AFTER)
+
+        update_doc_arg = args[1]
+        self.assertIn("$set", update_doc_arg)
+        set_payload = update_doc_arg["$set"]
+        self.assertIn("updatedAt", set_payload)
+        self.assertIsInstance(set_payload["updatedAt"], datetime)
+
+        for key, value in self.valid_update_data.items():
+            self.assertEqual(set_payload[key], value)
+
+    def test_update_task_returns_none_if_task_not_found(self):
+        self.mock_collection.find_one_and_update.return_value = None
+
+        result_task = TaskRepository.update(self.task_id_str, self.valid_update_data)
+
+        self.assertIsNone(result_task)
+        self.mock_collection.find_one_and_update.assert_called_once()
+
+        args, kwargs = self.mock_collection.find_one_and_update.call_args
+        self.assertEqual(args[0], {"_id": self.task_id_obj})
+        update_doc_arg = args[1]
+        self.assertIn("updatedAt", update_doc_arg["$set"])
+
+    def test_update_task_returns_none_for_invalid_task_id_format(self):
+        invalid_id_str = "not-an-object-id"
+
+        result_task = TaskRepository.update(invalid_id_str, self.valid_update_data)
+        self.assertIsNone(result_task)
+
+        self.mock_collection.find_one_and_update.assert_not_called()
+
+    def test_update_task_raises_value_error_for_non_dict_update_data(self):
+        with self.assertRaises(ValueError) as context:
+            TaskRepository.update(self.task_id_str, "not-a-dict")
+        self.assertEqual(str(context.exception), "update_data must be a dictionary.")
+        self.mock_collection.find_one_and_update.assert_not_called()
+
+    def test_update_task_empty_update_data_still_calls_find_one_and_update(self):
+        self.mock_collection.find_one_and_update.return_value = {**self.updated_doc_from_db, "title": "Original Title"}
+
+        result_task = TaskRepository.update(self.task_id_str, {})
+
+        self.assertIsNotNone(result_task)
+        self.mock_collection.find_one_and_update.assert_called_once()
+        args, kwargs = self.mock_collection.find_one_and_update.call_args
+        self.assertEqual(args[0], {"_id": self.task_id_obj})
+        update_doc_arg = args[1]["$set"]
+        self.assertIn("updatedAt", update_doc_arg)
+        self.assertEqual(len(update_doc_arg), 1)
+
+    def test_update_task_does_not_pass_id_or_underscore_id_in_update_payload(self):
+        self.mock_collection.find_one_and_update.return_value = self.updated_doc_from_db
+
+        data_with_ids = {"_id": "some_other_id", "id": "yet_another_id", "title": "Title with IDs"}
+
+        TaskRepository.update(self.task_id_str, data_with_ids)
+
+        self.mock_collection.find_one_and_update.assert_called_once()
+        args, _ = self.mock_collection.find_one_and_update.call_args
+        set_payload = args[1]["$set"]
+
+        self.assertNotIn("_id", set_payload)
+        self.assertNotIn("id", set_payload)
+        self.assertIn("title", set_payload)
+        self.assertEqual(set_payload["title"], "Title with IDs")
+        self.assertIn("updatedAt", set_payload)
 
 
 class TestRepositoryDeleteTaskById(TestCase):

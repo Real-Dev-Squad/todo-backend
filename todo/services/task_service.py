@@ -163,7 +163,7 @@ class TaskService:
             raise exc
 
     @classmethod
-    def process_labels_for_update(cls, raw_labels: list | None) -> list[PyObjectId]:
+    def _process_labels_for_update(cls, raw_labels: list | None) -> list[PyObjectId]:
         if raw_labels is None:
             return []
 
@@ -180,7 +180,7 @@ class TaskService:
         return label_object_ids
 
     @classmethod
-    def process_enum_for_update(cls, enum_type: type, value: str | None) -> str | None:
+    def _process_enum_for_update(cls, enum_type: type, value: str | None) -> str | None:
         if value is None:
             return None
         return enum_type[value].value
@@ -199,10 +199,10 @@ class TaskService:
                 update_payload[field] = cls._process_labels_for_update(value)
                 has_updates = True
             elif field == "priority":
-                update_payload[field] = cls.process_enum_for_update(TaskPriority, value)
+                update_payload[field] = cls._process_enum_for_update(TaskPriority, value)
                 has_updates = True
             elif field == "status":
-                update_payload[field] = cls.process_enum_for_update(TaskStatus, value)
+                update_payload[field] = cls._process_enum_for_update(TaskStatus, value)
                 has_updates = True
             elif field in cls.DIRECT_ASSIGNMENT_FIELDS:
                 update_payload[field] = value

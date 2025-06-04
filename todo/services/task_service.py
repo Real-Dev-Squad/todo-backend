@@ -187,37 +187,31 @@ class TaskService:
 
     @classmethod
     def update_task(cls, task_id: str, validated_data: dict, user_id: str = "system") -> TaskDTO:
-        current_task_model = TaskRepository.get_by_id(task_id)
-        if not current_task_model:
+        current_task = TaskRepository.get_by_id(task_id)
+        if not current_task:
             raise TaskNotFoundException(task_id)
 
         update_payload = {}
-        has_updates = False
+        enum_fields = {"priority": TaskPriority, "status": TaskStatus}
 
         for field, value in validated_data.items():
             if field == "labels":
                 update_payload[field] = cls._process_labels_for_update(value)
-                has_updates = True
-            elif field == "priority":
-                update_payload[field] = cls._process_enum_for_update(TaskPriority, value)
-                has_updates = True
-            elif field == "status":
-                update_payload[field] = cls._process_enum_for_update(TaskStatus, value)
-                has_updates = True
+            elif field in enum_fields:
+                update_payload[field] = cls._process_enum_for_update(enum_fields[field], value)
             elif field in cls.DIRECT_ASSIGNMENT_FIELDS:
                 update_payload[field] = value
-                has_updates = True
 
-        if not has_updates:
-            return cls.prepare_task_dto(current_task_model)
+        if not update_payload:
+            return cls.prepare_task_dto(current_task)
 
         update_payload["updatedBy"] = user_id
-        updated_task_model = TaskRepository.update(task_id, update_payload)
+        updated_task = TaskRepository.update(task_id, update_payload)
 
-        if not updated_task_model:
+        if not updated_task:
             raise TaskNotFoundException(task_id)
 
-        return cls.prepare_task_dto(updated_task_model)
+        return cls.prepare_task_dto(updated_task)
 
     @classmethod
     def create_task(cls, dto: CreateTaskDTO) -> CreateTaskResponse:

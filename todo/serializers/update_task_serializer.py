@@ -43,8 +43,9 @@ class UpdateTaskSerializer(serializers.Serializer):
 
         invalid_ids = [label_id for label_id in value if not ObjectId.is_valid(label_id)]
         if invalid_ids:
-            errors = [ValidationErrors.INVALID_OBJECT_ID.format(label_id) for label_id in invalid_ids]
-            raise serializers.ValidationError(errors)
+            raise serializers.ValidationError(
+                [ValidationErrors.INVALID_OBJECT_ID.format(label_id) for label_id in invalid_ids]
+            )
 
         return value
 

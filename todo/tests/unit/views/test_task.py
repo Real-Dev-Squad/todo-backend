@@ -18,6 +18,8 @@ from todo.constants.task import TaskPriority, TaskStatus
 from todo.dto.responses.get_task_by_id_response import GetTaskByIdResponse
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.constants.messages import ValidationErrors, ApiErrors
+from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 
 class TaskViewTests(APISimpleTestCase):
@@ -329,3 +331,218 @@ class TaskDeleteViewTests(APISimpleTestCase):
         response = self.client.delete(invalid_url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn(ValidationErrors.INVALID_TASK_ID_FORMAT, response.data["message"])
+
+
+class TaskDetailViewPatchTests(APISimpleTestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.task_id_str = str(ObjectId())
+        self.task_url = reverse("task_detail", args=[self.task_id_str])
+        self.future_date = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+
+        self.updated_task_dto_fixture = TaskDTO(
+            id=self.task_id_str,
+            displayId="#UPD1",
+            title="Updated Title from View Test",
+            description="Updated description.",
+            priority=TaskPriority.HIGH.value,
+            status=TaskStatus.IN_PROGRESS.value,
+            assignee=UserDTO(id="user_assignee_id", name="SYSTEM"),
+            isAcknowledged=True,
+            labels=[],
+            startedAt=datetime.now(timezone.utc) - timedelta(hours=1),
+            dueAt=datetime.fromisoformat(
+                self.future_date.replace("Z", "+00:00") if "Z" in self.future_date else self.future_date
+            ),
+            createdAt=datetime.now(timezone.utc) - timedelta(days=2),
+            updatedAt=datetime.now(timezone.utc),
+            createdBy=UserDTO(id="system_creator", name="SYSTEM"),
+            updatedBy=UserDTO(id="system_patch_user", name="SYSTEM"),
+        )
+
+    @patch("todo.views.task.UpdateTaskSerializer")
+    @patch("todo.views.task.TaskService.update_task")
+    def test_patch_task_success(self, mock_service_update_task, mock_update_serializer_class):
+        valid_payload = {
+            "title": "Updated Title from View Test",
+            "priority": TaskPriority.HIGH.name,
+            "dueAt": self.future_date,
+        }
+
+        mock_serializer_instance = Mock()
+        mock_serializer_instance.is_valid.return_value = True
+        mock_serializer_instance.validated_data = valid_payload
+        mock_update_serializer_class.return_value = mock_serializer_instance
+
+        mock_service_update_task.return_value = self.updated_task_dto_fixture
+
+        response = self.client.patch(self.task_url, data=valid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        mock_update_serializer_class.assert_called_once_with(data=valid_payload, partial=True)
+        mock_serializer_instance.is_valid.assert_called_once_with(raise_exception=True)
+        mock_service_update_task.assert_called_once_with(
+            task_id=self.task_id_str, validated_data=valid_payload, user_id="system_patch_user"
+        )
+
+        expected_response_data = self.updated_task_dto_fixture.model_dump(mode="json", exclude_none=True)
+        self.assertEqual(response.data, expected_response_data)
+
+    @patch("todo.views.task.UpdateTaskSerializer")
+    def test_patch_task_serializer_invalid_data(self, mock_update_serializer_class):
+        invalid_payload = {"title": "   ", "dueAt": "not-a-date"}
+
+        mock_serializer_instance = Mock()
+        error_detail = {"title": [ValidationErrors.BLANK_TITLE], "dueAt": ["Invalid date format."]}
+        mock_serializer_instance.is_valid.side_effect = DRFValidationError(detail=error_detail)
+        mock_update_serializer_class.return_value = mock_serializer_instance
+
+        response = self.client.patch(self.task_url, data=invalid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.data)
+        errors_list = response.data["errors"]
+
+        title_error_found = any(
+            err.get("source", {}).get("parameter") == "title" and ValidationErrors.BLANK_TITLE in err.get("detail", "")
+            for err in errors_list
+        )
+        due_at_error_found = any(
+            err.get("source", {}).get("parameter") == "dueAt" and "Invalid date format" in err.get("detail", "")
+            for err in errors_list
+        )
+
+        self.assertTrue(title_error_found, "Title validation error not found in response as expected.")
+        self.assertTrue(due_at_error_found, "dueAt validation error not found in response as expected.")
+
+    @patch("todo.views.task.TaskService.update_task")
+    @patch("todo.views.task.UpdateTaskSerializer")
+    def test_patch_task_service_raises_task_not_found(self, mock_update_serializer_class, mock_service_update_task):
+        valid_payload = {"title": "Attempt to update non-existent task"}
+
+        mock_serializer_instance = Mock()
+        mock_serializer_instance.is_valid.return_value = True
+        mock_serializer_instance.validated_data = valid_payload
+        mock_update_serializer_class.return_value = mock_serializer_instance
+
+        mock_service_update_task.side_effect = TaskNotFoundException(task_id=self.task_id_str)
+
+        response = self.client.patch(self.task_url, data=valid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        expected_message = ApiErrors.TASK_NOT_FOUND.format(self.task_id_str)
+        self.assertEqual(response.data["statusCode"], status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["message"], expected_message)
+        self.assertEqual(response.data["errors"][0]["detail"], expected_message)
+        self.assertEqual(response.data["errors"][0]["title"], ApiErrors.RESOURCE_NOT_FOUND_TITLE)
+        self.assertEqual(response.data["errors"][0]["source"]["path"], "task_id")
+
+    @patch("todo.views.task.TaskService.update_task")
+    @patch("todo.views.task.UpdateTaskSerializer")
+    def test_patch_task_service_raises_bson_invalid_id_for_task_id(
+        self, mock_update_serializer_class, mock_service_update_task
+    ):
+        invalid_task_id_format = "not-a-valid-object-id"
+        url_with_invalid_id = reverse("task_detail", args=[invalid_task_id_format])
+        valid_payload = {"title": "Update with invalid task ID format"}
+
+        mock_serializer_instance = Mock()
+        mock_serializer_instance.is_valid.return_value = True
+        mock_serializer_instance.validated_data = valid_payload
+        mock_update_serializer_class.return_value = mock_serializer_instance
+
+        mock_service_update_task.side_effect = BsonInvalidId(ValidationErrors.INVALID_TASK_ID_FORMAT)
+
+        response = self.client.patch(url_with_invalid_id, data=valid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["statusCode"], status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["message"], ValidationErrors.INVALID_TASK_ID_FORMAT)
+        self.assertEqual(response.data["errors"][0]["detail"], ValidationErrors.INVALID_TASK_ID_FORMAT)
+        self.assertEqual(response.data["errors"][0]["title"], ApiErrors.VALIDATION_ERROR)
+        self.assertEqual(response.data["errors"][0]["source"]["path"], "task_id")
+
+    @patch("todo.views.task.TaskService.update_task")
+    @patch("todo.views.task.UpdateTaskSerializer")
+    def test_patch_task_service_raises_drf_validation_error(
+        self, mock_update_serializer_class, mock_service_update_task
+    ):
+        valid_payload = {"labels": ["some_valid_id", "a_label_id_that_service_finds_missing"]}
+
+        mock_serializer_instance = Mock()
+        mock_serializer_instance.is_valid.return_value = True
+        mock_serializer_instance.validated_data = valid_payload
+        mock_update_serializer_class.return_value = mock_serializer_instance
+
+        service_error_detail = {
+            "labels": [ValidationErrors.MISSING_LABEL_IDS.format("a_label_id_that_service_finds_missing")]
+        }
+        mock_service_update_task.side_effect = DRFValidationError(detail=service_error_detail)
+
+        response = self.client.patch(self.task_url, data=valid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["statusCode"], status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["message"], "Invalid request")
+
+        self.assertIn(
+            "labels",
+            response.data["errors"][0]["source"]["parameter"],
+            "Source parameter should indicate 'labels' field",
+        )
+        self.assertEqual(response.data["errors"][0]["detail"], service_error_detail["labels"][0])
+
+    @patch("todo.views.task.TaskService.update_task")
+    @patch("todo.views.task.UpdateTaskSerializer")
+    def test_patch_task_service_raises_general_value_error(
+        self, mock_update_serializer_class, mock_service_update_task
+    ):
+        valid_payload = {"title": "Update that causes generic service error"}
+
+        mock_serializer_instance = Mock()
+        mock_serializer_instance.is_valid.return_value = True
+        mock_serializer_instance.validated_data = valid_payload
+        mock_update_serializer_class.return_value = mock_serializer_instance
+
+        simulated_service_api_error = ApiErrorResponse(
+            statusCode=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            message=ApiErrors.SERVER_ERROR,
+            errors=[ApiErrorDetail(detail="Failed to save task updates in service.", title=ApiErrors.UNEXPECTED_ERROR)],
+        )
+        mock_service_update_task.side_effect = ValueError(simulated_service_api_error)
+
+        response = self.client.patch(self.task_url, data=valid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data["statusCode"], status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data["message"], ApiErrors.SERVER_ERROR)
+        self.assertEqual(response.data["errors"][0]["detail"], "Failed to save task updates in service.")
+        self.assertEqual(response.data["errors"][0]["title"], ApiErrors.UNEXPECTED_ERROR)
+
+    @patch("todo.views.task.TaskService.update_task")
+    @patch("todo.views.task.UpdateTaskSerializer")
+    def test_patch_task_service_raises_unhandled_exception(
+        self, mock_update_serializer_class, mock_service_update_task
+    ):
+        valid_payload = {"title": "Update that causes unhandled service error"}
+
+        mock_serializer_instance = Mock()
+        mock_serializer_instance.is_valid.return_value = True
+        mock_serializer_instance.validated_data = valid_payload
+        mock_update_serializer_class.return_value = mock_serializer_instance
+
+        mock_service_update_task.side_effect = Exception("Something completely unexpected broke!")
+
+        with patch.object(settings, "DEBUG", False):
+            response = self.client.patch(self.task_url, data=valid_payload, format="json")
+
+            self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+            self.assertEqual(response.data["statusCode"], status.HTTP_500_INTERNAL_SERVER_ERROR)
+            self.assertEqual(response.data["message"], ApiErrors.UNEXPECTED_ERROR_OCCURRED)
+            self.assertEqual(response.data["errors"][0]["detail"], ApiErrors.INTERNAL_SERVER_ERROR)
+
+        with patch.object(settings, "DEBUG", True):
+            response_debug = self.client.patch(self.task_url, data=valid_payload, format="json")
+            self.assertEqual(response_debug.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+            self.assertEqual(response_debug.data["errors"][0]["detail"], "Something completely unexpected broke!")

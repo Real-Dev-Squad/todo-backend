@@ -3,6 +3,7 @@ from unittest import TestCase
 from django.core.paginator import Page, Paginator, EmptyPage
 from django.core.exceptions import ValidationError
 from datetime import datetime, timedelta, timezone
+from bson import ObjectId
 
 from todo.dto.responses.get_tasks_response import GetTasksResponse
 from todo.dto.responses.paginated_response import LinksData
@@ -16,8 +17,11 @@ from todo.constants.task import TaskPriority, TaskStatus
 from todo.models.task import TaskModel
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from bson.errors import InvalidId as BsonInvalidId
-from todo.constants.messages import ApiErrors
+from todo.constants.messages import ApiErrors, ValidationErrors
 from todo.repositories.task_repository import TaskRepository
+from todo.models.label import LabelModel
+from todo.models.common.pyobjectid import PyObjectId
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 
 class TaskServiceTests(TestCase):
@@ -259,3 +263,240 @@ class TaskServiceTests(TestCase):
         mock_delete_by_id.return_value = None
         with self.assertRaises(TaskNotFoundException):
             TaskService.delete_task("nonexistent_id")
+
+
+class TaskServiceUpdateTests(TestCase):
+    def setUp(self):
+        self.task_id_str = str(ObjectId())
+        self.user_id_str = "test_user_123"
+        self.default_task_model = TaskModel(
+            id=ObjectId(self.task_id_str),
+            displayId="#TSK1",
+            title="Original Task Title",
+            description="Original Description",
+            priority=TaskPriority.MEDIUM,
+            status=TaskStatus.TODO,
+            createdBy="system",
+            createdAt=datetime.now(timezone.utc) - timedelta(days=2),
+        )
+        self.label_id_1_str = str(ObjectId())
+        self.label_id_2_str = str(ObjectId())
+        self.mock_label_1 = LabelModel(
+            id=PyObjectId(self.label_id_1_str),
+            name="Label One",
+            color="#FF0000",
+            createdBy="system",
+            createdAt=datetime.now(timezone.utc),
+        )
+        self.mock_label_2 = LabelModel(
+            id=PyObjectId(self.label_id_2_str),
+            name="Label Two",
+            color="#00FF00",
+            createdBy="system",
+            createdAt=datetime.now(timezone.utc),
+        )
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskRepository.update")
+    @patch("todo.services.task_service.LabelRepository.list_by_ids")
+    @patch("todo.services.task_service.TaskService.prepare_task_dto")
+    def test_update_task_success_full_payload(
+        self, mock_prepare_dto, mock_list_labels, mock_repo_update, mock_repo_get_by_id
+    ):
+        mock_repo_get_by_id.return_value = self.default_task_model
+
+        updated_task_model_from_repo = self.default_task_model.model_copy(deep=True)
+        updated_task_model_from_repo.title = "Updated Title via Service"
+        updated_task_model_from_repo.status = TaskStatus.IN_PROGRESS
+        updated_task_model_from_repo.priority = TaskPriority.HIGH
+        updated_task_model_from_repo.description = "New Description"
+        updated_task_model_from_repo.assignee = "new_assignee_id"
+        updated_task_model_from_repo.dueAt = datetime.now(timezone.utc) + timedelta(days=5)
+        updated_task_model_from_repo.startedAt = datetime.now(timezone.utc) - timedelta(hours=2)
+        updated_task_model_from_repo.isAcknowledged = True
+        updated_task_model_from_repo.labels = [PyObjectId(self.label_id_1_str)]
+        updated_task_model_from_repo.updatedBy = self.user_id_str
+        updated_task_model_from_repo.updatedAt = datetime.now(timezone.utc)
+        mock_repo_update.return_value = updated_task_model_from_repo
+
+        mock_dto_response = MagicMock(spec=TaskDTO)
+        mock_prepare_dto.return_value = mock_dto_response
+
+        mock_list_labels.return_value = [self.mock_label_1]
+
+        validated_data_from_serializer = {
+            "title": "Updated Title via Service",
+            "description": "New Description",
+            "priority": TaskPriority.HIGH.name,
+            "status": TaskStatus.IN_PROGRESS.name,
+            "assignee": "new_assignee_id",
+            "labels": [self.label_id_1_str],
+            "dueAt": datetime.now(timezone.utc) + timedelta(days=5),
+            "startedAt": datetime.now(timezone.utc) - timedelta(hours=2),
+            "isAcknowledged": True,
+        }
+
+        result_dto = TaskService.update_task(self.task_id_str, validated_data_from_serializer, self.user_id_str)
+
+        mock_repo_get_by_id.assert_called_once_with(self.task_id_str)
+        mock_list_labels.assert_called_once_with([PyObjectId(self.label_id_1_str)])
+
+        mock_repo_update.assert_called_once()
+        call_args = mock_repo_update.call_args[0]
+        self.assertEqual(call_args[0], self.task_id_str)
+        update_payload_sent_to_repo = call_args[1]
+
+        self.assertEqual(update_payload_sent_to_repo["title"], validated_data_from_serializer["title"])
+        self.assertEqual(update_payload_sent_to_repo["status"], TaskStatus.IN_PROGRESS.value)
+        self.assertEqual(update_payload_sent_to_repo["priority"], TaskPriority.HIGH.value)
+        self.assertEqual(update_payload_sent_to_repo["description"], validated_data_from_serializer["description"])
+        self.assertEqual(update_payload_sent_to_repo["assignee"], validated_data_from_serializer["assignee"])
+        self.assertEqual(update_payload_sent_to_repo["dueAt"], validated_data_from_serializer["dueAt"])
+        self.assertEqual(update_payload_sent_to_repo["startedAt"], validated_data_from_serializer["startedAt"])
+        self.assertEqual(
+            update_payload_sent_to_repo["isAcknowledged"], validated_data_from_serializer["isAcknowledged"]
+        )
+        self.assertEqual(update_payload_sent_to_repo["labels"], [PyObjectId(self.label_id_1_str)])
+        self.assertEqual(update_payload_sent_to_repo["updatedBy"], self.user_id_str)
+
+        mock_prepare_dto.assert_called_once_with(updated_task_model_from_repo)
+        self.assertEqual(result_dto, mock_dto_response)
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskRepository.update")
+    @patch("todo.services.task_service.TaskService.prepare_task_dto")
+    def test_update_task_no_actual_changes_returns_current_task_dto(
+        self, mock_prepare_dto, mock_repo_update, mock_repo_get_by_id
+    ):
+        mock_repo_get_by_id.return_value = self.default_task_model
+        mock_dto_response = MagicMock(spec=TaskDTO)
+        mock_prepare_dto.return_value = mock_dto_response
+
+        validated_data_empty = {}
+        result_dto = TaskService.update_task(self.task_id_str, validated_data_empty, self.user_id_str)
+
+        mock_repo_get_by_id.assert_called_once_with(self.task_id_str)
+        mock_repo_update.assert_not_called()
+        mock_prepare_dto.assert_called_once_with(self.default_task_model)
+        self.assertEqual(result_dto, mock_dto_response)
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    def test_update_task_raises_task_not_found(self, mock_repo_get_by_id):
+        mock_repo_get_by_id.return_value = None
+        validated_data = {"title": "some update"}
+
+        with self.assertRaises(TaskNotFoundException) as context:
+            TaskService.update_task(self.task_id_str, validated_data, self.user_id_str)
+
+        self.assertEqual(str(context.exception), ApiErrors.TASK_NOT_FOUND.format(self.task_id_str))
+        mock_repo_get_by_id.assert_called_once_with(self.task_id_str)
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.LabelRepository.list_by_ids")
+    def test_update_task_raises_drf_validation_error_for_missing_labels(self, mock_list_labels, mock_repo_get_by_id):
+        mock_repo_get_by_id.return_value = self.default_task_model
+        mock_list_labels.return_value = [self.mock_label_1]
+
+        label_id_non_existent = str(ObjectId())
+        validated_data_with_bad_label = {"labels": [self.label_id_1_str, label_id_non_existent]}
+
+        with self.assertRaises(DRFValidationError) as context:
+            TaskService.update_task(self.task_id_str, validated_data_with_bad_label, self.user_id_str)
+
+        self.assertIn("labels", context.exception.detail)
+        self.assertIn(
+            ValidationErrors.MISSING_LABEL_IDS.format(label_id_non_existent), context.exception.detail["labels"]
+        )
+        mock_repo_get_by_id.assert_called_once_with(self.task_id_str)
+        mock_list_labels.assert_called_once_with([PyObjectId(self.label_id_1_str), PyObjectId(label_id_non_existent)])
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskRepository.update")
+    def test_update_task_raises_task_not_found_if_repo_update_fails(self, mock_repo_update, mock_repo_get_by_id):
+        mock_repo_get_by_id.return_value = self.default_task_model
+        mock_repo_update.return_value = None
+
+        validated_data = {"title": "Updated Title"}
+
+        with self.assertRaises(TaskNotFoundException) as context:
+            TaskService.update_task(self.task_id_str, validated_data, self.user_id_str)
+
+        self.assertEqual(str(context.exception), ApiErrors.TASK_NOT_FOUND.format(self.task_id_str))
+        mock_repo_get_by_id.assert_called_once_with(self.task_id_str)
+        mock_repo_update.assert_called_once_with(self.task_id_str, {**validated_data, "updatedBy": self.user_id_str})
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskRepository.update")
+    @patch("todo.services.task_service.TaskService.prepare_task_dto")
+    def test_update_task_clears_labels_when_labels_is_none(
+        self, mock_prepare_dto, mock_repo_update, mock_repo_get_by_id
+    ):
+        mock_repo_get_by_id.return_value = self.default_task_model
+        updated_task_model_from_repo = self.default_task_model.model_copy(deep=True)
+        updated_task_model_from_repo.labels = []
+        mock_repo_update.return_value = updated_task_model_from_repo
+        mock_prepare_dto.return_value = MagicMock(spec=TaskDTO)
+
+        validated_data = {"labels": None}
+        TaskService.update_task(self.task_id_str, validated_data, self.user_id_str)
+
+        _, kwargs_update = mock_repo_update.call_args
+        update_payload = mock_repo_update.call_args[0][1]
+        self.assertEqual(update_payload["labels"], [])
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskRepository.update")
+    @patch("todo.services.task_service.LabelRepository.list_by_ids")
+    @patch("todo.services.task_service.TaskService.prepare_task_dto")
+    def test_update_task_sets_empty_labels_list_when_labels_is_empty_list(
+        self, mock_prepare_dto, mock_list_labels, mock_repo_update, mock_repo_get_by_id
+    ):
+        mock_repo_get_by_id.return_value = self.default_task_model
+        updated_task_model_from_repo = self.default_task_model.model_copy(deep=True)
+        updated_task_model_from_repo.labels = []
+        mock_repo_update.return_value = updated_task_model_from_repo
+        mock_prepare_dto.return_value = MagicMock(spec=TaskDTO)
+        mock_list_labels.return_value = []
+
+        validated_data = {"labels": []}
+        TaskService.update_task(self.task_id_str, validated_data, self.user_id_str)
+
+        update_payload_sent_to_repo = mock_repo_update.call_args[0][1]
+        self.assertEqual(update_payload_sent_to_repo["labels"], [])
+        mock_list_labels.assert_not_called()
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskRepository.update")
+    @patch("todo.services.task_service.TaskService.prepare_task_dto")
+    def test_update_task_converts_priority_and_status_names_to_values(
+        self, mock_prepare_dto, mock_repo_update, mock_repo_get_by_id
+    ):
+        mock_repo_get_by_id.return_value = self.default_task_model
+        updated_task_model_from_repo = self.default_task_model.model_copy(deep=True)
+        mock_repo_update.return_value = updated_task_model_from_repo
+        mock_prepare_dto.return_value = MagicMock(spec=TaskDTO)
+
+        validated_data = {"priority": TaskPriority.LOW.name, "status": TaskStatus.DONE.name}
+        TaskService.update_task(self.task_id_str, validated_data, self.user_id_str)
+
+        update_payload_sent_to_repo = mock_repo_update.call_args[0][1]
+        self.assertEqual(update_payload_sent_to_repo["priority"], TaskPriority.LOW.value)
+        self.assertEqual(update_payload_sent_to_repo["status"], TaskStatus.DONE.value)
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskRepository.update")
+    @patch("todo.services.task_service.TaskService.prepare_task_dto")
+    def test_update_task_handles_null_priority_and_status(
+        self, mock_prepare_dto, mock_repo_update, mock_repo_get_by_id
+    ):
+        mock_repo_get_by_id.return_value = self.default_task_model
+        updated_task_model_from_repo = self.default_task_model.model_copy(deep=True)
+        mock_repo_update.return_value = updated_task_model_from_repo
+        mock_prepare_dto.return_value = MagicMock(spec=TaskDTO)
+
+        validated_data = {"priority": None, "status": None}
+        TaskService.update_task(self.task_id_str, validated_data, self.user_id_str)
+
+        update_payload_sent_to_repo = mock_repo_update.call_args[0][1]
+        self.assertIsNone(update_payload_sent_to_repo["priority"])
+        self.assertIsNone(update_payload_sent_to_repo["status"])

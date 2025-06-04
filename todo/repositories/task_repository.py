@@ -103,3 +103,30 @@ class TaskRepository(MongoRepository):
         if deleted_task_data:
             return TaskModel(**deleted_task_data)
         return None
+
+    @classmethod
+    def update(cls, task_id: str, update_data: dict) -> TaskModel | None:
+        """
+        Updates a specific task by its ID with the given data.
+        """
+        if not isinstance(update_data, dict):
+            raise ValueError("update_data must be a dictionary.")
+
+        try:
+            obj_id = ObjectId(task_id)
+        except Exception:
+            return None
+
+        update_data_with_timestamp = {**update_data, "updatedAt": datetime.now(timezone.utc)}
+        update_data_with_timestamp.pop("_id", None)
+        update_data_with_timestamp.pop("id", None)
+
+        tasks_collection = cls.get_collection()
+
+        updated_task_doc = tasks_collection.find_one_and_update(
+            {"_id": obj_id}, {"$set": update_data_with_timestamp}, return_document=ReturnDocument.AFTER
+        )
+
+        if updated_task_doc:
+            return TaskModel(**updated_task_doc)
+        return None

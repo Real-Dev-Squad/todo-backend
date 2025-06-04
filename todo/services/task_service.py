@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from urllib.parse import urlencode
 from datetime import datetime, timezone
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from todo.dto.label_dto import LabelDTO
 from todo.dto.task_dto import TaskDTO, CreateTaskDTO
 from todo.dto.user_dto import UserDTO
@@ -13,9 +14,10 @@ from todo.dto.responses.create_task_response import CreateTaskResponse
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.dto.responses.paginated_response import LinksData
 from todo.models.task import TaskModel
+from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.label_repository import LabelRepository
-from todo.constants.task import TaskStatus
+from todo.constants.task import TaskStatus, TaskPriority
 from todo.constants.messages import ApiErrors, ValidationErrors
 from django.conf import settings
 from todo.exceptions.task_exceptions import TaskNotFoundException
@@ -30,6 +32,8 @@ class PaginationConfig:
 
 
 class TaskService:
+    DIRECT_ASSIGNMENT_FIELDS = {"title", "description", "assignee", "dueAt", "startedAt", "isAcknowledged"}
+
     @classmethod
     def get_tasks(
         cls, page: int = PaginationConfig.DEFAULT_PAGE, limit: int = PaginationConfig.DEFAULT_LIMIT
@@ -157,6 +161,57 @@ class TaskService:
             return cls.prepare_task_dto(task_model)
         except BsonInvalidId as exc:
             raise exc
+
+    @classmethod
+    def _process_labels_for_update(cls, raw_labels: list | None) -> list[PyObjectId]:
+        if raw_labels is None:
+            return []
+
+        label_object_ids = [PyObjectId(label_id_str) for label_id_str in raw_labels]
+
+        if label_object_ids:
+            existing_labels = LabelRepository.list_by_ids(label_object_ids)
+            if len(existing_labels) != len(label_object_ids):
+                found_db_ids_str = {str(label.id) for label in existing_labels}
+                missing_ids_str = [str(py_id) for py_id in label_object_ids if str(py_id) not in found_db_ids_str]
+                raise DRFValidationError(
+                    {"labels": [ValidationErrors.MISSING_LABEL_IDS.format(", ".join(missing_ids_str))]}
+                )
+        return label_object_ids
+
+    @classmethod
+    def _process_enum_for_update(cls, enum_type: type, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return enum_type[value].value
+
+    @classmethod
+    def update_task(cls, task_id: str, validated_data: dict, user_id: str = "system") -> TaskDTO:
+        current_task = TaskRepository.get_by_id(task_id)
+        if not current_task:
+            raise TaskNotFoundException(task_id)
+
+        update_payload = {}
+        enum_fields = {"priority": TaskPriority, "status": TaskStatus}
+
+        for field, value in validated_data.items():
+            if field == "labels":
+                update_payload[field] = cls._process_labels_for_update(value)
+            elif field in enum_fields:
+                update_payload[field] = cls._process_enum_for_update(enum_fields[field], value)
+            elif field in cls.DIRECT_ASSIGNMENT_FIELDS:
+                update_payload[field] = value
+
+        if not update_payload:
+            return cls.prepare_task_dto(current_task)
+
+        update_payload["updatedBy"] = user_id
+        updated_task = TaskRepository.update(task_id, update_payload)
+
+        if not updated_task:
+            raise TaskNotFoundException(task_id)
+
+        return cls.prepare_task_dto(updated_task)
 
     @classmethod
     def create_task(cls, dto: CreateTaskDTO) -> CreateTaskResponse:

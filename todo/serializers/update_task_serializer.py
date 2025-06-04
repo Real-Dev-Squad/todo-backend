@@ -49,10 +49,14 @@ class UpdateTaskSerializer(serializers.Serializer):
         return value
 
     def validate_dueAt(self, value):
-        if value is not None:
-            now = datetime.now(timezone.utc)
-            if value <= now:
-                raise serializers.ValidationError(ValidationErrors.PAST_DUE_DATE)
+        if value is None:
+            return value
+        errors = []
+        now = datetime.now(timezone.utc)
+        if value <= now:
+            errors.append(ValidationErrors.PAST_DUE_DATE)
+        if errors:
+            raise serializers.ValidationError(errors)
         return value
 
     def validate_startedAt(self, value):

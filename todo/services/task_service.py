@@ -32,6 +32,8 @@ class PaginationConfig:
 
 
 class TaskService:
+    DIRECT_ASSIGNMENT_FIELDS = {"title", "description", "assignee", "dueAt", "startedAt", "isAcknowledged"}
+
     @classmethod
     def get_tasks(
         cls, page: int = PaginationConfig.DEFAULT_PAGE, limit: int = PaginationConfig.DEFAULT_LIMIT
@@ -161,6 +163,29 @@ class TaskService:
             raise exc
 
     @classmethod
+    def _process_labels_for_update(cls, raw_labels: list | None) -> list[PyObjectId]:
+        if raw_labels is None:
+            return []
+
+        label_object_ids = [PyObjectId(label_id_str) for label_id_str in raw_labels]
+
+        if label_object_ids:
+            existing_labels = LabelRepository.list_by_ids(label_object_ids)
+            if len(existing_labels) != len(label_object_ids):
+                found_db_ids_str = {str(label.id) for label in existing_labels}
+                missing_ids_str = [str(py_id) for py_id in label_object_ids if str(py_id) not in found_db_ids_str]
+                raise DRFValidationError(
+                    {"labels": [ValidationErrors.MISSING_LABEL_IDS.format(", ".join(missing_ids_str))]}
+                )
+        return label_object_ids
+
+    @classmethod
+    def _process_enum_for_update(cls, enum_type: type, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return enum_type[value].value
+
+    @classmethod
     def update_task(cls, task_id: str, validated_data: dict, user_id: str = "system") -> TaskDTO:
         current_task_model = TaskRepository.get_by_id(task_id)
         if not current_task_model:
@@ -171,31 +196,15 @@ class TaskService:
 
         for field, value in validated_data.items():
             if field == "labels":
-                if value is None:
-                    update_payload[field] = []
-                    has_updates = True
-                elif isinstance(value, list):
-                    label_object_ids = [PyObjectId(label_id_str) for label_id_str in value]
-
-                    if label_object_ids:
-                        existing_labels = LabelRepository.list_by_ids(label_object_ids)
-                        if len(existing_labels) != len(label_object_ids):
-                            found_db_ids_str = {str(label.id) for label in existing_labels}
-                            missing_ids_str = [
-                                str(py_id) for py_id in label_object_ids if str(py_id) not in found_db_ids_str
-                            ]
-                            raise DRFValidationError(
-                                {"labels": [ValidationErrors.MISSING_LABEL_IDS.format(", ".join(missing_ids_str))]}
-                            )
-                    update_payload[field] = label_object_ids
-                    has_updates = True
+                update_payload[field] = cls._process_labels_for_update(value)
+                has_updates = True
             elif field == "priority":
-                update_payload[field] = TaskPriority[value].value if value else None
+                update_payload[field] = cls._process_enum_for_update(TaskPriority, value)
                 has_updates = True
             elif field == "status":
-                update_payload[field] = TaskStatus[value].value if value else None
+                update_payload[field] = cls._process_enum_for_update(TaskStatus, value)
                 has_updates = True
-            elif field in ["title", "description", "assignee", "dueAt", "startedAt", "isAcknowledged"]:
+            elif field in cls.DIRECT_ASSIGNMENT_FIELDS:
                 update_payload[field] = value
                 has_updates = True
 
@@ -203,7 +212,6 @@ class TaskService:
             return cls.prepare_task_dto(current_task_model)
 
         update_payload["updatedBy"] = user_id
-
         updated_task_model = TaskRepository.update(task_id, update_payload)
 
         if not updated_task_model:

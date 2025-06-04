@@ -36,17 +36,21 @@
     ```
     python -m pip install -r requirements.txt
     ```
-6. Create a `.env` file in the root directory, and copy the content from the `.env.example` file to it
-7. Install [docker](https://docs.docker.com/get-docker/) and [docker compose](https://docs.docker.com/compose/install/)
-8. Start MongoDB using docker
+6. Create a .env file in your project's root directory by copying the contents from .env.example.
+
+7. Verify or update MONGO_REPLICA_HOST in your newly created .env file to ensure it is set as follows:
+    ``` env
+    MONGO_REPLICA_HOST="localhost:27017"
+8. Install [docker](https://docs.docker.com/get-docker/) and [docker compose](https://docs.docker.com/compose/install/)
+9. Start MongoDB using docker
     ```
     docker-compose up -d db
     ```
-9. Start the development server by running the command
+10. Start the development server by running the command
     ```
     python manage.py runserver
     ```
-10. Go to http://127.0.0.1:8000/v1/health API to make sure the server it up. You should see this response
+11. Go to http://127.0.0.1:8000/v1/health API to make sure the server it up. You should see this response
     ```
     {
         "status": "UP",
@@ -60,17 +64,25 @@
 
 ## To simply try out the app
 1. Install [docker](https://docs.docker.com/get-docker/) and [docker compose](https://docs.docker.com/compose/install/)
-2. Start Django application and MongoDB using docker
+
+
+2. Create a .env file in your project's root directory by copying the contents from .env.example.
+
+3. Verify or update MONGO_REPLICA_HOST in your newly created .env file to ensure it is set as follows:
+    ``` env
+    MONGO_REPLICA_HOST="db:27017"
+
+4. Start Django application and MongoDB using docker
     ```
     docker-compose up -d
     ```
-3. Go to http://127.0.0.1:8000/v1/health API to make sure the server it up. You should see this response
+5. Go to http://127.0.0.1:8000/v1/health API to make sure the server it up. You should see this response
     ```
     {
     "status": "UP"
     }
     ```
-4. On making changes to code and saving, live reload will work in this case as well
+6. On making changes to code and saving, live reload will work in this case as well
 
 ## Command reference
 1. To run the tests, run the following command

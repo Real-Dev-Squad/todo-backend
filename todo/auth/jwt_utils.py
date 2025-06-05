@@ -34,10 +34,6 @@ def verify_jwt_token(token: str) -> dict:
             options={"verify_signature": True, "verify_exp": True, "require": ["exp", "iat", "userId", "role"]},
         )
 
-        required_fields = ["userId", "role"]
-        for field in required_fields:
-            if not payload.get(field):
-                raise TokenInvalidError()
         return payload
 
     except jwt.ExpiredSignatureError:

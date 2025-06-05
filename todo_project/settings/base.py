@@ -73,8 +73,12 @@ JWT_AUTH = {
 # Cookie Settings
 
 JWT_COOKIE_SETTINGS = {
-    "RDS_SESSION_COOKIE_NAME": os.getenv("RDS_SESSION_COOKIE_NAME", "rds-session-development"),
-    "RDS_SESSION_V2_COOKIE_NAME": os.getenv("RDS_SESSION_V2_COOKIE_NAME", "rds-session-v2-development"),
+    "RDS_SESSION_COOKIE_NAME": os.getenv(
+        "RDS_SESSION_COOKIE_NAME", "rds-session-development"
+    ),
+    "RDS_SESSION_V2_COOKIE_NAME": os.getenv(
+        "RDS_SESSION_V2_COOKIE_NAME", "rds-session-v2-development"
+    ),
     "COOKIE_DOMAIN": os.getenv("COOKIE_DOMAIN", None),
     "COOKIE_SECURE": os.getenv("COOKIE_SECURE", "False").lower() == "true",
     "COOKIE_HTTPONLY": True,

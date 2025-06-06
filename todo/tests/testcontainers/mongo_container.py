@@ -1,5 +1,4 @@
-# tests/testcontainers/mongo_container.py
-
+import os
 import time
 import json
 from testcontainers.core.generic import DockerContainer
@@ -20,7 +19,8 @@ class MongoReplicaSetContainer(DockerContainer):
         default_db = "testdb"
         mongo_url = f"mongodb://localhost:{mapped_port}/{default_db}" f"?replicaSet=rs0"
         self._mongo_url = mongo_url
-        member_host = f"host.docker.internal:{mapped_port}"
+        host = "localhost" if os.environ.get("CI") else "host.docker.internal"
+        member_host = f"{host}:{mapped_port}"
         initiate_js = json.dumps({"_id": "rs0", "members": [{"_id": 0, "host": member_host}]})
 
         time.sleep(1)

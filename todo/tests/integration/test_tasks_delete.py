@@ -1,31 +1,14 @@
-from django.test import TransactionTestCase
 from bson import ObjectId
 from http import HTTPStatus
-from django.test import override_settings
 from rest_framework.test import APIClient
-from pymongo import MongoClient
-from todo.tests.testcontainers.mongo_container import MongoReplicaSetContainer
-from todo_project.db.config import DatabaseManager
 from todo.tests.fixtures.task import tasks_db_data
+from todo.tests.integration.base_mongo_test import BaseMongoTestCase
 
 
-@override_settings(DB_NAME="testdb")
-class TaskDeleteAPIIntegrationTest(TransactionTestCase):
+class TaskDeleteAPIIntegrationTest(BaseMongoTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.mongo_container = MongoReplicaSetContainer()
-        cls.mongo_container.start()
-        cls.mongo_url = cls.mongo_container.get_connection_url()
-        cls.mongo_client = MongoClient(cls.mongo_url)
-        cls.db = cls.mongo_client.get_database("testdb")
-
-        cls.override = override_settings(
-            MONGODB_URI=cls.mongo_url,
-            DB_NAME="testdb",
-        )
-        cls.override.enable()
-        DatabaseManager().reset()
         task_doc = tasks_db_data[0].copy()
         task_doc["_id"] = task_doc.pop("id")
         cls.db.tasks.insert_one(task_doc)
@@ -33,13 +16,6 @@ class TaskDeleteAPIIntegrationTest(TransactionTestCase):
         cls.non_existent_id = str(ObjectId())
         cls.invalid_task_id = "invalid-task-id"
         cls.client = APIClient()
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.mongo_client.close()
-        cls.mongo_container.stop()
-        cls.override.disable()
-        super().tearDownClass()
 
     def test_delete_task_success(self):
         response = self.client.delete(f"/v1/tasks/{self.existing_task_id}")

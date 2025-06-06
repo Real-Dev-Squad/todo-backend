@@ -1,42 +1,64 @@
-from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APITestCase
+from django.test import TransactionTestCase
 from bson import ObjectId
-from unittest.mock import patch
-from todo.constants.messages import ApiErrors
-from todo.tests.fixtures.task import task_dtos
+from http import HTTPStatus
+from django.test import override_settings
+from rest_framework.test import APIClient
+from pymongo import MongoClient
+from todo.tests.testcontainers.mongo_container import MongoReplicaSetContainer
+from todo_project.db.config import DatabaseManager
+from todo.tests.fixtures.task import tasks_db_data
 
 
-class TaskDeleteAPIIntegrationTest(APITestCase):
-    def setUp(self):
-        self.task_id = task_dtos[0].id
+@override_settings(DB_NAME="testdb")
+class TaskDeleteAPIIntegrationTest(TransactionTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.mongo_container = MongoReplicaSetContainer()
+        cls.mongo_container.start()
+        cls.mongo_url = cls.mongo_container.get_connection_url()
+        cls.mongo_client = MongoClient(cls.mongo_url)
+        cls.db = cls.mongo_client.get_database("testdb")
 
-    @patch("todo.repositories.task_repository.TaskRepository.delete_by_id")
-    def test_delete_task_success(self, mock_delete_by_id):
-        url = reverse("task_detail", args=[self.task_id])
-        response = self.client.delete(url)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        cls.override = override_settings(
+            MONGODB_URI=cls.mongo_url,
+            DB_NAME="testdb",
+        )
+        cls.override.enable()
+        DatabaseManager().reset()
+        task_doc = tasks_db_data[0].copy()
+        task_doc["_id"] = task_doc.pop("id")
+        cls.db.tasks.insert_one(task_doc)
+        cls.existing_task_id = str(task_doc["_id"])
+        cls.non_existent_id = str(ObjectId())
+        cls.invalid_task_id = "invalid-task-id"
+        cls.client = APIClient()
 
-    @patch("todo.repositories.task_repository.TaskRepository.delete_by_id")
-    def test_delete_task_not_found(self, mock_delete_by_id):
-        mock_delete_by_id.return_value = None
-        non_existent_id = str(ObjectId())
-        url = reverse("task_detail", args=[non_existent_id])
-        response = self.client.delete(url)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        error_detail = response.data.get("errors", [{}])[0].get("detail")
-        self.assertEqual(error_detail, ApiErrors.TASK_NOT_FOUND.format(non_existent_id))
+    @classmethod
+    def tearDownClass(cls):
+        cls.mongo_client.close()
+        cls.mongo_container.stop()
+        cls.override.disable()
+        super().tearDownClass()
+
+    def test_delete_task_success(self):
+        response = self.client.delete(f"/v1/tasks/{self.existing_task_id}")
+        self.assertEqual(response.status_code, HTTPStatus.NO_CONTENT)
+
+    def test_delete_task_not_found(self):
+        response = self.client.delete(f"/v1/tasks/{self.non_existent_id}")
+        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
+        response_data = response.json()
+        error_message = f"Task with ID {self.non_existent_id} not found."
+        self.assertEqual(response_data["message"], error_message)
+        error = response_data["errors"][0]
+        self.assertEqual(error["source"]["path"], "task_id")
+        self.assertEqual(error["title"], "Resource Not Found")
+        self.assertEqual(error["detail"], error_message)
 
     def test_delete_task_invalid_id_format(self):
-        invalid_task_id = "invalid-id"
-        url = reverse("task_detail", args=[invalid_task_id])
-        response = self.client.delete(url)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["message"], "Please enter a valid Task ID format.")
-        self.assertIsNotNone(response.data.get("errors"))
-        self.assertEqual(len(response.data["errors"]), 1)
-
-        error_obj = response.data["errors"][0]
-        self.assertEqual(error_obj["detail"], "Please enter a valid Task ID format.")
-        self.assertEqual(error_obj["source"]["path"], "task_id")
-        self.assertEqual(error_obj["title"], "Validation Error")
+        response = self.client.delete(f"/v1/tasks/{self.invalid_task_id}")
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
+        response_data = response.json()
+        self.assertEqual(response_data["message"], "Please enter a valid Task ID format.")
+        self.assertEqual(response_data["errors"][0]["title"], "Validation Error")

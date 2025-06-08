@@ -1,5 +1,5 @@
-from bson import ObjectId
 from http import HTTPStatus
+from bson import ObjectId
 from rest_framework.test import APIClient
 from todo.tests.fixtures.task import tasks_db_data
 from todo.tests.integration.base_mongo_test import BaseMongoTestCase

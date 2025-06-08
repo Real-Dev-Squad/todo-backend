@@ -9,6 +9,7 @@ class MongoReplicaSetContainer(DockerContainer):
         super().__init__(image=image)
         self.with_exposed_ports(27017)
         self.with_command(["mongod", "--replSet", "rs0", "--bind_ip_all"])
+        self._mongo_url = None
 
     def start(self):
         super().start()
@@ -35,7 +36,8 @@ class MongoReplicaSetContainer(DockerContainer):
         exit_code, output = self.exec(cmd)
         if exit_code != 0:
             raise RuntimeError(
-                f"rs.initiate() failed (exit code {exit_code}):\n{output.decode('utf-8', errors='ignore')}"
+                f"rs.initiate() failed (exit code {exit_code}):\n"
+                f"{output.decode('utf-8', errors='ignore')}"
             )
         self._wait_for_primary()
         return self

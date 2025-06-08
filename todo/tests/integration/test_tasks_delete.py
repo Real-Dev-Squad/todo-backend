@@ -35,6 +35,9 @@ class TaskDeleteAPIIntegrationTest(BaseMongoTestCase):
     def test_delete_task_invalid_id_format(self):
         response = self.client.delete(f"/v1/tasks/{self.invalid_task_id}")
         self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
-        response_data = response.json()
-        self.assertEqual(response_data["message"], "Please enter a valid Task ID format.")
-        self.assertEqual(response_data["errors"][0]["title"], "Validation Error")
+        data = response.json()
+        self.assertEqual(data["statusCode"], 400)
+        self.assertEqual(data["message"], "Please enter a valid Task ID format.")
+        self.assertEqual(data["errors"][0]["source"]["path"], "task_id")
+        self.assertEqual(data["errors"][0]["title"], "Validation Error")
+        self.assertEqual(data["errors"][0]["detail"], "Please enter a valid Task ID format.")

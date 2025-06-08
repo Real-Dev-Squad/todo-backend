@@ -43,7 +43,9 @@ class TaskDetailAPIIntegrationTest(BaseMongoTestCase):
     def test_get_task_by_id_invalid_format(self):
         response = self.client.get(f"/v1/tasks/{self.invalid_task_id}")
         self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
-
         data = response.json()
+        self.assertEqual(data["statusCode"], 400)
         self.assertEqual(data["message"], "Please enter a valid Task ID format.")
+        self.assertEqual(data["errors"][0]["source"]["path"], "task_id")
         self.assertEqual(data["errors"][0]["title"], "Validation Error")
+        self.assertEqual(data["errors"][0]["detail"], "Please enter a valid Task ID format.")

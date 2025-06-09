@@ -11,6 +11,14 @@ from todo.dto.responses.error_response import ApiErrorDetail, ApiErrorResponse, 
 from todo.constants.messages import ApiErrors, ValidationErrors, AuthErrorMessages
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from .auth_exceptions import TokenExpiredError, TokenMissingError, TokenInvalidError
+from .google_auth_exceptions import (
+    GoogleAuthException,
+    GoogleTokenExpiredError,
+    GoogleTokenInvalidError,
+    GoogleRefreshTokenExpiredError,
+    GoogleAPIException,
+    GoogleUserNotFoundException,
+)
 
 
 def format_validation_errors(errors) -> List[ApiErrorDetail]:
@@ -70,6 +78,72 @@ def handle_exception(exc, context):
             ApiErrorDetail(
                 source={ApiErrorSource.HEADER: "Authorization"},
                 title=AuthErrorMessages.INVALID_TOKEN_TITLE,
+                detail=detail_message_str,
+            )
+        )
+    elif isinstance(exc, GoogleTokenExpiredError):
+        status_code = status.HTTP_401_UNAUTHORIZED
+        detail_message_str = str(exc)
+        determined_message = detail_message_str
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.HEADER: "Authorization"},
+                title=AuthErrorMessages.TOKEN_EXPIRED_TITLE,
+                detail=detail_message_str,
+            )
+        )
+    elif isinstance(exc, GoogleTokenInvalidError):
+        status_code = status.HTTP_401_UNAUTHORIZED
+        detail_message_str = str(exc)
+        determined_message = detail_message_str
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.HEADER: "Authorization"},
+                title=AuthErrorMessages.INVALID_TOKEN_TITLE,
+                detail=detail_message_str,
+            )
+        )
+    elif isinstance(exc, GoogleRefreshTokenExpiredError):
+        status_code = status.HTTP_401_UNAUTHORIZED
+        detail_message_str = str(exc)
+        determined_message = detail_message_str
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.HEADER: "Authorization"},
+                title=AuthErrorMessages.TOKEN_EXPIRED_TITLE,
+                detail=detail_message_str,
+            )
+        )
+    elif isinstance(exc, GoogleAuthException):
+        status_code = status.HTTP_400_BAD_REQUEST
+        detail_message_str = str(exc)
+        determined_message = detail_message_str
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.PARAMETER: "google_auth"},
+                title=ApiErrors.GOOGLE_AUTH_FAILED,
+                detail=detail_message_str,
+            )
+        )
+    elif isinstance(exc, GoogleAPIException):
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        detail_message_str = str(exc)
+        determined_message = detail_message_str
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.PARAMETER: "google_api"},
+                title=ApiErrors.GOOGLE_API_ERROR,
+                detail=detail_message_str,
+            )
+        )
+    elif isinstance(exc, GoogleUserNotFoundException):
+        status_code = status.HTTP_404_NOT_FOUND
+        detail_message_str = str(exc)
+        determined_message = detail_message_str
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.PARAMETER: "user_id"},
+                title=ApiErrors.RESOURCE_NOT_FOUND_TITLE,
                 detail=detail_message_str,
             )
         )

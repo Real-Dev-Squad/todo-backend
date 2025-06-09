@@ -3,7 +3,7 @@ from bson import ObjectId
 from rest_framework.test import APIClient
 from todo.tests.fixtures.task import tasks_db_data
 from todo.tests.integration.base_mongo_test import BaseMongoTestCase
-
+from todo.constants.messages import ApiErrors, ValidationErrors
 
 class TaskDetailAPIIntegrationTest(BaseMongoTestCase):
     @classmethod
@@ -33,11 +33,11 @@ class TaskDetailAPIIntegrationTest(BaseMongoTestCase):
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
         data = response.json()
-        error_message = f"Task with ID {self.non_existent_id} not found."
+        error_message = ApiErrors.TASK_NOT_FOUND.format(self.non_existent_id)
         self.assertEqual(data["message"], error_message)
         error = data["errors"][0]
         self.assertEqual(error["source"]["path"], "task_id")
-        self.assertEqual(error["title"], "Resource Not Found")
+        self.assertEqual(error["title"], ApiErrors.RESOURCE_NOT_FOUND_TITLE)
         self.assertEqual(error["detail"], error_message)
 
     def test_get_task_by_id_invalid_format(self):
@@ -45,7 +45,7 @@ class TaskDetailAPIIntegrationTest(BaseMongoTestCase):
         self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         data = response.json()
         self.assertEqual(data["statusCode"], 400)
-        self.assertEqual(data["message"], "Please enter a valid Task ID format.")
+        self.assertEqual(data["message"], ValidationErrors.INVALID_TASK_ID_FORMAT)
         self.assertEqual(data["errors"][0]["source"]["path"], "task_id")
-        self.assertEqual(data["errors"][0]["title"], "Validation Error")
-        self.assertEqual(data["errors"][0]["detail"], "Please enter a valid Task ID format.")
+        self.assertEqual(data["errors"][0]["title"], ApiErrors.VALIDATION_ERROR)
+        self.assertEqual(data["errors"][0]["detail"], ValidationErrors.INVALID_TASK_ID_FORMAT)

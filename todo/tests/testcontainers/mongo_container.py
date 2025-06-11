@@ -1,6 +1,5 @@
 import time
 import json
-import platform
 from testcontainers.core.generic import DockerContainer
 from pymongo import MongoClient
 from testcontainers.core.waiting_utils import wait_for_logs
@@ -17,31 +16,19 @@ class MongoReplicaSetContainer(DockerContainer):
         super().start()
         self._container.reload()
         mapped_port = self.get_exposed_port(27017)
-        default_db = "testdb"
-        self._mongo_url = f"mongodb://localhost:{mapped_port}/{default_db}?replicaSet=rs0"
-        is_linux = platform.system().lower() == "linux"
-        host_ip = "172.17.0.1" if is_linux else "host.docker.internal"
-        member_host = f"{host_ip}:{mapped_port}"
+        container_ip = self._container.attrs["NetworkSettings"]["IPAddress"]
+        member_host = f"{container_ip}:27017"
         initiate_js = json.dumps(
             {"_id": "rs0", "members": [{"_id": 0, "host": member_host}]})
         wait_for_logs(self, r"Waiting for connections", timeout=20)
-
-        cmd = [
-            "mongosh",
-            "--quiet",
-            "--host",
-            "localhost",
-            "--port",
-            "27017",
-            "--eval",
-            f"rs.initiate({initiate_js})",
-        ]
+        cmd = ["mongosh", "--quiet", "--host", "localhost", "--port",
+               "27017", "--eval", f"rs.initiate({initiate_js})"]
         exit_code, output = self.exec(cmd)
         if exit_code != 0:
             raise RuntimeError(
-                f"rs.initiate() failed (exit code {exit_code}):\n"
-                f"{output.decode('utf-8', errors='ignore')}"
+                f"rs.initiate() failed (exit code {exit_code}):\n" f"{output.decode('utf-8', errors='ignore')}"
             )
+        self._mongo_url = f"mongodb://localhost:{mapped_port}/testdb?directConnection=true"
         self._wait_for_primary()
         return self
 

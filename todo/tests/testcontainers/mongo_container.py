@@ -3,6 +3,8 @@ import json
 import platform
 from testcontainers.core.generic import DockerContainer
 from pymongo import MongoClient
+from testcontainers.core.waiting_utils import wait_for_logs
+
 
 class MongoReplicaSetContainer(DockerContainer):
     def __init__(self, image: str = "mongo:6.0"):
@@ -20,8 +22,9 @@ class MongoReplicaSetContainer(DockerContainer):
         is_linux = platform.system().lower() == "linux"
         host_ip = "172.17.0.1" if is_linux else "host.docker.internal"
         member_host = f"{host_ip}:{mapped_port}"
-        initiate_js = json.dumps({"_id": "rs0", "members": [{"_id": 0, "host": member_host}]})
-        time.sleep(1)
+        initiate_js = json.dumps(
+            {"_id": "rs0", "members": [{"_id": 0, "host": member_host}]})
+        wait_for_logs(self, r"Waiting for connections", timeout=20)
 
         cmd = [
             "mongosh",
@@ -56,4 +59,5 @@ class MongoReplicaSetContainer(DockerContainer):
             except Exception as e:
                 print(f"Waiting for PRIMARY: {e}")
             time.sleep(0.5)
-        raise TimeoutError("Timed out waiting for replica set to become PRIMARY.")
+        raise TimeoutError(
+            "Timed out waiting for replica set to become PRIMARY.")

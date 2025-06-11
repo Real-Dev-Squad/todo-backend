@@ -8,3 +8,9 @@ class TaskNotFoundException(Exception):
         else:
             self.message = ApiErrors.TASK_NOT_FOUND_GENERIC
         super().__init__(self.message)
+
+
+class UnprocessableEntityException(Exception):
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)

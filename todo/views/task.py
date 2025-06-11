@@ -7,6 +7,7 @@ from django.conf import settings
 from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer
 from todo.serializers.create_task_serializer import CreateTaskSerializer
 from todo.serializers.update_task_serializer import UpdateTaskSerializer
+from todo.serializers.defer_task_serializer import DeferTaskSerializer
 from todo.services.task_service import TaskService
 from todo.dto.task_dto import CreateTaskDTO
 from todo.dto.responses.create_task_response import CreateTaskResponse
@@ -102,15 +103,29 @@ class TaskDetailView(APIView):
     def patch(self, request: Request, task_id: str):
         """
         Partially updates a task by its ID.
-
+        Can also be used to defer a task by using ?action=defer query parameter.
         """
-        serializer = UpdateTaskSerializer(data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        # This is a placeholder for the user ID, NEED TO IMPLEMENT THIS AFTER AUTHENTICATION
-        user_id_placeholder = "system_patch_user"
+        action = request.query_params.get("action")
 
-        updated_task_dto = TaskService.update_task(
-            task_id=(task_id), validated_data=serializer.validated_data, user_id=user_id_placeholder
-        )
+        if action == "defer":
+            serializer = DeferTaskSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            # This is a placeholder for the user ID, NEED TO IMPLEMENT THIS AFTER AUTHENTICATION
+            user_id_placeholder = "system_defer_user"
+
+            updated_task_dto = TaskService.defer_task(
+                task_id=task_id,
+                deferred_till=serializer.validated_data["deferredTill"],
+                user_id=user_id_placeholder,
+            )
+        else:
+            serializer = UpdateTaskSerializer(data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            # This is a placeholder for the user ID, NEED TO IMPLEMENT THIS AFTER AUTHENTICATION
+            user_id_placeholder = "system_patch_user"
+
+            updated_task_dto = TaskService.update_task(
+                task_id=(task_id), validated_data=serializer.validated_data, user_id=user_id_placeholder
+            )
 
         return Response(data=updated_task_dto.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)

@@ -30,6 +30,7 @@ class ValidationErrors:
     BLANK_TITLE = "Title must not be blank."
     INVALID_OBJECT_ID = "{0} is not a valid ObjectId."
     PAST_DUE_DATE = "Due date must be in the future."
+    CANNOT_DEFER_TOO_CLOSE_TO_DUE_DATE = "Cannot defer task so close to the due date."
     PAGE_POSITIVE = "Page must be a positive integer"
     LIMIT_POSITIVE = "Limit must be a positive integer"
     MAX_LIMIT_EXCEEDED = "Maximum limit of {0} exceeded"

@@ -4,8 +4,9 @@ from django.core.paginator import Paginator, EmptyPage
 from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from urllib.parse import urlencode
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from rest_framework.exceptions import ValidationError as DRFValidationError
+from todo.dto.deferred_details_dto import DeferredDetailsDTO
 from todo.dto.label_dto import LabelDTO
 from todo.dto.task_dto import TaskDTO, CreateTaskDTO
 from todo.dto.user_dto import UserDTO
@@ -13,14 +14,14 @@ from todo.dto.responses.get_tasks_response import GetTasksResponse
 from todo.dto.responses.create_task_response import CreateTaskResponse
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.dto.responses.paginated_response import LinksData
-from todo.models.task import TaskModel
+from todo.models.task import TaskModel, DeferredDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.label_repository import LabelRepository
 from todo.constants.task import TaskStatus, TaskPriority
 from todo.constants.messages import ApiErrors, ValidationErrors
 from django.conf import settings
-from todo.exceptions.task_exceptions import TaskNotFoundException
+from todo.exceptions.task_exceptions import TaskNotFoundException, UnprocessableEntityException
 from bson.errors import InvalidId as BsonInvalidId
 
 
@@ -111,6 +112,9 @@ class TaskService:
         assignee = cls.prepare_user_dto(task_model.assignee) if task_model.assignee else None
         created_by = cls.prepare_user_dto(task_model.createdBy)
         updated_by = cls.prepare_user_dto(task_model.updatedBy) if task_model.updatedBy else None
+        deferred_details = (
+            cls.prepare_deferred_details_dto(task_model.deferredDetails) if task_model.deferredDetails else None
+        )
 
         return TaskDTO(
             id=str(task_model.id),
@@ -124,6 +128,7 @@ class TaskService:
             dueAt=task_model.dueAt,
             status=task_model.status,
             priority=task_model.priority,
+            deferredDetails=deferred_details,
             createdAt=task_model.createdAt,
             updatedAt=task_model.updatedAt,
             createdBy=created_by,
@@ -147,6 +152,19 @@ class TaskService:
             )
             for label_model in label_models
         ]
+
+    @classmethod
+    def prepare_deferred_details_dto(cls, deferred_details_model: DeferredDetailsModel) -> DeferredDetailsDTO | None:
+        if not deferred_details_model:
+            return None
+
+        deferred_by_user = cls.prepare_user_dto(deferred_details_model.deferredBy)
+
+        return DeferredDetailsDTO(
+            deferredAt=deferred_details_model.deferredAt,
+            deferredTill=deferred_details_model.deferredTill,
+            deferredBy=deferred_by_user,
+        )
 
     @classmethod
     def prepare_user_dto(cls, user_id: str) -> UserDTO:
@@ -208,6 +226,34 @@ class TaskService:
         update_payload["updatedBy"] = user_id
         updated_task = TaskRepository.update(task_id, update_payload)
 
+        if not updated_task:
+            raise TaskNotFoundException(task_id)
+
+        return cls.prepare_task_dto(updated_task)
+
+    @classmethod
+    def defer_task(cls, task_id: str, deferred_till: datetime, user_id: str) -> TaskDTO:
+        current_task = TaskRepository.get_by_id(task_id)
+        if not current_task:
+            raise TaskNotFoundException(task_id)
+
+        if current_task.dueAt:
+            defer_limit = current_task.dueAt - timedelta(days=2)
+            if deferred_till > defer_limit:
+                raise UnprocessableEntityException(ValidationErrors.CANNOT_DEFER_TOO_CLOSE_TO_DUE_DATE)
+
+        deferred_details = DeferredDetailsModel(
+            deferredAt=datetime.now(timezone.utc),
+            deferredTill=deferred_till,
+            deferredBy=user_id,
+        )
+
+        update_payload = {
+            "deferredDetails": deferred_details.model_dump(),
+            "updatedBy": user_id,
+        }
+
+        updated_task = TaskRepository.update(task_id, update_payload)
         if not updated_task:
             raise TaskNotFoundException(task_id)
 

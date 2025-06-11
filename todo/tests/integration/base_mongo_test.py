@@ -19,6 +19,10 @@ class BaseMongoTestCase(TransactionTestCase):
         cls.override.enable()
         DatabaseManager().reset()
 
+    def setUp(self):
+        for collection in self.db.list_collection_names():
+            self.db[collection].delete_many({})
+
     @classmethod
     def tearDownClass(cls):
         cls.mongo_client.close()

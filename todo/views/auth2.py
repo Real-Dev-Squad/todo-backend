@@ -305,8 +305,8 @@ class GoogleRefreshView(APIView):
 
             return response
 
-        except (GoogleTokenInvalidError, GoogleRefreshTokenExpiredError):
-            return self._handle_expired_token(redirect_url)
+        except (GoogleTokenInvalidError, GoogleRefreshTokenExpiredError) as e:
+            return self._handle_expired_token(redirect_url, str(e))
         except Exception as e:
             error_response = ApiErrorResponse(
                 statusCode=500,

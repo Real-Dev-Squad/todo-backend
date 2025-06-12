@@ -15,7 +15,7 @@ from todo.tests.fixtures.task import tasks_models
 from todo.tests.fixtures.label import label_models
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.models.task import TaskModel
-from todo.exceptions.task_exceptions import TaskNotFoundException
+from todo.exceptions.task_exceptions import TaskNotFoundException, UnprocessableEntityException
 from bson.errors import InvalidId as BsonInvalidId
 from todo.constants.messages import ApiErrors, ValidationErrors
 from todo.repositories.task_repository import TaskRepository
@@ -500,3 +500,93 @@ class TaskServiceUpdateTests(TestCase):
         update_payload_sent_to_repo = mock_repo_update.call_args[0][1]
         self.assertIsNone(update_payload_sent_to_repo["priority"])
         self.assertIsNone(update_payload_sent_to_repo["status"])
+
+
+class TaskServiceDeferTests(TestCase):
+    def setUp(self):
+        self.task_id = str(ObjectId())
+        self.user_id = "system_user"
+        self.current_time = datetime.now(timezone.utc)
+        self.due_at = self.current_time + timedelta(days=10)
+        self.task_model = TaskModel(
+            id=self.task_id,
+            displayId="TASK-1",
+            title="Test Task",
+            description="A task for testing deferral.",
+            dueAt=self.due_at,
+            createdAt=self.current_time - timedelta(days=1),
+            createdBy="another_user",
+        )
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskRepository.update")
+    @patch("todo.services.task_service.TaskService.prepare_task_dto")
+    def test_defer_task_success(self, mock_prepare_dto, mock_repo_update, mock_repo_get_by_id):
+        mock_repo_get_by_id.return_value = self.task_model
+        deferred_till = self.current_time + timedelta(days=5)
+
+        mock_updated_task = MagicMock()
+        mock_repo_update.return_value = mock_updated_task
+        mock_dto = MagicMock()
+        mock_prepare_dto.return_value = mock_dto
+
+        result_dto = TaskService.defer_task(self.task_id, deferred_till, self.user_id)
+
+        self.assertEqual(result_dto, mock_dto)
+        mock_repo_get_by_id.assert_called_once_with(self.task_id)
+        mock_repo_update.assert_called_once()
+        mock_prepare_dto.assert_called_once_with(mock_updated_task)
+
+        update_call_args = mock_repo_update.call_args[0]
+        self.assertEqual(update_call_args[0], self.task_id)
+        update_payload = update_call_args[1]
+        self.assertEqual(update_payload["updatedBy"], self.user_id)
+        self.assertIn("deferredDetails", update_payload)
+        self.assertEqual(update_payload["deferredDetails"]["deferredTill"], deferred_till)
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    def test_defer_task_too_close_to_due_date_raises_exception(self, mock_repo_get_by_id):
+        mock_repo_get_by_id.return_value = self.task_model
+        deferred_till = self.due_at - timedelta(days=1)
+
+        with self.assertRaises(UnprocessableEntityException):
+            TaskService.defer_task(self.task_id, deferred_till, self.user_id)
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskRepository.update")
+    @patch("todo.services.task_service.TaskService.prepare_task_dto")
+    def test_defer_task_without_due_date_success(self, mock_prepare_dto, mock_repo_update, mock_repo_get_by_id):
+        self.task_model.dueAt = None
+        mock_repo_get_by_id.return_value = self.task_model
+        deferred_till = self.current_time + timedelta(days=20)
+        mock_repo_update.return_value = MagicMock(spec=TaskModel)
+
+        TaskService.defer_task(self.task_id, deferred_till, self.user_id)
+
+        mock_repo_update.assert_called_once()
+        mock_prepare_dto.assert_called_once()
+        update_payload = mock_repo_update.call_args[0][1]
+        self.assertEqual(update_payload["deferredDetails"]["deferredTill"], deferred_till)
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    def test_defer_task_raises_task_not_found(self, mock_repo_get_by_id):
+        mock_repo_get_by_id.return_value = None
+        deferred_till = self.current_time + timedelta(days=5)
+
+        with self.assertRaises(TaskNotFoundException):
+            TaskService.defer_task(self.task_id, deferred_till, self.user_id)
+
+        mock_repo_get_by_id.assert_called_once_with(self.task_id)
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskRepository.update")
+    def test_defer_task_raises_task_not_found_on_update_failure(self, mock_repo_update, mock_repo_get_by_id):
+        mock_repo_get_by_id.return_value = self.task_model
+        mock_repo_update.return_value = None
+        deferred_till = self.current_time + timedelta(days=5)
+
+        with self.assertRaises(TaskNotFoundException):
+            TaskService.defer_task(self.task_id, deferred_till, self.user_id)
+
+        mock_repo_get_by_id.assert_called_once_with(self.task_id)
+        mock_repo_update.assert_called_once()

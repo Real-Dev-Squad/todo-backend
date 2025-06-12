@@ -16,10 +16,11 @@ from todo.dto.responses.create_task_response import CreateTaskResponse
 from todo.tests.fixtures.task import task_dtos
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.dto.responses.get_task_by_id_response import GetTaskByIdResponse
-from todo.exceptions.task_exceptions import TaskNotFoundException
+from todo.exceptions.task_exceptions import TaskNotFoundException, UnprocessableEntityException
 from todo.constants.messages import ValidationErrors, ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 from rest_framework.exceptions import ValidationError as DRFValidationError
+from todo.dto.deferred_details_dto import DeferredDetailsDTO
 
 
 class TaskViewTests(APISimpleTestCase):
@@ -546,3 +547,89 @@ class TaskDetailViewPatchTests(APISimpleTestCase):
             response_debug = self.client.patch(self.task_url, data=valid_payload, format="json")
             self.assertEqual(response_debug.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
             self.assertEqual(response_debug.data["errors"][0]["detail"], "Something completely unexpected broke!")
+
+    @patch("todo.views.task.TaskService.update_task")
+    @patch("todo.views.task.UpdateTaskSerializer")
+    def test_patch_task_service_raises_exception(self, mock_update_serializer_class, mock_service_update_task):
+        mock_service_update_task.side_effect = Exception("A wild error appears!")
+        mock_serializer_instance = mock_update_serializer_class.return_value
+        mock_serializer_instance.is_valid.return_value = True
+
+        response = self.client.patch(self.task_url, data={}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @patch("todo.views.task.DeferTaskSerializer")
+    @patch("todo.views.task.TaskService.defer_task")
+    def test_patch_task_defer_action_success(self, mock_service_defer_task, mock_defer_serializer_class):
+        deferred_till_datetime = datetime.now(timezone.utc) + timedelta(days=5)
+        deferred_task_dto = self.updated_task_dto_fixture.model_copy(deep=True)
+        deferred_task_dto.deferredDetails = DeferredDetailsDTO(
+            deferredAt=datetime.now(timezone.utc),
+            deferredTill=deferred_till_datetime,
+            deferredBy=UserDTO(id="system_defer_user", name="SYSTEM"),
+        )
+        mock_service_defer_task.return_value = deferred_task_dto
+        mock_serializer_instance = mock_defer_serializer_class.return_value
+        mock_serializer_instance.is_valid.return_value = True
+        mock_serializer_instance.validated_data = {"deferredTill": deferred_till_datetime}
+
+        url_with_action = f"{self.task_url}?action=defer"
+        request_data = {"deferredTill": deferred_till_datetime.isoformat()}
+        response = self.client.patch(url_with_action, data=request_data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, deferred_task_dto.model_dump(mode="json", exclude_none=True))
+        mock_defer_serializer_class.assert_called_once_with(data=request_data)
+        mock_service_defer_task.assert_called_once_with(
+            task_id=self.task_id_str,
+            deferred_till=deferred_till_datetime,
+            user_id="system_defer_user",
+        )
+
+    @patch("todo.views.task.DeferTaskSerializer")
+    def test_patch_task_defer_action_serializer_invalid(self, mock_defer_serializer_class):
+        mock_serializer_instance = mock_defer_serializer_class.return_value
+        validation_error = DRFValidationError({"deferredTill": ["This field may not be blank."]})
+        mock_serializer_instance.is_valid.side_effect = validation_error
+
+        url_with_action = f"{self.task_url}?action=defer"
+        response = self.client.patch(url_with_action, data={}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch("todo.views.task.TaskService.defer_task")
+    @patch("todo.views.task.DeferTaskSerializer")
+    def test_patch_task_defer_service_raises_task_not_found(self, mock_defer_serializer_class, mock_service_defer_task):
+        deferred_till_datetime = datetime.now(timezone.utc) + timedelta(days=5)
+        mock_service_defer_task.side_effect = TaskNotFoundException(self.task_id_str)
+        mock_serializer_instance = mock_defer_serializer_class.return_value
+        mock_serializer_instance.is_valid.return_value = True
+        mock_serializer_instance.validated_data = {"deferredTill": deferred_till_datetime}
+
+        url_with_action = f"{self.task_url}?action=defer"
+        response = self.client.patch(
+            url_with_action, data={"deferredTill": deferred_till_datetime.isoformat()}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    @patch("todo.views.task.TaskService.defer_task")
+    @patch("todo.views.task.DeferTaskSerializer")
+    def test_patch_task_defer_service_raises_unprocessable_entity(
+        self, mock_defer_serializer_class, mock_service_defer_task
+    ):
+        deferred_till_datetime = datetime.now(timezone.utc) + timedelta(days=5)
+        error_message = "Cannot defer too close to due date."
+        mock_service_defer_task.side_effect = UnprocessableEntityException(error_message)
+        mock_serializer_instance = mock_defer_serializer_class.return_value
+        mock_serializer_instance.is_valid.return_value = True
+        mock_serializer_instance.validated_data = {"deferredTill": deferred_till_datetime}
+
+        url_with_action = f"{self.task_url}?action=defer"
+        response = self.client.patch(
+            url_with_action, data={"deferredTill": deferred_till_datetime.isoformat()}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data["message"], error_message)

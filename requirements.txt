@@ -24,3 +24,4 @@ django-cors-headers==4.7.0
 cryptography==45.0.3
 PyJWT==2.10.1
 requests==2.32.3
+email-validator==2.2.0

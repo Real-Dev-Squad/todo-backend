@@ -31,15 +31,15 @@ class UserRepository:
             google_id = user_data["google_id"]
 
             result = collection.find_one_and_update(
-                {"googleId": google_id},
+                {"google_id": google_id},
                 {
                     "$set": {
-                        "emailId": user_data["email"],
+                        "email_id": user_data["email"],
                         "name": user_data["name"],
-                        "updatedAt": now,
-                        "lastLoginAt": now,
+                        "updated_at": now,
+                        "last_login_at": now,
                     },
-                    "$setOnInsert": {"googleId": google_id, "createdAt": now},
+                    "$setOnInsert": {"google_id": google_id, "created_at": now},
                 },
                 upsert=True,
                 return_document=True,

@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, EmailStr
 from typing import ClassVar
 from datetime import datetime, timezone
 
@@ -13,8 +13,8 @@ class UserModel(Document):
 
     collection_name: ClassVar[str] = "users"
 
-    googleId: str
-    emailId: str
+    google_id: str
+    email_id: EmailStr
     name: str
-    createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updatedAt: datetime | None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

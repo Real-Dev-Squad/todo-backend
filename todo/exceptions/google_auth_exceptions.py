@@ -1,37 +1,37 @@
 from todo.constants.messages import AuthErrorMessages, ApiErrors, RepositoryErrors
 
 
-class GoogleAuthException(Exception):
+class BaseGoogleException(Exception):
+    def __init__(self, message: str):
+        self.message = message
+        super().__init__(self.message)
+
+
+class GoogleAuthException(BaseGoogleException):
     def __init__(self, message: str = ApiErrors.GOOGLE_AUTH_FAILED):
-        self.message = message
-        super().__init__(self.message)
+        super().__init__(message)
 
 
-class GoogleTokenExpiredError(Exception):
+class GoogleTokenExpiredError(BaseGoogleException):
     def __init__(self, message: str = AuthErrorMessages.GOOGLE_TOKEN_EXPIRED):
-        self.message = message
-        super().__init__(self.message)
+        super().__init__(message)
 
 
-class GoogleTokenInvalidError(Exception):
+class GoogleTokenInvalidError(BaseGoogleException):
     def __init__(self, message: str = AuthErrorMessages.GOOGLE_TOKEN_INVALID):
-        self.message = message
-        super().__init__(self.message)
+        super().__init__(message)
 
 
-class GoogleRefreshTokenExpiredError(Exception):
+class GoogleRefreshTokenExpiredError(BaseGoogleException):
     def __init__(self, message: str = AuthErrorMessages.GOOGLE_REFRESH_TOKEN_EXPIRED):
-        self.message = message
-        super().__init__(self.message)
+        super().__init__(message)
 
 
-class GoogleAPIException(Exception):
+class GoogleAPIException(BaseGoogleException):
     def __init__(self, message: str = ApiErrors.GOOGLE_API_ERROR):
-        self.message = message
-        super().__init__(self.message)
+        super().__init__(message)
 
 
-class GoogleUserNotFoundException(Exception):
+class GoogleUserNotFoundException(BaseGoogleException):
     def __init__(self, message: str = RepositoryErrors.USER_NOT_FOUND):
-        self.message = message
-        super().__init__(self.message)
+        super().__init__(message)

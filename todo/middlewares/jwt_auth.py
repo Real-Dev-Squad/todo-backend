@@ -6,6 +6,7 @@ from todo.utils.jwt_utils import verify_jwt_token
 from todo.utils.google_jwt_utils import validate_google_access_token
 from todo.exceptions.auth_exceptions import TokenMissingError, TokenExpiredError, TokenInvalidError
 from todo.exceptions.google_auth_exceptions import GoogleTokenExpiredError, GoogleTokenInvalidError
+from todo.constants.messages import AuthErrorMessages, ApiErrors
 
 
 class JWTAuthenticationMiddleware:
@@ -26,14 +27,14 @@ class JWTAuthenticationMiddleware:
             if auth_success:
                 return self.get_response(request)
             else:
-                return self._unauthorized_response("Authentication required")
+                return self._unauthorized_response(AuthErrorMessages.AUTHENTICATION_REQUIRED)
 
         except (TokenMissingError, TokenExpiredError, TokenInvalidError) as e:
             return self._handle_rds_auth_error(e)
         except (GoogleTokenExpiredError, GoogleTokenInvalidError) as e:
             return self._handle_google_auth_error(e)
         except Exception:
-            return self._unauthorized_response("Authentication failed")
+            return self._unauthorized_response(ApiErrors.AUTHENTICATION_FAILED.format(""))
 
     def _try_authentication(self, request) -> bool:
         if self._try_google_auth(request):

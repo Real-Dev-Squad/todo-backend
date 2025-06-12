@@ -126,8 +126,8 @@ class GoogleCallbackView(APIView):
             tokens = generate_google_token_pair(
                 {
                     "user_id": str(user.id),
-                    "google_id": user.googleId,
-                    "email": user.emailId,
+                    "google_id": user.google_id,
+                    "email": user.email_id,
                     "name": user.name,
                 }
             )
@@ -142,8 +142,8 @@ class GoogleCallbackView(APIView):
                     <ul>
                         <li><strong>ID:</strong> {user.id}</li>
                         <li><strong>Name:</strong> {user.name}</li>
-                        <li><strong>Email:</strong> {user.emailId}</li>
-                        <li><strong>Google ID:</strong> {user.googleId}</li>
+                        <li><strong>Email:</strong> {user.email_id}</li>
+                        <li><strong>Google ID:</strong> {user.google_id}</li>
                     </ul>
                     
                     <h2>🍪 Authentication Cookies Set:</h2>
@@ -227,7 +227,12 @@ class GoogleAuthStatusView(APIView):
             return Response(
                 {
                     "authenticated": True,
-                    "user": {"id": str(user.id), "email": user.emailId, "name": user.name, "googleId": user.googleId},
+                    "user": {
+                        "id": str(user.id),
+                        "email": user.email_id,
+                        "name": user.name,
+                        "google_id": user.google_id,
+                    },
                 }
             )
 

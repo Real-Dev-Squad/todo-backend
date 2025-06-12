@@ -4,13 +4,24 @@ from .base import *
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
+# Service ports configuration
+SERVICE_PORTS = {
+    "BACKEND": 3000,
+    "AUTH": 8000,
+    "FRONTEND": 4000,
+}
+
+# Base URL configuration
+BASE_URL = "http://localhost"
+
+
 GOOGLE_OAUTH.update(
     {
-        "REDIRECT_URI": "http://localhost:8000/v1/auth/google/callback",
+        "REDIRECT_URI": f"{BASE_URL}:{SERVICE_PORTS['AUTH']}/v1/auth/google/callback",
     }
 )
 
-FRONTEND_URL = "http://localhost:4000"
+FRONTEND_URL = f"{BASE_URL}:{SERVICE_PORTS['FRONTEND']}"
 
 JWT_COOKIE_SETTINGS.update(
     {
@@ -28,10 +39,9 @@ GOOGLE_COOKIE_SETTINGS.update(
     }
 )
 
-
 MAIN_APP.update(
     {
-        "RDS_BACKEND_BASE_URL": "http://localhost:3000",
+        "RDS_BACKEND_BASE_URL": f"{BASE_URL}:{SERVICE_PORTS['BACKEND']}",
     }
 )
 

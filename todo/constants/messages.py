@@ -67,25 +67,6 @@ class AuthErrorMessages:
     AUTHENTICATION_REQUIRED = "Authentication required"
     TOKEN_EXPIRED_TITLE = "Token Expired"
     INVALID_TOKEN_TITLE = "Invalid Token"
-
-
-# Auth messages
-class AuthErrorMessages:
-    TOKEN_MISSING = "Authentication token is required"
-    TOKEN_EXPIRED = "Authentication token has expired"
-    TOKEN_INVALID = "Invalid authentication token"
-    AUTHENTICATION_REQUIRED = "Authentication required"
-    TOKEN_EXPIRED_TITLE = "Token Expired"
-    INVALID_TOKEN_TITLE = "Invalid Token"
-
-# Auth messages
-class AuthErrorMessages:
-    TOKEN_MISSING = "Authentication token is required"
-    TOKEN_EXPIRED = "Authentication token has expired"
-    TOKEN_INVALID = "Invalid authentication token"
-    AUTHENTICATION_REQUIRED = "Authentication required"
-    TOKEN_EXPIRED_TITLE = "Token Expired"
-    INVALID_TOKEN_TITLE = "Invalid Token"
     GOOGLE_TOKEN_EXPIRED = "Google access token has expired"
     GOOGLE_REFRESH_TOKEN_EXPIRED = "Google refresh token has expired, please login again"
     GOOGLE_TOKEN_INVALID = "Invalid Google token"

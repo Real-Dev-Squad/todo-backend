@@ -4,14 +4,23 @@ from .base import *
 DEBUG = False
 ALLOWED_HOSTS = ["staging-api.realdevsquad.com", "services.realdevsquad.com"]
 
+# Service domains configuration
+SERVICE_DOMAINS = {
+    "RDS_API": "staging-api.realdevsquad.com",
+    "AUTH": "services.realdevsquad.com",
+    "FRONTEND": "staging-todo.realdevsquad.com",
+}
+
+# Base URL configuration
+BASE_URL = "https://"
+
 GOOGLE_OAUTH.update(
     {
-        "REDIRECT_URI": "https://services.realdevsquad.com/staging-todo/v1/auth/google/callback",
+        "REDIRECT_URI": f"{BASE_URL}{SERVICE_DOMAINS['AUTH']}/staging-todo/v1/auth/google/callback",
     }
 )
 
-FRONTEND_URL = "https://staging-todo.realdevsquad.com"
-
+FRONTEND_URL = f"{BASE_URL}{SERVICE_DOMAINS['FRONTEND']}"
 
 JWT_COOKIE_SETTINGS.update(
     {
@@ -32,7 +41,7 @@ GOOGLE_COOKIE_SETTINGS.update(
 
 MAIN_APP.update(
     {
-        "RDS_BACKEND_BASE_URL": "https://staging-api.realdevsquad.com",
+        "RDS_BACKEND_BASE_URL": f"{BASE_URL}{SERVICE_DOMAINS['RDS_API']}",
     }
 )
 
@@ -41,7 +50,7 @@ MIDDLEWARE.insert(0, "corsheaders.middleware.CorsMiddleware")
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "https://staging-todo.realdevsquad.com",
+    f"{BASE_URL}{SERVICE_DOMAINS['FRONTEND']}",
 ]
 
 CORS_ALLOWED_HEADERS = [

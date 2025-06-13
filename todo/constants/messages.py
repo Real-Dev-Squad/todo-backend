@@ -23,6 +23,7 @@ class ApiErrors:
     TASK_NOT_FOUND = "Task with ID {0} not found."
     TASK_NOT_FOUND_GENERIC = "Task not found."
     RESOURCE_NOT_FOUND_TITLE = "Resource Not Found"
+    STATE_CONFLICT_TITLE = "State Conflict"
 
 
 # Validation error messages
@@ -31,10 +32,12 @@ class ValidationErrors:
     INVALID_OBJECT_ID = "{0} is not a valid ObjectId."
     PAST_DUE_DATE = "Due date must be in the future."
     CANNOT_DEFER_TOO_CLOSE_TO_DUE_DATE = "Cannot defer task so close to the due date."
+    CANNOT_DEFER_A_DONE_TASK = "Cannot defer a task that is already done."
     PAGE_POSITIVE = "Page must be a positive integer"
     LIMIT_POSITIVE = "Limit must be a positive integer"
     MAX_LIMIT_EXCEEDED = "Maximum limit of {0} exceeded"
     MISSING_LABEL_IDS = "The following label ID(s) do not exist: {0}."
     INVALID_TASK_ID_FORMAT = "Please enter a valid Task ID format."
+    UNSUPPORTED_ACTION = "Unsupported action '{0}'."
     FUTURE_STARTED_AT = "The start date cannot be set in the future."
     INVALID_LABELS_STRUCTURE = "Labels must be provided as a list or tuple of ObjectId strings."

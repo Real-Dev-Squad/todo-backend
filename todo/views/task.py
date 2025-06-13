@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.request import Request
+from rest_framework.exceptions import ValidationError
 from django.conf import settings
 from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer
 from todo.serializers.create_task_serializer import CreateTaskSerializer
@@ -14,6 +15,7 @@ from todo.dto.responses.create_task_response import CreateTaskResponse
 from todo.dto.responses.get_task_by_id_response import GetTaskByIdResponse
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.constants.messages import ApiErrors
+from todo.constants.messages import ValidationErrors
 
 
 class TaskListView(APIView):
@@ -107,6 +109,9 @@ class TaskDetailView(APIView):
         """
         action = request.query_params.get("action")
 
+        if action is None:
+            action = "update"
+
         if action == "defer":
             serializer = DeferTaskSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
@@ -118,7 +123,7 @@ class TaskDetailView(APIView):
                 deferred_till=serializer.validated_data["deferredTill"],
                 user_id=user_id_placeholder,
             )
-        else:
+        elif action == "update":
             serializer = UpdateTaskSerializer(data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             # This is a placeholder for the user ID, NEED TO IMPLEMENT THIS AFTER AUTHENTICATION
@@ -127,5 +132,7 @@ class TaskDetailView(APIView):
             updated_task_dto = TaskService.update_task(
                 task_id=(task_id), validated_data=serializer.validated_data, user_id=user_id_placeholder
             )
+        else:
+            raise ValidationError({"action": ValidationErrors.UNSUPPORTED_ACTION.format(action)})
 
         return Response(data=updated_task_dto.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)

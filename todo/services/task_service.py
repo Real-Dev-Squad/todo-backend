@@ -241,7 +241,7 @@ class TaskService:
         if not current_task:
             raise TaskNotFoundException(task_id)
 
-        if current_task.status == TaskStatus.DONE.value:
+        if current_task.status == TaskStatus.DONE:
             raise TaskStateConflictException(ValidationErrors.CANNOT_DEFER_A_DONE_TASK)
 
         if current_task.dueAt:

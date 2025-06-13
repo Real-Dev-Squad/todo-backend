@@ -633,3 +633,16 @@ class TaskDetailViewPatchTests(APISimpleTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
         self.assertEqual(response.data["message"], error_message)
+
+    def test_patch_task_unsupported_action_raises_validation_error(self):
+        unsupported_action = "archive"
+        url = reverse("task_detail", kwargs={"task_id": self.task_id_str})
+        response = self.client.patch(f"{url}?action={unsupported_action}", data={}, format="json")
+
+        expected_detail = ValidationErrors.UNSUPPORTED_ACTION.format(unsupported_action)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["message"], "Invalid request")
+        self.assertEqual(len(response.data["errors"]), 1)
+        self.assertEqual(response.data["errors"][0]["source"]["parameter"], "action")
+        self.assertEqual(response.data["errors"][0]["detail"], expected_detail)

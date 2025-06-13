@@ -15,7 +15,11 @@ from todo.tests.fixtures.task import tasks_models
 from todo.tests.fixtures.label import label_models
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.models.task import TaskModel
-from todo.exceptions.task_exceptions import TaskNotFoundException, UnprocessableEntityException
+from todo.exceptions.task_exceptions import (
+    TaskNotFoundException,
+    UnprocessableEntityException,
+    TaskStateConflictException,
+)
 from bson.errors import InvalidId as BsonInvalidId
 from todo.constants.messages import ApiErrors, ValidationErrors
 from todo.repositories.task_repository import TaskRepository
@@ -583,10 +587,32 @@ class TaskServiceDeferTests(TestCase):
     def test_defer_task_raises_task_not_found_on_update_failure(self, mock_repo_update, mock_repo_get_by_id):
         mock_repo_get_by_id.return_value = self.task_model
         mock_repo_update.return_value = None
-        deferred_till = self.current_time + timedelta(days=5)
+        valid_deferred_till = self.due_at - timedelta(days=3)
 
-        with self.assertRaises(TaskNotFoundException):
-            TaskService.defer_task(self.task_id, deferred_till, self.user_id)
+        with self.assertRaises(TaskNotFoundException) as context:
+            TaskService.defer_task(self.task_id, valid_deferred_till, "test_user")
 
+        self.assertEqual(str(context.exception), ApiErrors.TASK_NOT_FOUND.format(self.task_id))
         mock_repo_get_by_id.assert_called_once_with(self.task_id)
         mock_repo_update.assert_called_once()
+
+    @patch("todo.services.task_service.TaskRepository.update")
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    def test_defer_task_on_done_task_raises_conflict(self, mock_repo_get_by_id, mock_repo_update):
+        done_task = TaskModel(
+            id=self.task_id,
+            displayId="#1",
+            title="Completed Task",
+            status=TaskStatus.DONE.value,
+            createdAt=datetime.now(timezone.utc),
+            createdBy="system",
+        )
+        mock_repo_get_by_id.return_value = done_task
+        valid_deferred_till = datetime.now(timezone.utc) + timedelta(days=5)
+
+        with self.assertRaises(TaskStateConflictException) as context:
+            TaskService.defer_task(self.task_id, valid_deferred_till, "test_user")
+
+        self.assertEqual(str(context.exception), ValidationErrors.CANNOT_DEFER_A_DONE_TASK)
+        mock_repo_get_by_id.assert_called_once_with(self.task_id)
+        mock_repo_update.assert_not_called()

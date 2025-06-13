@@ -1,5 +1,3 @@
-# Temporary file for testing purpose. Post frontend integration, this file will be removed and auth2.py will be renamed as auth.py
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.request import Request
@@ -13,6 +11,7 @@ from todo.utils.google_jwt_utils import (
     validate_google_refresh_token,
     validate_google_access_token,
     generate_google_access_token,
+    generate_google_token_pair,
 )
 from todo.exceptions.google_auth_exceptions import (
     GoogleAuthException,
@@ -71,10 +70,17 @@ class GoogleLoginView(APIView):
 
 
 class GoogleCallbackView(APIView):
-    def get(self, request):
-        """
-        TEMPORARY: Process callback directly without redirecting to frontend
-        """
+    """
+    This class has two implementations:
+    1. Current active implementation (temporary) - For testing and development
+    2. Commented implementation - For frontend integration (to be used later)
+
+    The temporary implementation processes the OAuth callback directly and shows a success page.
+    The frontend implementation will redirect to the frontend and process the callback via POST request.
+    """
+
+    # Temporary implementation for testing and development
+    def get(self, request: Request):
         try:
             if "error" in request.query_params:
                 error = request.query_params.get("error")
@@ -115,12 +121,7 @@ class GoogleCallbackView(APIView):
 
     def _handle_callback_directly(self, code, request):
         try:
-            from todo.services.google_oauth_service import GoogleOAuthService
-            from todo.services.user_service import UserService
-            from todo.utils.google_jwt_utils import generate_google_token_pair
-
             google_data = GoogleOAuthService.handle_callback(code)
-
             user = UserService.create_or_update_user(google_data)
 
             tokens = generate_google_token_pair(
@@ -197,6 +198,143 @@ class GoogleCallbackView(APIView):
 
     def post(self, request):
         pass
+
+    # Frontend integration implementation (to be used later)
+    """
+    class GoogleCallbackView(APIView):
+    def get(self, request: Request):
+        code = request.query_params.get("code")
+        state = request.query_params.get("state")
+        error = request.query_params.get("error")
+
+        frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
+
+        if error:
+            return HttpResponseRedirect(f"{frontend_callback}?error={error}")
+        elif code and state:
+            return HttpResponseRedirect(f"{frontend_callback}?code={code}&state={state}")
+        else:
+            return HttpResponseRedirect(f"{frontend_callback}?error=missing_parameters")
+
+    def post(self, request: Request):
+        try:
+            code = request.data.get("code")
+            state = request.data.get("state")
+
+            if not code:
+                error_response = ApiErrorResponse(
+                    statusCode=400,
+                    message=ApiErrors.INVALID_AUTH_CODE,
+                    errors=[
+                        ApiErrorDetail(
+                            source={ApiErrorSource.PARAMETER: "code"},
+                            title=ApiErrors.VALIDATION_ERROR,
+                            detail=ApiErrors.INVALID_AUTH_CODE,
+                        )
+                    ],
+                )
+                return Response(
+                    data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_400_BAD_REQUEST
+                )
+
+            stored_state = request.session.get("oauth_state")
+            if not stored_state or stored_state != state:
+                error_response = ApiErrorResponse(
+                    statusCode=400,
+                    message=ApiErrors.INVALID_STATE_PARAMETER,
+                    errors=[
+                        ApiErrorDetail(
+                            source={ApiErrorSource.PARAMETER: "state"},
+                            title=ApiErrors.VALIDATION_ERROR,
+                            detail=ApiErrors.INVALID_STATE_PARAMETER,
+                        )
+                    ],
+                )
+                return Response(
+                    data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_400_BAD_REQUEST
+                )
+
+            google_data = GoogleOAuthService.handle_callback(code)
+            user = UserService.create_or_update_user(google_data)
+
+            tokens = generate_google_token_pair(
+                {
+                    "user_id": str(user.id),
+                    "google_id": user.google_id,
+                    "email": user.email_id,
+                    "name": user.name,
+                }
+            )
+
+            response = Response(
+                {
+                    "success": True,
+                    "user": {
+                        "id": str(user.id),
+                        "email": user.email_id,
+                        "name": user.name,
+                        "google_id": user.google_id,
+                    },
+                }
+            )
+
+            self._set_auth_cookies(response, tokens)
+            request.session.pop("oauth_state", None)
+
+            return response
+
+        except (GoogleAPIException, GoogleUserNotFoundException) as e:
+            error_response = ApiErrorResponse(
+                statusCode=500,
+                message=str(e),
+                errors=[
+                    ApiErrorDetail(
+                        source={ApiErrorSource.PARAMETER: "google_auth"},
+                        title=ApiErrors.AUTHENTICATION_FAILED,
+                        detail=str(e),
+                    )
+                ],
+            )
+            return Response(
+                data=error_response.model_dump(mode="json", exclude_none=True),
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        except Exception as e:
+            error_response = ApiErrorResponse(
+                statusCode=500,
+                message=ApiErrors.AUTHENTICATION_FAILED.format(str(e)),
+                errors=[
+                    ApiErrorDetail(
+                        source={ApiErrorSource.PARAMETER: "authentication"},
+                        title=ApiErrors.AUTHENTICATION_FAILED,
+                        detail=ApiErrors.AUTHENTICATION_FAILED.format(str(e)),
+                    )
+                ],
+            )
+            return Response(
+                data=error_response.model_dump(mode="json", exclude_none=True),
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def _get_cookie_config(self):
+        return {
+            "path": "/",
+            "domain": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
+            "secure": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SECURE", False),
+            "httponly": True,
+            "samesite": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SAMESITE", "Lax"),
+        }
+
+    def _set_auth_cookies(self, response, tokens):
+        config = self._get_cookie_config()
+
+        response.set_cookie("ext-access", tokens["access_token"], max_age=tokens["expires_in"], **config)
+
+        response.set_cookie(
+            "ext-refresh", tokens["refresh_token"], max_age=settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"], **config
+        )
+    """
 
 
 class GoogleAuthStatusView(APIView):
@@ -330,12 +468,12 @@ class GoogleRefreshView(APIView):
     def _handle_missing_token(self, redirect_url):
         error_response = ApiErrorResponse(
             statusCode=401,
-            message="No refresh token found",
+            message=AuthErrorMessages.NO_REFRESH_TOKEN,
             errors=[
                 ApiErrorDetail(
                     source={ApiErrorSource.HEADER: "Authorization"},
                     title=AuthErrorMessages.AUTHENTICATION_REQUIRED,
-                    detail="No refresh token found",
+                    detail=AuthErrorMessages.NO_REFRESH_TOKEN,
                 )
             ],
         )
@@ -350,7 +488,7 @@ class GoogleRefreshView(APIView):
     def _handle_expired_token(self, redirect_url, error_detail):
         error_response = ApiErrorResponse(
             statusCode=401,
-            message="Refresh token expired",
+            message=AuthErrorMessages.GOOGLE_REFRESH_TOKEN_EXPIRED,
             errors=[
                 ApiErrorDetail(
                     source={ApiErrorSource.HEADER: "Authorization"},

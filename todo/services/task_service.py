@@ -21,7 +21,11 @@ from todo.repositories.label_repository import LabelRepository
 from todo.constants.task import TaskStatus, TaskPriority
 from todo.constants.messages import ApiErrors, ValidationErrors
 from django.conf import settings
-from todo.exceptions.task_exceptions import TaskNotFoundException, UnprocessableEntityException
+from todo.exceptions.task_exceptions import (
+    TaskNotFoundException,
+    UnprocessableEntityException,
+    TaskStateConflictException,
+)
 from bson.errors import InvalidId as BsonInvalidId
 
 
@@ -236,6 +240,9 @@ class TaskService:
         current_task = TaskRepository.get_by_id(task_id)
         if not current_task:
             raise TaskNotFoundException(task_id)
+
+        if current_task.status == TaskStatus.DONE.value:
+            raise TaskStateConflictException(ValidationErrors.CANNOT_DEFER_A_DONE_TASK)
 
         if current_task.dueAt:
             defer_limit = current_task.dueAt - timedelta(days=2)

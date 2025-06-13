@@ -9,7 +9,11 @@ from bson.errors import InvalidId as BsonInvalidId
 
 from todo.dto.responses.error_response import ApiErrorDetail, ApiErrorResponse, ApiErrorSource
 from todo.constants.messages import ApiErrors, ValidationErrors
-from todo.exceptions.task_exceptions import TaskNotFoundException, UnprocessableEntityException
+from todo.exceptions.task_exceptions import (
+    TaskNotFoundException,
+    UnprocessableEntityException,
+    TaskStateConflictException,
+)
 
 
 def format_validation_errors(errors) -> List[ApiErrorDetail]:
@@ -48,6 +52,16 @@ def handle_exception(exc, context):
                 source={ApiErrorSource.PATH: "task_id"} if task_id else None,
                 title=ApiErrors.RESOURCE_NOT_FOUND_TITLE,
                 detail=detail_message_str,
+            )
+        )
+    elif isinstance(exc, TaskStateConflictException):
+        status_code = status.HTTP_409_CONFLICT
+        determined_message = str(exc)
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.PATH: "task_id"} if task_id else None,
+                title=ApiErrors.STATE_CONFLICT_TITLE,
+                detail=determined_message,
             )
         )
     elif isinstance(exc, UnprocessableEntityException):

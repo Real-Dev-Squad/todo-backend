@@ -38,7 +38,7 @@ class UserModelTest(TestCase):
 
         with self.assertRaises(ValidationError) as context:
             UserModel(**invalid_data)
-        
+
         error_fields = [e["loc"][0] for e in context.exception.errors()]
         self.assertIn("email_id", error_fields)
 
@@ -46,11 +46,11 @@ class UserModelTest(TestCase):
         minimal_data = {
             "google_id": self.valid_user_data["google_id"],
             "email_id": self.valid_user_data["email_id"],
-            "name": self.valid_user_data["name"]
+            "name": self.valid_user_data["name"],
         }
         user = UserModel(**minimal_data)
 
         self.assertIsInstance(user.created_at, datetime)
         self.assertIsInstance(user.updated_at, datetime)
         self.assertLessEqual(user.created_at, datetime.now(timezone.utc))
-        self.assertLessEqual(user.updated_at, datetime.now(timezone.utc)) 
+        self.assertLessEqual(user.updated_at, datetime.now(timezone.utc))

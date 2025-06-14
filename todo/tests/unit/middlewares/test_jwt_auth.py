@@ -5,12 +5,7 @@ from django.conf import settings
 from rest_framework import status
 import json
 
-from todo.middlewares.jwt_auth import (
-    JWTAuthenticationMiddleware,
-    is_google_user,
-    is_rds_user,
-    get_current_user_info
-)
+from todo.middlewares.jwt_auth import JWTAuthenticationMiddleware, is_google_user, is_rds_user, get_current_user_info
 from todo.constants.messages import AuthErrorMessages
 
 

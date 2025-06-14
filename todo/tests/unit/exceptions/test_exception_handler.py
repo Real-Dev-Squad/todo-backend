@@ -17,7 +17,7 @@ class ExceptionHandlerTests(TestCase):
         error_detail = {"field": ["error message"]}
         exception = DRFValidationError(detail=error_detail)
         request = Mock()
-        
+
         with patch("todo.exceptions.exception_handler.format_validation_errors") as mock_format:
             mock_format.return_value = [
                 ApiErrorDetail(detail="error message", source={ApiErrorSource.PARAMETER: "field"})

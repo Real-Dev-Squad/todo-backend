@@ -12,17 +12,13 @@ from todo.constants.messages import RepositoryErrors
 
 class UserRepositoryTests(TestCase):
     def setUp(self) -> None:
-        self.valid_user_data = {
-            "google_id": "123456789",
-            "email": "test@example.com",
-            "name": "Test User"
-        }
+        self.valid_user_data = {"google_id": "123456789", "email": "test@example.com", "name": "Test User"}
         self.user_model = UserModel(**users_db_data[0])
         self.mock_collection = MagicMock()
         self.mock_db_manager = MagicMock()
         self.mock_db_manager.get_collection.return_value = self.mock_collection
 
-    @patch('todo.repositories.user_repository.DatabaseManager')
+    @patch("todo.repositories.user_repository.DatabaseManager")
     def test_get_by_id_success(self, mock_db_manager):
         mock_db_manager.return_value = self.mock_db_manager
         user_id = str(ObjectId())
@@ -34,7 +30,7 @@ class UserRepositoryTests(TestCase):
         self.assertIsInstance(result, UserModel)
         self.assertEqual(result.google_id, users_db_data[0]["google_id"])
 
-    @patch('todo.repositories.user_repository.DatabaseManager')
+    @patch("todo.repositories.user_repository.DatabaseManager")
     def test_get_by_id_not_found(self, mock_db_manager):
         mock_db_manager.return_value = self.mock_db_manager
         user_id = str(ObjectId())
@@ -43,7 +39,7 @@ class UserRepositoryTests(TestCase):
         result = UserRepository.get_by_id(user_id)
         self.assertIsNone(result)
 
-    @patch('todo.repositories.user_repository.DatabaseManager')
+    @patch("todo.repositories.user_repository.DatabaseManager")
     def test_get_by_id_database_error(self, mock_db_manager):
         mock_db_manager.return_value = self.mock_db_manager
         user_id = str(ObjectId())
@@ -52,7 +48,7 @@ class UserRepositoryTests(TestCase):
         with self.assertRaises(GoogleUserNotFoundException):
             UserRepository.get_by_id(user_id)
 
-    @patch('todo.repositories.user_repository.DatabaseManager')
+    @patch("todo.repositories.user_repository.DatabaseManager")
     def test_create_or_update_success(self, mock_db_manager):
         mock_db_manager.return_value = self.mock_db_manager
         self.mock_collection.find_one_and_update.return_value = users_db_data[0]
@@ -65,7 +61,7 @@ class UserRepositoryTests(TestCase):
         self.assertIsInstance(result, UserModel)
         self.assertEqual(result.google_id, users_db_data[0]["google_id"])
 
-    @patch('todo.repositories.user_repository.DatabaseManager')
+    @patch("todo.repositories.user_repository.DatabaseManager")
     def test_create_or_update_no_result(self, mock_db_manager):
         mock_db_manager.return_value = self.mock_db_manager
         self.mock_collection.find_one_and_update.return_value = None
@@ -74,7 +70,7 @@ class UserRepositoryTests(TestCase):
             UserRepository.create_or_update(self.valid_user_data)
         self.assertIn(RepositoryErrors.USER_OPERATION_FAILED, str(context.exception))
 
-    @patch('todo.repositories.user_repository.DatabaseManager')
+    @patch("todo.repositories.user_repository.DatabaseManager")
     def test_create_or_update_database_error(self, mock_db_manager):
         mock_db_manager.return_value = self.mock_db_manager
         self.mock_collection.find_one_and_update.side_effect = Exception("Database error")
@@ -83,7 +79,7 @@ class UserRepositoryTests(TestCase):
             UserRepository.create_or_update(self.valid_user_data)
         self.assertIn(RepositoryErrors.USER_CREATE_UPDATE_FAILED.format("Database error"), str(context.exception))
 
-    @patch('todo.repositories.user_repository.DatabaseManager')
+    @patch("todo.repositories.user_repository.DatabaseManager")
     def test_create_or_update_sets_timestamps(self, mock_db_manager):
         mock_db_manager.return_value = self.mock_db_manager
         self.mock_collection.find_one_and_update.return_value = users_db_data[0]

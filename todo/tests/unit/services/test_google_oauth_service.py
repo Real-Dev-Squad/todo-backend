@@ -14,21 +14,14 @@ class GoogleOAuthServiceTests(TestCase):
                 "CLIENT_ID": "test-client-id",
                 "CLIENT_SECRET": "test-client-secret",
                 "REDIRECT_URI": "http://localhost:3000/auth/callback",
-                "SCOPES": ["email", "profile"]
+                "SCOPES": ["email", "profile"],
             }
         }
-        self.valid_user_info = {
-            "id": "123456789",
-            "email": "test@example.com",
-            "name": "Test User"
-        }
-        self.valid_tokens = {
-            "access_token": "test-access-token",
-            "refresh_token": "test-refresh-token"
-        }
+        self.valid_user_info = {"id": "123456789", "email": "test@example.com", "name": "Test User"}
+        self.valid_tokens = {"access_token": "test-access-token", "refresh_token": "test-refresh-token"}
 
-    @patch('todo.services.google_oauth_service.settings')
-    @patch('todo.services.google_oauth_service.secrets')
+    @patch("todo.services.google_oauth_service.settings")
+    @patch("todo.services.google_oauth_service.secrets")
     def test_get_authorization_url_success(self, mock_secrets, mock_settings):
         mock_settings.configure_mock(**self.mock_settings)
         mock_secrets.token_urlsafe.return_value = "test-state"
@@ -48,7 +41,7 @@ class GoogleOAuthServiceTests(TestCase):
         expected_url = f"{GoogleOAuthService.GOOGLE_AUTH_URL}?{urlencode(expected_params)}"
         self.assertEqual(auth_url, expected_url)
 
-    @patch('todo.services.google_oauth_service.settings')
+    @patch("todo.services.google_oauth_service.settings")
     def test_get_authorization_url_error(self, mock_settings):
         mock_settings.configure_mock(**self.mock_settings)
         mock_settings.GOOGLE_OAUTH = None
@@ -57,8 +50,8 @@ class GoogleOAuthServiceTests(TestCase):
             GoogleOAuthService.get_authorization_url()
         self.assertIn(ApiErrors.GOOGLE_AUTH_FAILED, str(context.exception))
 
-    @patch('todo.services.google_oauth_service.GoogleOAuthService._exchange_code_for_tokens')
-    @patch('todo.services.google_oauth_service.GoogleOAuthService._get_user_info')
+    @patch("todo.services.google_oauth_service.GoogleOAuthService._exchange_code_for_tokens")
+    @patch("todo.services.google_oauth_service.GoogleOAuthService._get_user_info")
     def test_handle_callback_success(self, mock_get_user_info, mock_exchange_tokens):
         mock_exchange_tokens.return_value = self.valid_tokens
         mock_get_user_info.return_value = self.valid_user_info
@@ -71,7 +64,7 @@ class GoogleOAuthServiceTests(TestCase):
         mock_exchange_tokens.assert_called_once_with("test-code")
         mock_get_user_info.assert_called_once_with(self.valid_tokens["access_token"])
 
-    @patch('todo.services.google_oauth_service.GoogleOAuthService._exchange_code_for_tokens')
+    @patch("todo.services.google_oauth_service.GoogleOAuthService._exchange_code_for_tokens")
     def test_handle_callback_token_error(self, mock_exchange_tokens):
         mock_exchange_tokens.side_effect = GoogleAPIException(ApiErrors.TOKEN_EXCHANGE_FAILED)
 
@@ -79,8 +72,8 @@ class GoogleOAuthServiceTests(TestCase):
             GoogleOAuthService.handle_callback("test-code")
         self.assertIn(ApiErrors.TOKEN_EXCHANGE_FAILED, str(context.exception))
 
-    @patch('todo.services.google_oauth_service.requests.post')
-    @patch('todo.services.google_oauth_service.settings')
+    @patch("todo.services.google_oauth_service.requests.post")
+    @patch("todo.services.google_oauth_service.settings")
     def test_exchange_code_for_tokens_success(self, mock_settings, mock_post):
         mock_settings.configure_mock(**self.mock_settings)
         mock_response = MagicMock()
@@ -97,8 +90,8 @@ class GoogleOAuthServiceTests(TestCase):
         self.assertEqual(call_args["data"]["client_id"], "test-client-id")
         self.assertEqual(call_args["data"]["client_secret"], "test-client-secret")
 
-    @patch('todo.services.google_oauth_service.requests.post')
-    @patch('todo.services.google_oauth_service.settings')
+    @patch("todo.services.google_oauth_service.requests.post")
+    @patch("todo.services.google_oauth_service.settings")
     def test_exchange_code_for_tokens_error_response(self, mock_settings, mock_post):
         mock_settings.configure_mock(**self.mock_settings)
         mock_response = MagicMock()
@@ -109,7 +102,7 @@ class GoogleOAuthServiceTests(TestCase):
             GoogleOAuthService._exchange_code_for_tokens("test-code")
         self.assertIn(ApiErrors.TOKEN_EXCHANGE_FAILED, str(context.exception))
 
-    @patch('todo.services.google_oauth_service.requests.get')
+    @patch("todo.services.google_oauth_service.requests.get")
     def test_get_user_info_success(self, mock_get):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -123,7 +116,7 @@ class GoogleOAuthServiceTests(TestCase):
         call_args = mock_get.call_args[1]
         self.assertEqual(call_args["headers"]["Authorization"], "Bearer test-token")
 
-    @patch('todo.services.google_oauth_service.requests.get')
+    @patch("todo.services.google_oauth_service.requests.get")
     def test_get_user_info_missing_fields(self, mock_get):
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -134,7 +127,7 @@ class GoogleOAuthServiceTests(TestCase):
             GoogleOAuthService._get_user_info("test-token")
         self.assertIn(ApiErrors.MISSING_USER_INFO_FIELDS.format("email, name"), str(context.exception))
 
-    @patch('todo.services.google_oauth_service.requests.get')
+    @patch("todo.services.google_oauth_service.requests.get")
     def test_get_user_info_error_response(self, mock_get):
         mock_response = MagicMock()
         mock_response.status_code = 400

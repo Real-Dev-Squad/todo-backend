@@ -37,7 +37,7 @@ class AuthenticatedTestCase(APISimpleTestCase):
             "name": "Test User",
         }
         tokens = generate_google_token_pair(user_data)
-        
+
         self.client.cookies["ext-access"] = tokens["access_token"]
         self.client.cookies["ext-refresh"] = tokens["refresh_token"]
 

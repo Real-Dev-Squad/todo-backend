@@ -54,7 +54,7 @@ class ExceptionHandlerTests(TestCase):
                 detail=error_message if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR,
                 title=error_message,
             )
-            expected_main_message = "Internal server error"
+            expected_main_message = ApiErrors.INTERNAL_SERVER_ERROR
 
             self.assertEqual(response.data.get("statusCode"), status.HTTP_500_INTERNAL_SERVER_ERROR)
             self.assertEqual(response.data.get("message"), expected_main_message)

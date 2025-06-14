@@ -15,7 +15,6 @@ class AuthenticatedAPITestCase(APITestCase):
         self._setup_auth_cookies()
 
     def _setup_auth_cookies(self):
-        # Generate a valid token pair for testing
         user_data = {
             "user_id": str(ObjectId()),
             "google_id": "test_google_id",
@@ -24,7 +23,6 @@ class AuthenticatedAPITestCase(APITestCase):
         }
         tokens = generate_google_token_pair(user_data)
         
-        # Set the cookies
         self.client.cookies["ext-access"] = tokens["access_token"]
         self.client.cookies["ext-refresh"] = tokens["refresh_token"]
 

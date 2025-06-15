@@ -50,14 +50,15 @@ class ExceptionHandlerTests(TestCase):
         self.assertEqual(response.data["errors"][0]["source"], {"path": "task_id"})
 
     def test_handles_unprocessable_entity_exception(self):
-        exception = UnprocessableEntityException("Cannot process this")
+        source = {ApiErrorSource.PARAMETER.value: "test_field"}
+        exception = UnprocessableEntityException("Cannot process this", source=source)
         context = {}
         response = handle_exception(exception, context)
 
         self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
         self.assertEqual(response.data["message"], "Cannot process this")
         self.assertEqual(response.data["errors"][0]["title"], ApiErrors.VALIDATION_ERROR)
-        self.assertEqual(response.data["errors"][0]["source"], {"parameter": "deferredTill"})
+        self.assertEqual(response.data["errors"][0]["source"], source)
 
     def test_handles_bson_invalid_id_exception(self):
         task_id = "invalid-id"

@@ -511,7 +511,7 @@ class TaskServiceDeferTests(TestCase):
         self.task_id = str(ObjectId())
         self.user_id = "system_user"
         self.current_time = datetime.now(timezone.utc)
-        self.due_at = self.current_time + timedelta(days=10)
+        self.due_at = self.current_time + timedelta(days=30)
         self.task_model = TaskModel(
             id=self.task_id,
             displayId="TASK-1",
@@ -582,12 +582,12 @@ class TaskServiceDeferTests(TestCase):
 
         mock_repo_get_by_id.assert_called_once_with(self.task_id)
 
-    @patch("todo.services.task_service.TaskRepository.get_by_id")
     @patch("todo.services.task_service.TaskRepository.update")
-    def test_defer_task_raises_task_not_found_on_update_failure(self, mock_repo_update, mock_repo_get_by_id):
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    def test_defer_task_raises_task_not_found_on_update_failure(self, mock_repo_get_by_id, mock_repo_update):
         mock_repo_get_by_id.return_value = self.task_model
         mock_repo_update.return_value = None
-        valid_deferred_till = self.due_at - timedelta(days=3)
+        valid_deferred_till = self.current_time + timedelta(days=5)
 
         with self.assertRaises(TaskNotFoundException) as context:
             TaskService.defer_task(self.task_id, valid_deferred_till, "test_user")

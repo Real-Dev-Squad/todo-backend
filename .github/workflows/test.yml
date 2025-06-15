@@ -7,15 +7,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    services:
-      db:
-        image: mongo:latest
-        ports:
-          - 27017:27017
-    
-    env:
-      MONGODB_URI: mongodb://db:27017
-      DB_NAME: todo-app
 
     steps:
       - name: Checkout code

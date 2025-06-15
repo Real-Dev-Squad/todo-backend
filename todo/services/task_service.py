@@ -18,7 +18,7 @@ from todo.models.task import TaskModel, DeferredDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.label_repository import LabelRepository
-from todo.constants.task import TaskStatus, TaskPriority
+from todo.constants.task import TaskStatus, TaskPriority, MINIMUM_DEFERRAL_NOTICE_DAYS
 from todo.constants.messages import ApiErrors, ValidationErrors
 from django.conf import settings
 from todo.exceptions.task_exceptions import (
@@ -245,9 +245,12 @@ class TaskService:
             raise TaskStateConflictException(ValidationErrors.CANNOT_DEFER_A_DONE_TASK)
 
         if current_task.dueAt:
-            defer_limit = current_task.dueAt - timedelta(days=2)
+            defer_limit = current_task.dueAt - timedelta(days=MINIMUM_DEFERRAL_NOTICE_DAYS)
             if deferred_till > defer_limit:
-                raise UnprocessableEntityException(ValidationErrors.CANNOT_DEFER_TOO_CLOSE_TO_DUE_DATE)
+                raise UnprocessableEntityException(
+                    ValidationErrors.CANNOT_DEFER_TOO_CLOSE_TO_DUE_DATE,
+                    source={ApiErrorSource.PARAMETER: "deferredTill"},
+                )
 
         deferred_details = DeferredDetailsModel(
             deferredAt=datetime.now(timezone.utc),

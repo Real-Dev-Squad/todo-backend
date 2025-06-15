@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from datetime import datetime, timezone
+from todo.constants.messages import ValidationErrors
 
 
 class DeferTaskSerializer(serializers.Serializer):
@@ -7,5 +8,5 @@ class DeferTaskSerializer(serializers.Serializer):
 
     def validate_deferredTill(self, value):
         if value < datetime.now(timezone.utc):
-            raise serializers.ValidationError("deferredTill cannot be in the past.")
+            raise serializers.ValidationError(ValidationErrors.PAST_DEFERRED_TILL_DATE)
         return value

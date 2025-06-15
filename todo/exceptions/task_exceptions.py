@@ -11,8 +11,9 @@ class TaskNotFoundException(Exception):
 
 
 class UnprocessableEntityException(Exception):
-    def __init__(self, message: str):
+    def __init__(self, message: str, source: dict | None = None):
         self.message = message
+        self.source = source
         super().__init__(self.message)
 
 

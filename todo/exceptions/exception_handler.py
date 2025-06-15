@@ -68,11 +68,7 @@ def handle_exception(exc, context):
         status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
         determined_message = str(exc)
         error_list.append(
-            ApiErrorDetail(
-                source={ApiErrorSource.PARAMETER: "deferredTill"},
-                title=ApiErrors.VALIDATION_ERROR,
-                detail=determined_message,
-            )
+            ApiErrorDetail(source=exc.source, title=ApiErrors.VALIDATION_ERROR, detail=determined_message)
         )
     elif isinstance(exc, BsonInvalidId):
         status_code = status.HTTP_400_BAD_REQUEST

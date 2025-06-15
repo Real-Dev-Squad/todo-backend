@@ -107,10 +107,7 @@ class TaskDetailView(APIView):
         Partially updates a task by its ID.
         Can also be used to defer a task by using ?action=defer query parameter.
         """
-        action = request.query_params.get("action")
-
-        if action is None:
-            action = "update"
+        action = request.query_params.get("action", "update")
 
         if action == "defer":
             serializer = DeferTaskSerializer(data=request.data)

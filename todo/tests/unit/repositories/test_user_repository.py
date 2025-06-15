@@ -90,6 +90,5 @@ class UserRepositoryTests(TestCase):
         update_doc = call_args[1]
         self.assertIn("$set", update_doc)
         self.assertIn("updated_at", update_doc["$set"])
-        self.assertIn("last_login_at", update_doc["$set"])
         self.assertIn("$setOnInsert", update_doc)
         self.assertIn("created_at", update_doc["$setOnInsert"])

@@ -215,6 +215,8 @@ class TaskServiceTests(TestCase):
         result = TaskService.create_task(dto)
 
         mock_create.assert_called_once()
+        created_task_model_arg = mock_create.call_args[0][0]
+        self.assertIsNone(created_task_model_arg.deferredDetails)
         mock_prepare_dto.assert_called_once_with(mock_task_model)
         self.assertEqual(result.data, mock_task_dto)
 

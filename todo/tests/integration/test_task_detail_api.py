@@ -1,76 +1,60 @@
-from unittest.mock import patch
-from rest_framework import status
-from rest_framework.test import APITestCase
-from django.urls import reverse
+from http import HTTPStatus
 from bson import ObjectId
-
-from todo.services.task_service import TaskService
-from todo.constants.messages import ValidationErrors, ApiErrors
-from todo.dto.responses.error_response import ApiErrorSource
-from todo.exceptions.task_exceptions import TaskNotFoundException
-from todo.tests.fixtures.task import task_dtos
-from todo.constants.task import TaskPriority, TaskStatus
+from django.urls import reverse
+from rest_framework.test import APIClient
+from todo.tests.fixtures.task import tasks_db_data
+from todo.tests.integration.base_mongo_test import BaseMongoTestCase
+from todo.constants.messages import ApiErrors, ValidationErrors
 
 
-class TaskDetailAPIIntegrationTest(APITestCase):
-    @patch("todo.services.task_service.TaskService.get_task_by_id")
-    def test_get_task_by_id_success(self, mock_get_task_by_id):
-        fixture_task_dto = task_dtos[0]
-        task_id_str = fixture_task_dto.id
+class TaskDetailAPIIntegrationTest(BaseMongoTestCase):
+    def setUp(self):
+        super().setUp()
+        self.db.tasks.delete_many({})  # Clear tasks to avoid DuplicateKeyError
+        self.task_doc = tasks_db_data[1].copy()
+        self.task_doc["_id"] = self.task_doc.pop("id")
+        self.db.tasks.insert_one(self.task_doc)
+        self.existing_task_id = str(self.task_doc["_id"])
+        self.non_existent_id = str(ObjectId())
+        self.invalid_task_id = "invalid-task-id"
+        self.client = APIClient()
 
-        mock_get_task_by_id.return_value = fixture_task_dto
-
-        url = reverse("task_detail", args=[task_id_str])
+    def test_get_task_by_id_success(self):
+        url = reverse('task_detail', args=[self.existing_task_id])
         response = self.client.get(url)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        data = response.json()["data"]
+        self.assertEqual(data["id"], self.existing_task_id)
+        self.assertEqual(data["title"], self.task_doc["title"])
+        self.assertEqual(data["priority"], "MEDIUM")
+        self.assertEqual(data["status"], self.task_doc["status"])
+        self.assertEqual(data["displayId"], self.task_doc["displayId"])
+        self.assertEqual(data["createdBy"]["id"],
+                         self.task_doc["createdBy"])
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        response_data_outer = response.data
-        response_data_inner = response_data_outer.get("data")
-        self.assertIsNotNone(response_data_inner)
-
-        self.assertEqual(response_data_inner["id"], fixture_task_dto.id)
-        self.assertEqual(response_data_inner["title"], fixture_task_dto.title)
-
-        self.assertEqual(response_data_inner["priority"], TaskPriority(fixture_task_dto.priority).name)
-        self.assertEqual(response_data_inner["status"], TaskStatus(fixture_task_dto.status).value)
-
-        self.assertEqual(response_data_inner["displayId"], fixture_task_dto.displayId)
-
-        if fixture_task_dto.createdBy:
-            self.assertEqual(response_data_inner["createdBy"]["id"], fixture_task_dto.createdBy.id)
-            self.assertEqual(response_data_inner["createdBy"]["name"], fixture_task_dto.createdBy.name)
-
-        mock_get_task_by_id.assert_called_once_with(task_id_str)
-
-    @patch("todo.services.task_service.TaskService.get_task_by_id")
-    def test_get_task_by_id_not_found(self, mock_get_task_by_id):
-        non_existent_id = str(ObjectId())
-        mock_get_task_by_id.side_effect = TaskNotFoundException()
-
-        url = reverse("task_detail", args=[non_existent_id])
+    def test_get_task_by_id_not_found(self):
+        url = reverse('task_detail', args=[self.non_existent_id])
         response = self.client.get(url)
+        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        error_detail = response.data.get("errors", [{}])[0].get("detail")
-        self.assertEqual(error_detail, "Task not found.")
-        mock_get_task_by_id.assert_called_once_with(non_existent_id)
+        data = response.json()
+        error_message = ApiErrors.TASK_NOT_FOUND.format(self.non_existent_id)
+        self.assertEqual(data["message"], error_message)
+        error = data["errors"][0]
+        self.assertEqual(error["source"]["path"], "task_id")
+        self.assertEqual(error["title"], ApiErrors.RESOURCE_NOT_FOUND_TITLE)
+        self.assertEqual(error["detail"], error_message)
 
-    @patch.object(TaskService, "get_task_by_id", wraps=TaskService.get_task_by_id)
-    def test_get_task_by_id_invalid_format(self, mock_actual_get_task_by_id):
-        invalid_task_id = "invalid-id"
-        url = reverse("task_detail", args=[invalid_task_id])
+    def test_get_task_by_id_invalid_format(self):
+        url = reverse('task_detail', args=[self.invalid_task_id])
         response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["message"], ValidationErrors.INVALID_TASK_ID_FORMAT)
-        self.assertIsNotNone(response.data.get("errors"))
-        self.assertEqual(len(response.data["errors"]), 1)
-
-        error_obj = response.data["errors"][0]
-        self.assertEqual(error_obj["detail"], ValidationErrors.INVALID_TASK_ID_FORMAT)
-        self.assertIn(ApiErrorSource.PATH.value, error_obj["source"])
-        self.assertEqual(error_obj["source"][ApiErrorSource.PATH.value], "task_id")
-        self.assertEqual(error_obj["title"], ApiErrors.VALIDATION_ERROR)
-
-        mock_actual_get_task_by_id.assert_called_once_with(invalid_task_id)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
+        data = response.json()
+        self.assertEqual(data["statusCode"], 400)
+        self.assertEqual(
+            data["message"], ValidationErrors.INVALID_TASK_ID_FORMAT)
+        self.assertEqual(data["errors"][0]["source"]["path"], "task_id")
+        self.assertEqual(data["errors"][0]["title"],
+                         ApiErrors.VALIDATION_ERROR)
+        self.assertEqual(data["errors"][0]["detail"],
+                         ValidationErrors.INVALID_TASK_ID_FORMAT)

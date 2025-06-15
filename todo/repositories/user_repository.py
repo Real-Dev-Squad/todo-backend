@@ -37,7 +37,6 @@ class UserRepository:
                         "email_id": user_data["email"],
                         "name": user_data["name"],
                         "updated_at": now,
-                        "last_login_at": now,
                     },
                     "$setOnInsert": {"google_id": google_id, "created_at": now},
                 },

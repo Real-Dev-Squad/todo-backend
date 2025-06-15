@@ -17,7 +17,8 @@ class BaseMongoTestCase(TransactionTestCase):
             DB_NAME="testdb",
         )
         cls.override.enable()
-        DatabaseManager().reset()
+        DatabaseManager.reset()
+        DatabaseManager().get_database()
 
     def setUp(self):
         for collection in self.db.list_collection_names():

@@ -10,8 +10,6 @@ from todo.tests.fixtures.task import tasks_db_data
 
 
 class TaskDeferAPIIntegrationTest(BaseMongoTestCase):
-    """Integration tests for deferring a task using the `action=defer` query parameter."""
-
     def setUp(self):
         super().setUp()
 
@@ -19,7 +17,6 @@ class TaskDeferAPIIntegrationTest(BaseMongoTestCase):
         self.client = APIClient()
 
     def _insert_task(self, *, status: str = TaskStatus.TODO.value, due_at: datetime | None = None) -> str:
-        """Helper to insert a task document and return its string id using the shared fixture schema."""
         task_fixture = tasks_db_data[0].copy()
         new_id = ObjectId()
         task_fixture["_id"] = new_id
@@ -37,7 +34,6 @@ class TaskDeferAPIIntegrationTest(BaseMongoTestCase):
         return str(new_id)
 
     def test_defer_task_success(self):
-        """Successfully defer a task when deferredTill is outside the notice window."""
         now = datetime.now(timezone.utc)
         due_at = now + timedelta(days=MINIMUM_DEFERRAL_NOTICE_DAYS + 30)
         task_id = self._insert_task(due_at=due_at)
@@ -63,7 +59,6 @@ class TaskDeferAPIIntegrationTest(BaseMongoTestCase):
         self.assertTrue(abs(response_deferred_till - deferred_till) < timedelta(seconds=1))
 
     def test_defer_task_too_close_to_due_date_returns_422(self):
-        """API should reject deferral when deferredTill violates the notice window rule."""
         now = datetime.now(timezone.utc)
         due_at = now + timedelta(days=MINIMUM_DEFERRAL_NOTICE_DAYS + 5)
         task_id = self._insert_task(due_at=due_at)
@@ -84,7 +79,6 @@ class TaskDeferAPIIntegrationTest(BaseMongoTestCase):
         self.assertEqual(error["source"]["parameter"], "deferredTill")
 
     def test_defer_done_task_returns_409(self):
-        """Cannot defer a task that is already marked as DONE."""
         task_id = self._insert_task(status=TaskStatus.DONE.value)
         deferred_till = datetime.now(timezone.utc) + timedelta(days=5)
 

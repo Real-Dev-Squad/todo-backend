@@ -11,11 +11,6 @@ from todo.tests.fixtures.task import tasks_db_data
 
 
 class TaskUpdateAPIIntegrationTest(BaseMongoTestCase):
-    """
-    Integration tests for the normal update action
-    (PATCH /v1/tasks/<id>  with no ?action query-param).
-    """
-
     def setUp(self):
         super().setUp()
         self.db.tasks.delete_many({})

@@ -18,6 +18,7 @@ from .google_auth_exceptions import (
     GoogleRefreshTokenExpiredError,
     GoogleAPIException,
     GoogleUserNotFoundException,
+    GoogleTokenMissingError
 )
 
 
@@ -69,7 +70,7 @@ def handle_exception(exc, context):
             statusCode=status_code,
             message=str(exc) if not error_list else error_list[0].detail,
             errors=error_list,
-            authenticated=False
+            authenticated=False,
         )
         return Response(data=final_response_data.model_dump(mode="json", exclude_none=True), status=status_code)
     elif isinstance(exc, TokenInvalidError):
@@ -85,7 +86,24 @@ def handle_exception(exc, context):
             statusCode=status_code,
             message=str(exc) if not error_list else error_list[0].detail,
             errors=error_list,
-            authenticated=False
+            authenticated=False,
+        )
+        return Response(data=final_response_data.model_dump(mode="json", exclude_none=True), status=status_code)
+    
+    elif isinstance(exc, GoogleTokenMissingError):
+        status_code = status.HTTP_401_UNAUTHORIZED
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.HEADER: "Authorization"},
+                title=AuthErrorMessages.AUTHENTICATION_REQUIRED,
+                detail=str(exc),
+            )
+        )
+        final_response_data = ApiErrorResponse(
+            statusCode=status_code,
+            message=str(exc) if not error_list else error_list[0].detail,
+            errors=error_list,
+            authenticated=False,
         )
         return Response(data=final_response_data.model_dump(mode="json", exclude_none=True), status=status_code)
     elif isinstance(exc, GoogleTokenExpiredError):
@@ -101,7 +119,7 @@ def handle_exception(exc, context):
             statusCode=status_code,
             message=str(exc) if not error_list else error_list[0].detail,
             errors=error_list,
-            authenticated=False
+            authenticated=False,
         )
         return Response(data=final_response_data.model_dump(mode="json", exclude_none=True), status=status_code)
     elif isinstance(exc, GoogleTokenInvalidError):
@@ -117,7 +135,7 @@ def handle_exception(exc, context):
             statusCode=status_code,
             message=str(exc) if not error_list else error_list[0].detail,
             errors=error_list,
-            authenticated=False
+            authenticated=False,
         )
         return Response(data=final_response_data.model_dump(mode="json", exclude_none=True), status=status_code)
     elif isinstance(exc, GoogleRefreshTokenExpiredError):

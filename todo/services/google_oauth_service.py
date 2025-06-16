@@ -54,7 +54,6 @@ class GoogleOAuthService:
 
     @classmethod
     def _exchange_code_for_tokens(cls, code: str) -> dict:
-        """Exchange authorization code for tokens"""
         try:
             data = {
                 "client_id": settings.GOOGLE_OAUTH["CLIENT_ID"],

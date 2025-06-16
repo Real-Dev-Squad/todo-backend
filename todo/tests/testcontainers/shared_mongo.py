@@ -3,6 +3,7 @@ import atexit
 
 _mongo_container = None
 
+
 def _cleanup_mongo_container():
     global _mongo_container
     if _mongo_container is not None:

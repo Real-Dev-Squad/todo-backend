@@ -13,13 +13,13 @@ class GoogleOAuthService:
     GOOGLE_USER_INFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 
     @classmethod
-    def get_authorization_url(cls, redirect_url: str = None) -> tuple[str, str]:
+    def get_authorization_url(cls, redirect_url: str | None = None) -> tuple[str, str]:
         try:
             state = secrets.token_urlsafe(32)
 
             params = {
                 "client_id": settings.GOOGLE_OAUTH["CLIENT_ID"],
-                "redirect_uri": settings.GOOGLE_OAUTH["REDIRECT_URI"],
+                "redirect_uri": redirect_url or settings.GOOGLE_OAUTH["REDIRECT_URI"],
                 "response_type": "code",
                 "scope": " ".join(settings.GOOGLE_OAUTH["SCOPES"]),
                 "access_type": "offline",
@@ -50,7 +50,7 @@ class GoogleOAuthService:
         except Exception as e:
             if isinstance(e, GoogleAPIException):
                 raise
-            raise GoogleAPIException(ApiErrors.GOOGLE_API_ERROR)
+            raise GoogleAPIException(ApiErrors.GOOGLE_API_ERROR) from e
 
     @classmethod
     def _exchange_code_for_tokens(cls, code: str) -> dict:

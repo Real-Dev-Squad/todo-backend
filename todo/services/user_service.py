@@ -14,7 +14,7 @@ class UserService:
         except (GoogleUserNotFoundException, GoogleAPIException, DRFValidationError):
             raise
         except Exception as e:
-            raise GoogleAPIException(RepositoryErrors.USER_CREATE_UPDATE_FAILED.format(str(e)))
+            raise GoogleAPIException(RepositoryErrors.USER_CREATE_UPDATE_FAILED.format(str(e))) from e
 
     @classmethod
     def get_user_by_id(cls, user_id: str) -> UserModel:

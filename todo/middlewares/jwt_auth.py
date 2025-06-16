@@ -1,18 +1,18 @@
 from django.conf import settings
-from django.http import JsonResponse
 from rest_framework import status
+from django.http import JsonResponse
 
 from todo.utils.jwt_utils import verify_jwt_token
 from todo.utils.google_jwt_utils import validate_google_access_token
 from todo.exceptions.auth_exceptions import TokenMissingError, TokenExpiredError, TokenInvalidError
 from todo.exceptions.google_auth_exceptions import GoogleTokenExpiredError, GoogleTokenInvalidError
 from todo.constants.messages import AuthErrorMessages, ApiErrors
+from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 
 
 class JWTAuthenticationMiddleware:
     def __init__(self, get_response) -> None:
         self.get_response = get_response
-
         self.rds_cookie_name = settings.JWT_COOKIE_SETTINGS["RDS_SESSION_V2_COOKIE_NAME"]
 
     def __call__(self, request):
@@ -27,14 +27,24 @@ class JWTAuthenticationMiddleware:
             if auth_success:
                 return self.get_response(request)
             else:
-                return self._unauthorized_response(AuthErrorMessages.AUTHENTICATION_REQUIRED)
+                error_response = ApiErrorResponse(
+                    statusCode=status.HTTP_401_UNAUTHORIZED,
+                    message=AuthErrorMessages.AUTHENTICATION_REQUIRED,
+                    errors=[ApiErrorDetail(detail=AuthErrorMessages.AUTHENTICATION_REQUIRED, title=AuthErrorMessages.AUTHENTICATION_REQUIRED)],
+                )
+                return JsonResponse(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED)
 
         except (TokenMissingError, TokenExpiredError, TokenInvalidError) as e:
             return self._handle_rds_auth_error(e)
         except (GoogleTokenExpiredError, GoogleTokenInvalidError) as e:
             return self._handle_google_auth_error(e)
         except Exception:
-            return self._unauthorized_response(ApiErrors.AUTHENTICATION_FAILED.format(""))
+            error_response = ApiErrorResponse(
+                statusCode=status.HTTP_401_UNAUTHORIZED,
+                message=ApiErrors.AUTHENTICATION_FAILED.format(""),
+                errors=[ApiErrorDetail(detail=ApiErrors.AUTHENTICATION_FAILED.format(""), title=AuthErrorMessages.AUTHENTICATION_REQUIRED)],
+            )
+            return JsonResponse(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED)
 
     def _try_authentication(self, request) -> bool:
         if self._try_google_auth(request):
@@ -63,8 +73,8 @@ class JWTAuthenticationMiddleware:
 
             return True
 
-        except (GoogleTokenExpiredError, GoogleTokenInvalidError):
-            return False
+        except (GoogleTokenExpiredError, GoogleTokenInvalidError) as e:
+            raise e
         except Exception:
             return False
 
@@ -92,17 +102,20 @@ class JWTAuthenticationMiddleware:
         return any(path.startswith(public_path) for public_path in settings.PUBLIC_PATHS)
 
     def _handle_rds_auth_error(self, exception):
-        return JsonResponse(
-            {"error": True, "message": str(exception), "auth_type": "rds"}, status=status.HTTP_401_UNAUTHORIZED
+        error_response = ApiErrorResponse(
+            statusCode=status.HTTP_401_UNAUTHORIZED,
+            message=str(exception),
+            errors=[ApiErrorDetail(detail=str(exception), title=AuthErrorMessages.AUTHENTICATION_REQUIRED)],
         )
+        return JsonResponse(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED)
 
     def _handle_google_auth_error(self, exception):
-        return JsonResponse(
-            {"error": True, "message": str(exception), "auth_type": "google"}, status=status.HTTP_401_UNAUTHORIZED
+        error_response = ApiErrorResponse(
+            statusCode=status.HTTP_401_UNAUTHORIZED,
+            message=str(exception),
+            errors=[ApiErrorDetail(detail=str(exception), title=AuthErrorMessages.AUTHENTICATION_REQUIRED)],
         )
-
-    def _unauthorized_response(self, message: str):
-        return JsonResponse({"error": True, "message": message}, status=status.HTTP_401_UNAUTHORIZED)
+        return JsonResponse(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED)
 
 
 def is_google_user(request) -> bool:

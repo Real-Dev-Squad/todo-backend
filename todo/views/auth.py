@@ -25,7 +25,14 @@ class GoogleLoginView(APIView):
         request.session["oauth_state"] = state
 
         if request.headers.get("Accept") == "application/json" or request.query_params.get("format") == "json":
-            return Response({"authUrl": auth_url, "state": state})
+            return Response({
+                "statusCode": status.HTTP_200_OK,
+                "message": "Google OAuth URL generated successfully",
+                "data": {
+                    "authUrl": auth_url,
+                    "state": state
+                }
+            })
 
         return HttpResponseRedirect(auth_url)
 
@@ -44,31 +51,32 @@ class GoogleCallbackView(APIView):
     def get(self, request: Request):
         if "error" in request.query_params:
             error = request.query_params.get("error")
-            return HttpResponse(f"""
-                <h1>❌ OAuth Error</h1>
-                <p>Error: {error}</p>
-                <a href="/v1/auth/google/login/">Try Again</a>
-            """)
+            error_response = ApiErrorResponse(
+                statusCode=status.HTTP_400_BAD_REQUEST,
+                message="OAuth Error",
+                errors=[ApiErrorDetail(detail=error, title="OAuth Error")]
+            )
+            return Response(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_400_BAD_REQUEST)
 
         code = request.query_params.get("code")
         state = request.query_params.get("state")
 
         if not code:
-            return HttpResponse("""
-                <h1>❌ Missing Authorization Code</h1>
-                <p>No authorization code received from Google</p>
-                <a href="/v1/auth/google/login/">Try Again</a>
-            """)
+            error_response = ApiErrorResponse(
+                statusCode=status.HTTP_400_BAD_REQUEST,
+                message="Missing Authorization Code",
+                errors=[ApiErrorDetail(detail="No authorization code received from Google", title="Missing Authorization Code")]
+            )
+            return Response(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_400_BAD_REQUEST)
 
         stored_state = request.session.get("oauth_state")
         if not stored_state or stored_state != state:
-            return HttpResponse(f"""
-                <h1>❌ Invalid State Parameter</h1>
-                <p>Stored state: {stored_state}</p>
-                <p>Received state: {state}</p>
-                <p>This might be a security issue.</p>
-                <a href="/v1/auth/google/login/">Try Again</a>
-            """)
+            error_response = ApiErrorResponse(
+                statusCode=status.HTTP_400_BAD_REQUEST,
+                message="Invalid State Parameter",
+                errors=[ApiErrorDetail(detail="This might be a security issue", title="Invalid State Parameter")]
+            )
+            return Response(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_400_BAD_REQUEST)
 
         return self._handle_callback_directly(code, request)
 
@@ -85,45 +93,65 @@ class GoogleCallbackView(APIView):
             }
         )
 
-        response = HttpResponse(f"""
-            <html>
-            <head><title>✅ Login Successful</title></head>
-            <body style="font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px;">
-                <h1>✅ Google OAuth Login Successful!</h1>
-                
-                <h2>🧑‍💻 User Info:</h2>
-                <ul>
-                    <li><strong>ID:</strong> {user.id}</li>
-                    <li><strong>Name:</strong> {user.name}</li>
-                    <li><strong>Email:</strong> {user.email_id}</li>
-                    <li><strong>Google ID:</strong> {user.google_id}</li>
-                </ul>
-                
-                <h2>🍪 Authentication Cookies Set:</h2>
-                <ul>
-                    <li><strong>Access Token:</strong> ext-access (expires in {tokens['expires_in']} seconds)</li>
-                    <li><strong>Refresh Token:</strong> ext-refresh (expires in 7 days)</li>
-                </ul>
-                
-                <h2>🧪 Test Other Endpoints:</h2>
-                <ul>
-                    <li><a href="/v1/auth/google/status/">Check Auth Status</a></li>
-                    <li><a href="/v1/auth/google/refresh/">Refresh Token</a></li>
-                    <li><a href="/v1/auth/google/logout/">Logout</a></li>
-                </ul>
-                
-                <p><strong>Google OAuth integration is working perfectly!</strong></p>
-            </body>
-            </html>
-        """)
+        wants_json = (
+            "application/json" in request.headers.get("Accept", "").lower()
+            or request.query_params.get("format") == "json"
+        )
+
+        if wants_json:
+            response = Response({
+                "statusCode": status.HTTP_200_OK,
+                "message": AppMessages.GOOGLE_LOGIN_SUCCESS,
+                "data": {
+                    "user": {
+                        "id": str(user.id),
+                        "name": user.name,
+                        "email": user.email_id,
+                        "google_id": user.google_id,
+                    },
+                    "tokens": {
+                        "access_token_expires_in": tokens["expires_in"],
+                        "refresh_token_expires_in": settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"]
+                    }
+                }
+            })
+        else:
+            response = HttpResponse(f"""
+                <html>
+                <head><title>✅ Login Successful</title></head>
+                <body style="font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px;">
+                    <h1>✅ Google OAuth Login Successful!</h1>
+                    
+                    <h2>🧑‍💻 User Info:</h2>
+                    <ul>
+                        <li><strong>ID:</strong> {user.id}</li>
+                        <li><strong>Name:</strong> {user.name}</li>
+                        <li><strong>Email:</strong> {user.email_id}</li>
+                        <li><strong>Google ID:</strong> {user.google_id}</li>
+                    </ul>
+                    
+                    <h2>🍪 Authentication Cookies Set:</h2>
+                    <ul>
+                        <li><strong>Access Token:</strong> ext-access (expires in {tokens['expires_in']} seconds)</li>
+                        <li><strong>Refresh Token:</strong> ext-refresh (expires in 7 days)</li>
+                    </ul>
+                    
+                    <h2>🧪 Test Other Endpoints:</h2>
+                    <ul>
+                        <li><a href="/v1/auth/google/status/">Check Auth Status</a></li>
+                        <li><a href="/v1/auth/google/refresh/">Refresh Token</a></li>
+                        <li><a href="/v1/auth/google/logout/">Logout</a></li>
+                    </ul>
+                    
+                    <p><strong>Google OAuth integration is working perfectly!</strong></p>
+                </body>
+                </html>
+            """)
 
         self._set_auth_cookies(response, tokens)
         request.session.pop("oauth_state", None)
 
         return response
-
-    def post(self, request):
-        pass
 
     def _get_cookie_config(self):
         return {
@@ -270,17 +298,19 @@ class GoogleAuthStatusView(APIView):
         payload = validate_google_access_token(access_token)
         user = UserService.get_user_by_id(payload["user_id"])
 
-        return Response(
-            {
+        return Response({
+            "statusCode": status.HTTP_200_OK,
+            "message": "Authentication status retrieved successfully",
+            "data": {
                 "authenticated": True,
                 "user": {
                     "id": str(user.id),
                     "email": user.email_id,
                     "name": user.name,
                     "google_id": user.google_id,
-                },
+                }
             }
-        )
+        })
 
 
 class GoogleRefreshView(APIView):
@@ -313,7 +343,13 @@ class GoogleRefreshView(APIView):
         }
         new_access_token = generate_google_access_token(user_data)
 
-        response = Response({"success": True, "message": AppMessages.TOKEN_REFRESHED})
+        response = Response({
+            "statusCode": status.HTTP_200_OK,
+            "message": AppMessages.TOKEN_REFRESHED,
+            "data": {
+                "success": True
+            }
+        })
 
         config = self._get_cookie_config()
         response.set_cookie(
@@ -343,19 +379,35 @@ class GoogleLogoutView(APIView):
         redirect_url = request.query_params.get("redirectURL")
 
         wants_json = (
-            request.headers.get("Accept") == "application/json"
-            or request.data.get("format") == "json"
+            "application/json" in request.headers.get("Accept", "").lower()
+            or request.query_params.get("format") == "json"
             or request.method == "POST"
         )
 
         if wants_json:
-            response = Response({"success": True, "message": AppMessages.GOOGLE_LOGOUT_SUCCESS})
+            response = Response({
+                "statusCode": status.HTTP_200_OK,
+                "message": AppMessages.GOOGLE_LOGOUT_SUCCESS,
+                "data": {
+                    "success": True
+                }
+            })
         else:
             redirect_url = redirect_url or "/"
             response = HttpResponseRedirect(redirect_url)
 
-        domain = settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_DOMAIN")
-        response.delete_cookie("ext-access", domain=domain)
-        response.delete_cookie("ext-refresh", domain=domain)
+        response.delete_cookie("ext-access", path="/")
+        response.delete_cookie("ext-refresh", path="/")
+        response.delete_cookie(settings.SESSION_COOKIE_NAME, path="/")
+        request.session.flush()
 
         return response
+
+    def _get_cookie_config(self):
+        return {
+            "path": "/",
+            "domain": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
+            "secure": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SECURE", False),
+            "httponly": True,
+            "samesite": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SAMESITE", "Lax"),
+        }

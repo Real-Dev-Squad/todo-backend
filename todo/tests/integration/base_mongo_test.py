@@ -3,6 +3,7 @@ from pymongo import MongoClient
 from todo.tests.testcontainers.shared_mongo import get_shared_mongo_container
 from todo_project.db.config import DatabaseManager
 
+
 class BaseMongoTestCase(TransactionTestCase):
     @classmethod
     def setUpClass(cls):

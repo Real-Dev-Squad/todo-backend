@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import Optional
+from pymongo.collection import ReturnDocument
 
 from todo.models.user import UserModel
 from todo.models.common.pyobjectid import PyObjectId
@@ -20,8 +21,8 @@ class UserRepository:
             object_id = PyObjectId(user_id)
             doc = collection.find_one({"_id": object_id})
             return UserModel(**doc) if doc else None
-        except Exception:
-            raise GoogleUserNotFoundException()
+        except Exception as e:
+            raise GoogleUserNotFoundException() from e
 
     @classmethod
     def create_or_update(cls, user_data: dict) -> UserModel:
@@ -41,7 +42,7 @@ class UserRepository:
                     "$setOnInsert": {"google_id": google_id, "created_at": now},
                 },
                 upsert=True,
-                return_document=True,
+                return_document=ReturnDocument.AFTER,
             )
 
             if not result:

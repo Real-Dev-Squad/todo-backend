@@ -1,6 +1,6 @@
 import jwt
 from django.conf import settings
-from todo.exceptions.auth_exceptions import TokenExpiredError, TokenInvalidError
+from todo.exceptions.auth_exceptions import TokenExpiredError, TokenInvalidError, TokenMissingError
 
 
 def verify_jwt_token(token: str) -> dict:
@@ -18,13 +18,13 @@ def verify_jwt_token(token: str) -> dict:
         TokenInvalidError: If token is invalid
     """
     if not token or not token.strip():
-        raise TokenInvalidError()
+        raise TokenMissingError()
 
     try:
         public_key = settings.JWT_AUTH["PUBLIC_KEY"]
         algorithm = settings.JWT_AUTH["ALGORITHM"]
 
-        if not public_key:
+        if not public_key or not algorithm:
             raise TokenInvalidError()
 
         payload = jwt.decode(

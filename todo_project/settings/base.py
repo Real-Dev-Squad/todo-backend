@@ -11,7 +11,7 @@ SECRET_KEY = os.getenv(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = []
 
@@ -27,10 +27,10 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django.middleware.common.CommonMiddleware",
     "todo.middlewares.jwt_auth.JWTAuthenticationMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 ROOT_URLCONF = "todo_project.urls"
@@ -78,14 +78,14 @@ REST_FRAMEWORK = {
 
 JWT_AUTH = {
     "ALGORITHM": "RS256",
-    "PUBLIC_KEY": os.getenv("RDS_PUBLIC_KEY"),
+    "PUBLIC_KEY": os.getenv("RDS_PUBLIC_KEY") or "",
 }
 
 JWT_COOKIE_SETTINGS = {
     "RDS_SESSION_COOKIE_NAME": os.getenv("RDS_SESSION_COOKIE_NAME", "rds-session-development"),
     "RDS_SESSION_V2_COOKIE_NAME": os.getenv("RDS_SESSION_V2_COOKIE_NAME", "rds-session-v2-development"),
     "COOKIE_DOMAIN": os.getenv("COOKIE_DOMAIN", None),
-    "COOKIE_SECURE": os.getenv("COOKIE_SECURE", "False").lower() == "true",
+    "COOKIE_SECURE": os.getenv("COOKIE_SECURE", "True").lower() == "true",
     "COOKIE_HTTPONLY": True,
     "COOKIE_SAMESITE": os.getenv("COOKIE_SAMESITE", "None"),
     "COOKIE_PATH": "/",

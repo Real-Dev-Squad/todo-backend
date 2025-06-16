@@ -93,7 +93,7 @@ def handle_exception(exc, context):
             )
         )
     elif isinstance(exc, GoogleRefreshTokenExpiredError):
-        status_code = status.HTTP_401_UNAUTHORIZED
+        status_code = status.HTTP_403_FORBIDDEN
         error_list.append(
             ApiErrorDetail(
                 source={ApiErrorSource.HEADER: "Authorization"},

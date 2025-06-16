@@ -9,7 +9,7 @@ from todo.constants.messages import ValidationErrors, ApiErrors
 from todo.utils.google_jwt_utils import generate_google_token_pair
 
 
-class AuthenticatedAPITestCase(APITestCase):
+class AuthenticatedMongoTestCase(BaseMongoTestCase):
     def setUp(self):
         super().setUp()
         self._setup_auth_cookies()
@@ -22,12 +22,11 @@ class AuthenticatedAPITestCase(APITestCase):
             "name": "Test User",
         }
         tokens = generate_google_token_pair(user_data)
-
         self.client.cookies["ext-access"] = tokens["access_token"]
         self.client.cookies["ext-refresh"] = tokens["refresh_token"]
 
 
-class TaskDeleteAPIIntegrationTest(AuthenticatedAPITestCase):
+class TaskDeleteAPIIntegrationTest(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.db.tasks.delete_many({})
@@ -37,7 +36,6 @@ class TaskDeleteAPIIntegrationTest(AuthenticatedAPITestCase):
         self.existing_task_id = str(task_doc["_id"])
         self.non_existent_id = str(ObjectId())
         self.invalid_task_id = "invalid-task-id"
-        self.client = APIClient()
 
     def test_delete_task_success(self):
         url = reverse("task_detail", args=[self.existing_task_id])

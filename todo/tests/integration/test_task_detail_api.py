@@ -2,14 +2,34 @@ from http import HTTPStatus
 from bson import ObjectId
 from django.urls import reverse
 from rest_framework.test import APIClient
+from bson import ObjectId
+
 from todo.tests.fixtures.task import tasks_db_data
 from todo.tests.integration.base_mongo_test import BaseMongoTestCase
 from todo.constants.messages import ApiErrors, ValidationErrors
+from todo.utils.google_jwt_utils import generate_google_token_pair
 
 
-class TaskDetailAPIIntegrationTest(BaseMongoTestCase):
+class AuthenticatedMongoTestCase(BaseMongoTestCase):
     def setUp(self):
-        super().setUp()
+        super().setUp()  # This sets up MongoDB
+        self._setup_auth_cookies()
+
+    def _setup_auth_cookies(self):
+        user_data = {
+            "user_id": str(ObjectId()),
+            "google_id": "test_google_id",
+            "email": "test@example.com",
+            "name": "Test User",
+        }
+        tokens = generate_google_token_pair(user_data)
+        self.client.cookies["ext-access"] = tokens["access_token"]
+        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
+
+
+class TaskDetailAPIIntegrationTest(AuthenticatedMongoTestCase):
+    def setUp(self):
+        super().setUp()  # This will set up both MongoDB and auth
         self.db.tasks.delete_many({})  # Clear tasks to avoid DuplicateKeyError
         self.task_doc = tasks_db_data[1].copy()
         self.task_doc["_id"] = self.task_doc.pop("id")
@@ -17,7 +37,6 @@ class TaskDetailAPIIntegrationTest(BaseMongoTestCase):
         self.existing_task_id = str(self.task_doc["_id"])
         self.non_existent_id = str(ObjectId())
         self.invalid_task_id = "invalid-task-id"
-        self.client = APIClient()
 
     def test_get_task_by_id_success(self):
         url = reverse("task_detail", args=[self.existing_task_id])

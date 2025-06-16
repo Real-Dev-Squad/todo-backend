@@ -44,4 +44,5 @@ class MongoReplicaSetContainer(DockerContainer):
             except Exception as e:
                 print(f"Waiting for PRIMARY: {e}")
             time.sleep(0.5)
-        raise TimeoutError("Timed out waiting for replica set to become PRIMARY.")
+        raise TimeoutError(
+            "Timed out waiting for replica set to become PRIMARY.")

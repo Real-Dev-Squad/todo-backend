@@ -35,7 +35,9 @@ class JWTAuthenticationMiddleware:
                         detail=AuthErrorMessages.AUTHENTICATION_REQUIRED
                     )],
                 )
-                return JsonResponse(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED)
+                return JsonResponse(
+                    data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED
+                )
 
         except (TokenMissingError, TokenExpiredError, TokenInvalidError) as e:
             return self._handle_rds_auth_error(e)
@@ -50,7 +52,9 @@ class JWTAuthenticationMiddleware:
                     detail=AuthErrorMessages.AUTHENTICATION_REQUIRED
                 )],
             )
-            return JsonResponse(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED)
+            return JsonResponse(
+                data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED
+            )
 
     def _try_authentication(self, request) -> bool:
         if self._try_google_auth(request):
@@ -116,7 +120,9 @@ class JWTAuthenticationMiddleware:
                 detail=str(exception)
             )],
         )
-        return JsonResponse(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED)
+        return JsonResponse(
+            data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED
+        )
 
     def _handle_google_auth_error(self, exception):
         error_response = ApiErrorResponse(
@@ -127,7 +133,9 @@ class JWTAuthenticationMiddleware:
                 detail=str(exception)
             )],
         )
-        return JsonResponse(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED)
+        return JsonResponse(
+            data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED
+        )
 
 
 def is_google_user(request) -> bool:

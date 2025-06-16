@@ -28,7 +28,7 @@ class AuthenticatedMongoTestCase(BaseMongoTestCase):
 class TaskDetailAPIIntegrationTest(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
-        self.db.tasks.delete_many({}) # Clear tasks to avoid DuplicateKeyError
+        self.db.tasks.delete_many({})  # Clear tasks to avoid DuplicateKeyError
         self.task_doc = tasks_db_data[1].copy()
         self.task_doc["_id"] = self.task_doc.pop("id")
         self.db.tasks.insert_one(self.task_doc)

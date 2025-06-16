@@ -51,6 +51,5 @@ class UserModelTest(TestCase):
         user = UserModel(**minimal_data)
 
         self.assertIsInstance(user.created_at, datetime)
-        self.assertIsInstance(user.updated_at, datetime)
+        self.assertIsNone(user.updated_at)
         self.assertLessEqual(user.created_at, datetime.now(timezone.utc))
-        self.assertLessEqual(user.updated_at, datetime.now(timezone.utc))

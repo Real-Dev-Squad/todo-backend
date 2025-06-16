@@ -41,8 +41,8 @@ class GoogleLoginViewTests(APISimpleTestCase):
         response = self.client.get(self.url, HTTP_ACCEPT="application/json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["authUrl"], mock_auth_url)
-        self.assertEqual(response.data["state"], mock_state)
+        self.assertEqual(response.data["data"]["authUrl"], mock_auth_url)
+        self.assertEqual(response.data["data"]["state"], mock_state)
         mock_get_auth_url.assert_called_once_with(None)
 
     @patch("todo.services.google_oauth_service.GoogleOAuthService.get_authorization_url")
@@ -73,17 +73,18 @@ class GoogleCallbackViewTests(APISimpleTestCase):
 
         response = self.view(request)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("❌ OAuth Error", response.content.decode())
-        self.assertIn(error, response.content.decode())
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["message"], "OAuth Error")
+        self.assertEqual(response.data["errors"][0]["detail"], error)
 
     def test_get_returns_error_for_missing_code(self):
         request = self.factory.get(self.url)
 
         response = self.view(request)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("❌ Missing Authorization Code", response.content.decode())
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["message"], "Missing Authorization Code")
+        self.assertEqual(response.data["errors"][0]["detail"], "No authorization code received from Google")
 
     def test_get_returns_error_for_invalid_state(self):
         request = self.factory.get(f"{self.url}?code=test_code&state=invalid_state")
@@ -91,8 +92,9 @@ class GoogleCallbackViewTests(APISimpleTestCase):
 
         response = self.view(request)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("❌ Invalid State Parameter", response.content.decode())
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["message"], "Invalid State Parameter")
+        self.assertEqual(response.data["errors"][0]["detail"], "This might be a security issue")
 
     @patch("todo.services.google_oauth_service.GoogleOAuthService.handle_callback")
     @patch("todo.services.user_service.UserService.create_or_update_user")
@@ -133,7 +135,7 @@ class GoogleAuthStatusViewTests(APISimpleTestCase):
     def setUp(self):
         super().setUp()
         self.client = APIClient()
-        self.url = reverse("google_auth_status")
+        self.url = reverse("google_status")
 
     def test_get_returns_401_when_no_access_token(self):
         response = self.client.get(self.url)
@@ -170,11 +172,10 @@ class GoogleAuthStatusViewTests(APISimpleTestCase):
         response = self.client.get(self.url, HTTP_ACCEPT="application/json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["authenticated"], True)
-        self.assertEqual(response.data["user"]["id"], user_id)
-        self.assertEqual(response.data["user"]["email"], mock_user.email_id)
-        self.assertEqual(response.data["user"]["name"], mock_user.name)
-        self.assertEqual(response.data["user"]["google_id"], mock_user.google_id)
+        self.assertEqual(response.data["data"]["user"]["id"], user_id)
+        self.assertEqual(response.data["data"]["user"]["email"], mock_user.email_id)
+        self.assertEqual(response.data["data"]["user"]["name"], mock_user.name)
+        self.assertEqual(response.data["data"]["user"]["google_id"], mock_user.google_id)
 
 
 class GoogleRefreshViewTests(APISimpleTestCase):
@@ -207,7 +208,7 @@ class GoogleRefreshViewTests(APISimpleTestCase):
         response = self.client.get(self.url, HTTP_ACCEPT="application/json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["success"], True)
+        self.assertEqual(response.data["data"]["success"], True)
         self.assertEqual(response.data["message"], AppMessages.TOKEN_REFRESHED)
         self.assertIn("ext-access", response.cookies)
 
@@ -232,7 +233,7 @@ class GoogleLogoutViewTests(APISimpleTestCase):
         response = self.client.get(self.url, HTTP_ACCEPT="application/json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["success"], True)
+        self.assertEqual(response.data["data"]["success"], True)
         self.assertEqual(response.data["message"], AppMessages.GOOGLE_LOGOUT_SUCCESS)
         self.assertEqual(response.cookies.get("ext-access").value, "")
         self.assertEqual(response.cookies.get("ext-refresh").value, "")
@@ -263,7 +264,7 @@ class GoogleLogoutViewTests(APISimpleTestCase):
         response = self.client.post(self.url, HTTP_ACCEPT="application/json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["success"], True)
+        self.assertEqual(response.data["data"]["success"], True)
         self.assertEqual(response.data["message"], AppMessages.GOOGLE_LOGOUT_SUCCESS)
         self.assertEqual(response.cookies.get("ext-access").value, "")
         self.assertEqual(response.cookies.get("ext-refresh").value, "")

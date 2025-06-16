@@ -31,14 +31,13 @@ class GoogleLoginView(APIView):
         request.session["oauth_state"] = state
 
         if request.headers.get("Accept") == "application/json" or request.query_params.get("format") == "json":
-            return Response({
-                "statusCode": status.HTTP_200_OK,
-                "message": "Google OAuth URL generated successfully",
-                "data": {
-                    "authUrl": auth_url,
-                    "state": state
+            return Response(
+                {
+                    "statusCode": status.HTTP_200_OK,
+                    "message": "Google OAuth URL generated successfully",
+                    "data": {"authUrl": auth_url, "state": state},
                 }
-            })
+            )
 
         return HttpResponseRedirect(auth_url)
 
@@ -286,19 +285,21 @@ class GoogleAuthStatusView(APIView):
         except Exception as e:
             raise GoogleTokenInvalidError(str(e))
 
-        return Response({
-            "statusCode": status.HTTP_200_OK,
-            "message": "Authentication status retrieved successfully",
-            "data": {
-                "authenticated": True,
-                "user": {
-                    "id": str(user.id),
-                    "email": user.email_id,
-                    "name": user.name,
-                    "google_id": user.google_id,
-                }
+        return Response(
+            {
+                "statusCode": status.HTTP_200_OK,
+                "message": "Authentication status retrieved successfully",
+                "data": {
+                    "authenticated": True,
+                    "user": {
+                        "id": str(user.id),
+                        "email": user.email_id,
+                        "name": user.name,
+                        "google_id": user.google_id,
+                    },
+                },
             }
-        })
+        )
 
 
 class GoogleRefreshView(APIView):
@@ -362,13 +363,13 @@ class GoogleLogoutView(APIView):
         )
 
         if wants_json:
-            response = Response({
-                "statusCode": status.HTTP_200_OK,
-                "message": AppMessages.GOOGLE_LOGOUT_SUCCESS,
-                "data": {
-                    "success": True
+            response = Response(
+                {
+                    "statusCode": status.HTTP_200_OK,
+                    "message": AppMessages.GOOGLE_LOGOUT_SUCCESS,
+                    "data": {"success": True},
                 }
-            })
+            )
         else:
             redirect_url = redirect_url or "/"
             response = HttpResponseRedirect(redirect_url)

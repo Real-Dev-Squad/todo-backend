@@ -1,8 +1,7 @@
 from http import HTTPStatus
-from bson import ObjectId
 from django.urls import reverse
-from rest_framework.test import APITestCase
-from rest_framework.test import APIClient
+from bson import ObjectId
+
 from todo.tests.fixtures.task import tasks_db_data
 from todo.tests.integration.base_mongo_test import BaseMongoTestCase
 from todo.constants.messages import ValidationErrors, ApiErrors

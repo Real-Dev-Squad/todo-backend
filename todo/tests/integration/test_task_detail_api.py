@@ -1,7 +1,5 @@
 from http import HTTPStatus
-from bson import ObjectId
 from django.urls import reverse
-from rest_framework.test import APIClient
 from bson import ObjectId
 
 from todo.tests.fixtures.task import tasks_db_data
@@ -12,7 +10,7 @@ from todo.utils.google_jwt_utils import generate_google_token_pair
 
 class AuthenticatedMongoTestCase(BaseMongoTestCase):
     def setUp(self):
-        super().setUp()  # This sets up MongoDB
+        super().setUp()
         self._setup_auth_cookies()
 
     def _setup_auth_cookies(self):
@@ -29,8 +27,8 @@ class AuthenticatedMongoTestCase(BaseMongoTestCase):
 
 class TaskDetailAPIIntegrationTest(AuthenticatedMongoTestCase):
     def setUp(self):
-        super().setUp()  # This will set up both MongoDB and auth
-        self.db.tasks.delete_many({})  # Clear tasks to avoid DuplicateKeyError
+        super().setUp()
+        self.db.tasks.delete_many({}) # Clear tasks to avoid DuplicateKeyError
         self.task_doc = tasks_db_data[1].copy()
         self.task_doc["_id"] = self.task_doc.pop("id")
         self.db.tasks.insert_one(self.task_doc)

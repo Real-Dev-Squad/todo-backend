@@ -18,11 +18,9 @@ class MongoReplicaSetContainer(DockerContainer):
         mapped_port = self.get_exposed_port(27017)
         container_ip = self._container.attrs["NetworkSettings"]["IPAddress"]
         member_host = f"{container_ip}:27017"
-        initiate_js = json.dumps(
-            {"_id": "rs0", "members": [{"_id": 0, "host": member_host}]})
+        initiate_js = json.dumps({"_id": "rs0", "members": [{"_id": 0, "host": member_host}]})
         wait_for_logs(self, r"Waiting for connections", timeout=20)
-        cmd = ["mongosh", "--quiet", "--host", "localhost", "--port",
-               "27017", "--eval", f"rs.initiate({initiate_js})"]
+        cmd = ["mongosh", "--quiet", "--host", "localhost", "--port", "27017", "--eval", f"rs.initiate({initiate_js})"]
         exit_code, output = self.exec(cmd)
         if exit_code != 0:
             raise RuntimeError(
@@ -46,5 +44,4 @@ class MongoReplicaSetContainer(DockerContainer):
             except Exception as e:
                 print(f"Waiting for PRIMARY: {e}")
             time.sleep(0.5)
-        raise TimeoutError(
-            "Timed out waiting for replica set to become PRIMARY.")
+        raise TimeoutError("Timed out waiting for replica set to become PRIMARY.")

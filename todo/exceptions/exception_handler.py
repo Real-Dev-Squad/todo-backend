@@ -65,6 +65,13 @@ def handle_exception(exc, context):
                 detail=str(exc),
             )
         )
+        final_response_data = ApiErrorResponse(
+            statusCode=status_code,
+            message=str(exc) if not error_list else error_list[0].detail,
+            errors=error_list,
+            authenticated=False
+        )
+        return Response(data=final_response_data.model_dump(mode="json", exclude_none=True), status=status_code)
     elif isinstance(exc, TokenInvalidError):
         status_code = status.HTTP_401_UNAUTHORIZED
         error_list.append(
@@ -74,6 +81,13 @@ def handle_exception(exc, context):
                 detail=str(exc),
             )
         )
+        final_response_data = ApiErrorResponse(
+            statusCode=status_code,
+            message=str(exc) if not error_list else error_list[0].detail,
+            errors=error_list,
+            authenticated=False
+        )
+        return Response(data=final_response_data.model_dump(mode="json", exclude_none=True), status=status_code)
     elif isinstance(exc, GoogleTokenExpiredError):
         status_code = status.HTTP_401_UNAUTHORIZED
         error_list.append(
@@ -83,6 +97,13 @@ def handle_exception(exc, context):
                 detail=str(exc),
             )
         )
+        final_response_data = ApiErrorResponse(
+            statusCode=status_code,
+            message=str(exc) if not error_list else error_list[0].detail,
+            errors=error_list,
+            authenticated=False
+        )
+        return Response(data=final_response_data.model_dump(mode="json", exclude_none=True), status=status_code)
     elif isinstance(exc, GoogleTokenInvalidError):
         status_code = status.HTTP_401_UNAUTHORIZED
         error_list.append(
@@ -92,6 +113,13 @@ def handle_exception(exc, context):
                 detail=str(exc),
             )
         )
+        final_response_data = ApiErrorResponse(
+            statusCode=status_code,
+            message=str(exc) if not error_list else error_list[0].detail,
+            errors=error_list,
+            authenticated=False
+        )
+        return Response(data=final_response_data.model_dump(mode="json", exclude_none=True), status=status_code)
     elif isinstance(exc, GoogleRefreshTokenExpiredError):
         status_code = status.HTTP_403_FORBIDDEN
         error_list.append(

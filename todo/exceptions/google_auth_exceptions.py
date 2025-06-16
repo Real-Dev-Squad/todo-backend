@@ -17,6 +17,11 @@ class GoogleTokenExpiredError(BaseGoogleException):
         super().__init__(message)
 
 
+class GoogleTokenMissingError(BaseGoogleException):
+    def __init__(self, message: str = AuthErrorMessages.NO_ACCESS_TOKEN):
+        super().__init__(message)
+
+
 class GoogleTokenInvalidError(BaseGoogleException):
     def __init__(self, message: str = AuthErrorMessages.GOOGLE_TOKEN_INVALID):
         super().__init__(message)

@@ -14,8 +14,14 @@ from todo.utils.google_jwt_utils import (
     generate_google_token_pair,
 )
 
-from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.constants.messages import AuthErrorMessages, AppMessages
+from todo.exceptions.google_auth_exceptions import (
+    GoogleAuthException,
+    GoogleTokenExpiredError,
+    GoogleTokenInvalidError,
+    GoogleTokenMissingError,
+    GoogleAPIException,
+)
 
 
 class GoogleLoginView(APIView):
@@ -47,111 +53,98 @@ class GoogleCallbackView(APIView):
     The frontend implementation will redirect to the frontend and process the callback via POST request.
     """
 
-    # Temporary implementation for testing and development
     def get(self, request: Request):
         if "error" in request.query_params:
             error = request.query_params.get("error")
-            error_response = ApiErrorResponse(
-                statusCode=status.HTTP_400_BAD_REQUEST,
-                message="OAuth Error",
-                errors=[ApiErrorDetail(detail=error, title="OAuth Error")]
-            )
-            return Response(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_400_BAD_REQUEST)
+            raise GoogleAuthException(error)
 
         code = request.query_params.get("code")
         state = request.query_params.get("state")
 
         if not code:
-            error_response = ApiErrorResponse(
-                statusCode=status.HTTP_400_BAD_REQUEST,
-                message="Missing Authorization Code",
-                errors=[ApiErrorDetail(detail="No authorization code received from Google", title="Missing Authorization Code")]
-            )
-            return Response(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_400_BAD_REQUEST)
+            raise GoogleAuthException("No authorization code received from Google")
 
         stored_state = request.session.get("oauth_state")
         if not stored_state or stored_state != state:
-            error_response = ApiErrorResponse(
-                statusCode=status.HTTP_400_BAD_REQUEST,
-                message="Invalid State Parameter",
-                errors=[ApiErrorDetail(detail="This might be a security issue", title="Invalid State Parameter")]
-            )
-            return Response(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_400_BAD_REQUEST)
+            raise GoogleAuthException("Invalid state parameter")
 
         return self._handle_callback_directly(code, request)
 
     def _handle_callback_directly(self, code, request):
-        google_data = GoogleOAuthService.handle_callback(code)
-        user = UserService.create_or_update_user(google_data)
+        try:
+            google_data = GoogleOAuthService.handle_callback(code)
+            user = UserService.create_or_update_user(google_data)
 
-        tokens = generate_google_token_pair(
-            {
-                "user_id": str(user.id),
-                "google_id": user.google_id,
-                "email": user.email_id,
-                "name": user.name,
-            }
-        )
-
-        wants_json = (
-            "application/json" in request.headers.get("Accept", "").lower()
-            or request.query_params.get("format") == "json"
-        )
-
-        if wants_json:
-            response = Response({
-                "statusCode": status.HTTP_200_OK,
-                "message": AppMessages.GOOGLE_LOGIN_SUCCESS,
-                "data": {
-                    "user": {
-                        "id": str(user.id),
-                        "name": user.name,
-                        "email": user.email_id,
-                        "google_id": user.google_id,
-                    },
-                    "tokens": {
-                        "access_token_expires_in": tokens["expires_in"],
-                        "refresh_token_expires_in": settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"]
-                    }
+            tokens = generate_google_token_pair(
+                {
+                    "user_id": str(user.id),
+                    "google_id": user.google_id,
+                    "email": user.email_id,
+                    "name": user.name,
                 }
-            })
-        else:
-            response = HttpResponse(f"""
-                <html>
-                <head><title>✅ Login Successful</title></head>
-                <body style="font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px;">
-                    <h1>✅ Google OAuth Login Successful!</h1>
-                    
-                    <h2>🧑‍💻 User Info:</h2>
-                    <ul>
-                        <li><strong>ID:</strong> {user.id}</li>
-                        <li><strong>Name:</strong> {user.name}</li>
-                        <li><strong>Email:</strong> {user.email_id}</li>
-                        <li><strong>Google ID:</strong> {user.google_id}</li>
-                    </ul>
-                    
-                    <h2>🍪 Authentication Cookies Set:</h2>
-                    <ul>
-                        <li><strong>Access Token:</strong> ext-access (expires in {tokens['expires_in']} seconds)</li>
-                        <li><strong>Refresh Token:</strong> ext-refresh (expires in 7 days)</li>
-                    </ul>
-                    
-                    <h2>🧪 Test Other Endpoints:</h2>
-                    <ul>
-                        <li><a href="/v1/auth/google/status/">Check Auth Status</a></li>
-                        <li><a href="/v1/auth/google/refresh/">Refresh Token</a></li>
-                        <li><a href="/v1/auth/google/logout/">Logout</a></li>
-                    </ul>
-                    
-                    <p><strong>Google OAuth integration is working perfectly!</strong></p>
-                </body>
-                </html>
-            """)
+            )
 
-        self._set_auth_cookies(response, tokens)
-        request.session.pop("oauth_state", None)
+            wants_json = (
+                "application/json" in request.headers.get("Accept", "").lower()
+                or request.query_params.get("format") == "json"
+            )
 
-        return response
+            if wants_json:
+                response = Response({
+                    "statusCode": status.HTTP_200_OK,
+                    "message": AppMessages.GOOGLE_LOGIN_SUCCESS,
+                    "data": {
+                        "user": {
+                            "id": str(user.id),
+                            "name": user.name,
+                            "email": user.email_id,
+                            "google_id": user.google_id,
+                        },
+                        "tokens": {
+                            "access_token_expires_in": tokens["expires_in"],
+                            "refresh_token_expires_in": settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"]
+                        }
+                    }
+                })
+            else:
+                response = HttpResponse(f"""
+                    <html>
+                    <head><title>✅ Login Successful</title></head>
+                    <body style="font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px;">
+                        <h1>✅ Google OAuth Login Successful!</h1>
+                        
+                        <h2>🧑‍💻 User Info:</h2>
+                        <ul>
+                            <li><strong>ID:</strong> {user.id}</li>
+                            <li><strong>Name:</strong> {user.name}</li>
+                            <li><strong>Email:</strong> {user.email_id}</li>
+                            <li><strong>Google ID:</strong> {user.google_id}</li>
+                        </ul>
+                        
+                        <h2>🍪 Authentication Cookies Set:</h2>
+                        <ul>
+                            <li><strong>Access Token:</strong> ext-access (expires in {tokens['expires_in']} seconds)</li>
+                            <li><strong>Refresh Token:</strong> ext-refresh (expires in 7 days)</li>
+                        </ul>
+                        
+                        <h2>🧪 Test Other Endpoints:</h2>
+                        <ul>
+                            <li><a href="/v1/auth/google/status/">Check Auth Status</a></li>
+                            <li><a href="/v1/auth/google/refresh/">Refresh Token</a></li>
+                            <li><a href="/v1/auth/google/logout/">Logout</a></li>
+                        </ul>
+                        
+                        <p><strong>Google OAuth integration is working perfectly!</strong></p>
+                    </body>
+                    </html>
+                """)
+
+            self._set_auth_cookies(response, tokens)
+            request.session.pop("oauth_state", None)
+
+            return response
+        except Exception as e:
+            raise GoogleAPIException(str(e))
 
     def _get_cookie_config(self):
         return {
@@ -240,17 +233,22 @@ class GoogleCallbackViewFrontend(APIView):
             }
         )
 
-        response = Response(
-            {
-                "success": True,
+        response = Response({
+            "statusCode": status.HTTP_200_OK,
+            "message": AppMessages.GOOGLE_LOGIN_SUCCESS,
+            "data": {
                 "user": {
                     "id": str(user.id),
-                    "email": user.email_id,
                     "name": user.name,
+                    "email": user.email_id,
                     "google_id": user.google_id,
                 },
+                "tokens": {
+                    "access_token_expires_in": tokens["expires_in"],
+                    "refresh_token_expires_in": settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"]
+                }
             }
-        )
+        })
 
         self._set_auth_cookies(response, tokens)
         request.session.pop("oauth_state", None)
@@ -280,23 +278,13 @@ class GoogleAuthStatusView(APIView):
         access_token = request.COOKIES.get("ext-access")
 
         if not access_token:
-            formatted_errors = [
-                ApiErrorDetail(
-                    source={ApiErrorSource.HEADER: "Authorization"},
-                    title=AuthErrorMessages.AUTHENTICATION_REQUIRED,
-                    detail=AuthErrorMessages.NO_ACCESS_TOKEN,
-                )
-            ]
-            error_response = ApiErrorResponse(
-                statusCode=401, message=AuthErrorMessages.NO_ACCESS_TOKEN, errors=formatted_errors
-            )
-            return Response(
-                data={"authenticated": False, **error_response.model_dump(mode="json", exclude_none=True)},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
+            raise GoogleTokenMissingError(AuthErrorMessages.NO_ACCESS_TOKEN)
 
-        payload = validate_google_access_token(access_token)
-        user = UserService.get_user_by_id(payload["user_id"])
+        try:
+            payload = validate_google_access_token(access_token)
+            user = UserService.get_user_by_id(payload["user_id"])
+        except Exception as e:
+            raise GoogleTokenInvalidError(str(e))
 
         return Response({
             "statusCode": status.HTTP_200_OK,
@@ -318,45 +306,34 @@ class GoogleRefreshView(APIView):
         refresh_token = request.COOKIES.get("ext-refresh")
 
         if not refresh_token:
-            formatted_errors = [
-                ApiErrorDetail(
-                    source={ApiErrorSource.HEADER: "Authorization"},
-                    title=AuthErrorMessages.AUTHENTICATION_REQUIRED,
-                    detail=AuthErrorMessages.NO_REFRESH_TOKEN,
-                )
-            ]
-            error_response = ApiErrorResponse(
-                statusCode=401, message=AuthErrorMessages.NO_REFRESH_TOKEN, errors=formatted_errors
-            )
-            return Response(
-                data={"requiresLogin": True, **error_response.model_dump(mode="json", exclude_none=True)},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
+            raise GoogleTokenMissingError(AuthErrorMessages.NO_REFRESH_TOKEN)
 
-        payload = validate_google_refresh_token(refresh_token)
-
-        user_data = {
-            "user_id": payload["user_id"],
-            "google_id": payload["google_id"],
-            "email": payload["email"],
-            "name": payload.get("name", ""),
-        }
-        new_access_token = generate_google_access_token(user_data)
-
-        response = Response({
-            "statusCode": status.HTTP_200_OK,
-            "message": AppMessages.TOKEN_REFRESHED,
-            "data": {
-                "success": True
+        try:
+            payload = validate_google_refresh_token(refresh_token)
+            user_data = {
+                "user_id": payload["user_id"],
+                "google_id": payload["google_id"],
+                "email": payload["email"],
+                "name": payload.get("name", ""),
             }
-        })
+            new_access_token = generate_google_access_token(user_data)
 
-        config = self._get_cookie_config()
-        response.set_cookie(
-            "ext-access", new_access_token, max_age=settings.GOOGLE_JWT["ACCESS_TOKEN_LIFETIME"], **config
-        )
+            response = Response({
+                "statusCode": status.HTTP_200_OK,
+                "message": AppMessages.TOKEN_REFRESHED,
+                "data": {
+                    "success": True
+                }
+            })
 
-        return response
+            config = self._get_cookie_config()
+            response.set_cookie(
+                "ext-access", new_access_token, max_age=settings.GOOGLE_JWT["ACCESS_TOKEN_LIFETIME"], **config
+            )
+
+            return response
+        except Exception as e:
+            raise GoogleTokenExpiredError(str(e))
 
     def _get_cookie_config(self):
         return {

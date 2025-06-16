@@ -1,7 +1,7 @@
 # Staging specific settings
 from .base import *
 
-DEBUG = False
+DEBUG = True
 ALLOWED_HOSTS = ["staging-api.realdevsquad.com", "services.realdevsquad.com"]
 
 # Service domains configuration

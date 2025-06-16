@@ -12,9 +12,6 @@ from todo.constants.messages import AuthErrorMessages, ApiErrors
 
 
 def generate_google_access_token(user_data: dict) -> str:
-    """
-    Generate access token for Google authenticated user
-    """
     try:
         now = datetime.now(timezone.utc)
         expiry = now + timedelta(seconds=settings.GOOGLE_JWT["ACCESS_TOKEN_LIFETIME"])
@@ -42,9 +39,6 @@ def generate_google_access_token(user_data: dict) -> str:
 
 
 def generate_google_refresh_token(user_data: dict) -> str:
-    """
-    Generate refresh token for Google authenticated user
-    """
     try:
         now = datetime.now(timezone.utc)
         expiry = now + timedelta(seconds=settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"])
@@ -71,9 +65,6 @@ def generate_google_refresh_token(user_data: dict) -> str:
 
 
 def validate_google_access_token(token: str) -> dict:
-    """
-    Validate Google access token
-    """
     try:
         payload = jwt.decode(
             jwt=token, key=settings.GOOGLE_JWT["SECRET_KEY"], algorithms=[settings.GOOGLE_JWT["ALGORITHM"]]
@@ -91,9 +82,6 @@ def validate_google_access_token(token: str) -> dict:
 
 
 def validate_google_refresh_token(token: str) -> dict:
-    """
-    Validate Google refresh token
-    """
     try:
         payload = jwt.decode(
             jwt=token, key=settings.GOOGLE_JWT["SECRET_KEY"], algorithms=[settings.GOOGLE_JWT["ALGORITHM"]]
@@ -111,9 +99,6 @@ def validate_google_refresh_token(token: str) -> dict:
 
 
 def generate_google_token_pair(user_data: dict) -> dict:
-    """
-    Generate both access and refresh tokens
-    """
     access_token = generate_google_access_token(user_data)
     refresh_token = generate_google_refresh_token(user_data)
 

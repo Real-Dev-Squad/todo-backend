@@ -22,6 +22,8 @@ services:
       - "27017:27017"
     volumes:
       - ./mongo_data:/data/db
+    environment:
+      MONGO_REPLICA_HOST: ${MONGO_REPLICA_HOST}
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "'db.runCommand({ping:1})'"]
       interval: 10s
@@ -34,6 +36,9 @@ services:
       sh -c "
         mongod --replSet rs0 --bind_ip_all --logpath /var/log/mongodb.log --logappend &
         sleep 5 &&
-        mongosh --eval 'try { rs.initiate() } catch(e) { print(e) }' &&
+        mongosh --eval '
+          var config = { _id: \"rs0\", members: [ { _id: 0, host: \"$MONGO_REPLICA_HOST\" } ] };
+          try { rs.initiate(config); }
+          catch(e) { if (e.codeName === \"AlreadyInitialized\") { print(\"Replica set already initialized.\"); } else { print(\"Error initiating replica set: \" + e); } }' &&
         tail -f /var/log/mongodb.log
       "

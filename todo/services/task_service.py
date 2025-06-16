@@ -244,8 +244,18 @@ class TaskService:
         if current_task.status == TaskStatus.DONE:
             raise TaskStateConflictException(ValidationErrors.CANNOT_DEFER_A_DONE_TASK)
 
+        if deferred_till.tzinfo is None:
+            deferred_till = deferred_till.replace(tzinfo=timezone.utc)
+
         if current_task.dueAt:
-            defer_limit = current_task.dueAt - timedelta(days=MINIMUM_DEFERRAL_NOTICE_DAYS)
+            due_at = (
+                current_task.dueAt.replace(tzinfo=timezone.utc)
+                if current_task.dueAt.tzinfo is None
+                else current_task.dueAt.astimezone(timezone.utc)
+            )
+
+            defer_limit = due_at - timedelta(days=MINIMUM_DEFERRAL_NOTICE_DAYS)
+
             if deferred_till > defer_limit:
                 raise UnprocessableEntityException(
                     ValidationErrors.CANNOT_DEFER_TOO_CLOSE_TO_DUE_DATE,

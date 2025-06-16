@@ -20,12 +20,12 @@ class TaskDeleteAPIIntegrationTest(BaseMongoTestCase):
         self.client = APIClient()
 
     def test_delete_task_success(self):
-        url = reverse('task_detail', args=[self.existing_task_id])
+        url = reverse("task_detail", args=[self.existing_task_id])
         response = self.client.delete(url)
         self.assertEqual(response.status_code, HTTPStatus.NO_CONTENT)
 
     def test_delete_task_not_found(self):
-        url = reverse('task_detail', args=[self.non_existent_id])
+        url = reverse("task_detail", args=[self.non_existent_id])
         response = self.client.delete(url)
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
         response_data = response.json()
@@ -37,15 +37,12 @@ class TaskDeleteAPIIntegrationTest(BaseMongoTestCase):
         self.assertEqual(error["detail"], error_message)
 
     def test_delete_task_invalid_id_format(self):
-        url = reverse('task_detail', args=[self.invalid_task_id])
+        url = reverse("task_detail", args=[self.invalid_task_id])
         response = self.client.delete(url)
         self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         data = response.json()
         self.assertEqual(data["statusCode"], 400)
-        self.assertEqual(
-            data["message"], ValidationErrors.INVALID_TASK_ID_FORMAT)
+        self.assertEqual(data["message"], ValidationErrors.INVALID_TASK_ID_FORMAT)
         self.assertEqual(data["errors"][0]["source"]["path"], "task_id")
-        self.assertEqual(data["errors"][0]["title"],
-                         ApiErrors.VALIDATION_ERROR)
-        self.assertEqual(data["errors"][0]["detail"],
-                         ValidationErrors.INVALID_TASK_ID_FORMAT)
+        self.assertEqual(data["errors"][0]["title"], ApiErrors.VALIDATION_ERROR)
+        self.assertEqual(data["errors"][0]["detail"], ValidationErrors.INVALID_TASK_ID_FORMAT)

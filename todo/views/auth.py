@@ -89,22 +89,24 @@ class GoogleCallbackView(APIView):
             )
 
             if wants_json:
-                response = Response({
-                    "statusCode": status.HTTP_200_OK,
-                    "message": AppMessages.GOOGLE_LOGIN_SUCCESS,
-                    "data": {
-                        "user": {
-                            "id": str(user.id),
-                            "name": user.name,
-                            "email": user.email_id,
-                            "google_id": user.google_id,
+                response = Response(
+                    {
+                        "statusCode": status.HTTP_200_OK,
+                        "message": AppMessages.GOOGLE_LOGIN_SUCCESS,
+                        "data": {
+                            "user": {
+                                "id": str(user.id),
+                                "name": user.name,
+                                "email": user.email_id,
+                                "google_id": user.google_id,
+                            },
+                            "tokens": {
+                                "access_token_expires_in": tokens["expires_in"],
+                                "refresh_token_expires_in": settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"],
+                            },
                         },
-                        "tokens": {
-                            "access_token_expires_in": tokens["expires_in"],
-                            "refresh_token_expires_in": settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"]
-                        }
                     }
-                })
+                )
             else:
                 response = HttpResponse(f"""
                     <html>
@@ -319,13 +321,9 @@ class GoogleRefreshView(APIView):
             }
             new_access_token = generate_google_access_token(user_data)
 
-            response = Response({
-                "statusCode": status.HTTP_200_OK,
-                "message": AppMessages.TOKEN_REFRESHED,
-                "data": {
-                    "success": True
-                }
-            })
+            response = Response(
+                {"statusCode": status.HTTP_200_OK, "message": AppMessages.TOKEN_REFRESHED, "data": {"success": True}}
+            )
 
             config = self._get_cookie_config()
             response.set_cookie(

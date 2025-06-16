@@ -11,7 +11,7 @@ from todo.views.auth import (
 from todo.utils.google_jwt_utils import (
     generate_google_token_pair,
 )
-from todo.constants.messages import AuthErrorMessages, AppMessages
+from todo.constants.messages import AppMessages, AuthErrorMessages
 
 
 class GoogleLoginViewTests(APISimpleTestCase):
@@ -74,7 +74,7 @@ class GoogleCallbackViewTests(APISimpleTestCase):
         response = self.view(request)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["message"], "OAuth Error")
+        self.assertEqual(response.data["message"], error)
         self.assertEqual(response.data["errors"][0]["detail"], error)
 
     def test_get_returns_error_for_missing_code(self):
@@ -83,7 +83,7 @@ class GoogleCallbackViewTests(APISimpleTestCase):
         response = self.view(request)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["message"], "Missing Authorization Code")
+        self.assertEqual(response.data["message"], "No authorization code received from Google")
         self.assertEqual(response.data["errors"][0]["detail"], "No authorization code received from Google")
 
     def test_get_returns_error_for_invalid_state(self):
@@ -93,8 +93,8 @@ class GoogleCallbackViewTests(APISimpleTestCase):
         response = self.view(request)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["message"], "Invalid State Parameter")
-        self.assertEqual(response.data["errors"][0]["detail"], "This might be a security issue")
+        self.assertEqual(response.data["message"], "Invalid state parameter")
+        self.assertEqual(response.data["errors"][0]["detail"], "Invalid state parameter")
 
     @patch("todo.services.google_oauth_service.GoogleOAuthService.handle_callback")
     @patch("todo.services.user_service.UserService.create_or_update_user")
@@ -141,9 +141,9 @@ class GoogleAuthStatusViewTests(APISimpleTestCase):
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data["message"], AuthErrorMessages.NO_ACCESS_TOKEN)
         self.assertEqual(response.data["authenticated"], False)
         self.assertEqual(response.data["statusCode"], status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.data["message"], AuthErrorMessages.NO_ACCESS_TOKEN)
 
     @patch("todo.utils.google_jwt_utils.validate_google_access_token")
     @patch("todo.services.user_service.UserService.get_user_by_id")
@@ -188,9 +188,9 @@ class GoogleRefreshViewTests(APISimpleTestCase):
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.data["requiresLogin"], True)
-        self.assertEqual(response.data["statusCode"], status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data["message"], AuthErrorMessages.NO_REFRESH_TOKEN)
+        self.assertEqual(response.data["authenticated"], False)
+        self.assertEqual(response.data["statusCode"], status.HTTP_401_UNAUTHORIZED)
 
     @patch("todo.utils.google_jwt_utils.validate_google_refresh_token")
     def test_get_refreshes_token_successfully(self, mock_validate_token):

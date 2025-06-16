@@ -14,7 +14,7 @@ class TaskDeferAPIIntegrationTest(BaseMongoTestCase):
 
     def setUp(self):
         super().setUp()
-        # Make sure we start with a clean state for every test
+
         self.db.tasks.delete_many({})
         self.client = APIClient()
 
@@ -41,8 +41,6 @@ class TaskDeferAPIIntegrationTest(BaseMongoTestCase):
         now = datetime.now(timezone.utc)
         due_at = now + timedelta(days=MINIMUM_DEFERRAL_NOTICE_DAYS + 30)
         task_id = self._insert_task(due_at=due_at)
-
-        # Choose a deferredTill that satisfies the ≥ notice window rule
         deferred_till = now + timedelta(days=10)
 
         url = reverse("task_detail", args=[task_id]) + "?action=defer"
@@ -53,13 +51,12 @@ class TaskDeferAPIIntegrationTest(BaseMongoTestCase):
         self.assertIn("deferredDetails", response_data)
         self.assertIsNotNone(response_data["deferredDetails"])
         raw_dt_str = response_data["deferredDetails"]["deferredTill"]
-        # Handle the possible trailing 'Z' (UTC) designator used by our API.
+
         if raw_dt_str.endswith("Z"):
             raw_dt_str = raw_dt_str.replace("Z", "+00:00")
 
         response_deferred_till = datetime.fromisoformat(raw_dt_str)
 
-        # Ensure timezone-awareness for robust comparison
         if response_deferred_till.tzinfo is None:
             response_deferred_till = response_deferred_till.replace(tzinfo=timezone.utc)
 
@@ -71,7 +68,6 @@ class TaskDeferAPIIntegrationTest(BaseMongoTestCase):
         due_at = now + timedelta(days=MINIMUM_DEFERRAL_NOTICE_DAYS + 5)
         task_id = self._insert_task(due_at=due_at)
 
-        # Pick a deferredTill just one day past the allowed limit
         defer_limit = due_at - timedelta(days=MINIMUM_DEFERRAL_NOTICE_DAYS)
         deferred_till = defer_limit + timedelta(days=1)
 

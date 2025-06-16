@@ -18,10 +18,9 @@ class TaskUpdateAPIIntegrationTest(BaseMongoTestCase):
 
     def setUp(self):
         super().setUp()
-        self.db.tasks.delete_many({})  # start clean
+        self.db.tasks.delete_many({})
         self.client = APIClient()
 
-        # insert a task using the shared fixture schema
         doc = tasks_db_data[0].copy()
         self.task_id = ObjectId()
         doc["_id"] = self.task_id
@@ -33,7 +32,6 @@ class TaskUpdateAPIIntegrationTest(BaseMongoTestCase):
         self.missing_id = str(ObjectId())
         self.bad_id = "bad-task-id"
 
-    # ---------- happy-path -------------------------------------------------
     def test_update_task_success(self):
         url = reverse("task_detail", args=[self.valid_id])
 
@@ -56,11 +54,9 @@ class TaskUpdateAPIIntegrationTest(BaseMongoTestCase):
         self.assertEqual(body["status"], payload["status"])
         self.assertEqual(body["isAcknowledged"], payload["isAcknowledged"])
 
-        # `updatedAt` should move forward – allow a small clock-skew
         updated_at = datetime.fromisoformat(body["updatedAt"].replace("Z", ""))
         self.assertTrue(datetime.utcnow() - updated_at < timedelta(minutes=1))
 
-    # ---------- 404 --------------------------------------------------------
     def test_update_task_not_found(self):
         url = reverse("task_detail", args=[self.missing_id])
         res = self.client.patch(url, data={"title": "ghost"}, format="json")
@@ -74,7 +70,6 @@ class TaskUpdateAPIIntegrationTest(BaseMongoTestCase):
         self.assertEqual(err["detail"], msg)
         self.assertEqual(err["source"]["path"], "task_id")
 
-    # ---------- 400 (invalid id string) ------------------------------------
     def test_update_task_invalid_id_format(self):
         url = reverse("task_detail", args=[self.bad_id])
         res = self.client.patch(url, data={"title": "bad"}, format="json")

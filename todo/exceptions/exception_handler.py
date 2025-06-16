@@ -8,8 +8,17 @@ from django.conf import settings
 from bson.errors import InvalidId as BsonInvalidId
 
 from todo.dto.responses.error_response import ApiErrorDetail, ApiErrorResponse, ApiErrorSource
-from todo.constants.messages import ApiErrors, ValidationErrors
+from todo.constants.messages import ApiErrors, ValidationErrors, AuthErrorMessages
 from todo.exceptions.task_exceptions import TaskNotFoundException
+from .auth_exceptions import TokenExpiredError, TokenMissingError, TokenInvalidError
+from .google_auth_exceptions import (
+    GoogleAuthException,
+    GoogleTokenExpiredError,
+    GoogleTokenInvalidError,
+    GoogleRefreshTokenExpiredError,
+    GoogleAPIException,
+    GoogleUserNotFoundException,
+)
 
 
 def format_validation_errors(errors) -> List[ApiErrorDetail]:
@@ -37,22 +46,99 @@ def handle_exception(exc, context):
 
     error_list = []
     status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-    determined_message = ApiErrors.UNEXPECTED_ERROR_OCCURRED
 
-    if isinstance(exc, TaskNotFoundException):
+    if isinstance(exc, TokenExpiredError):
+        status_code = status.HTTP_401_UNAUTHORIZED
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.HEADER: "Authorization"},
+                title=AuthErrorMessages.TOKEN_EXPIRED_TITLE,
+                detail=str(exc),
+            )
+        )
+    elif isinstance(exc, TokenMissingError):
+        status_code = status.HTTP_401_UNAUTHORIZED
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.HEADER: "Authorization"},
+                title=AuthErrorMessages.AUTHENTICATION_REQUIRED,
+                detail=str(exc),
+            )
+        )
+    elif isinstance(exc, TokenInvalidError):
+        status_code = status.HTTP_401_UNAUTHORIZED
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.HEADER: "Authorization"},
+                title=AuthErrorMessages.INVALID_TOKEN_TITLE,
+                detail=str(exc),
+            )
+        )
+    elif isinstance(exc, GoogleTokenExpiredError):
+        status_code = status.HTTP_401_UNAUTHORIZED
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.HEADER: "Authorization"},
+                title=AuthErrorMessages.TOKEN_EXPIRED_TITLE,
+                detail=str(exc),
+            )
+        )
+    elif isinstance(exc, GoogleTokenInvalidError):
+        status_code = status.HTTP_401_UNAUTHORIZED
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.HEADER: "Authorization"},
+                title=AuthErrorMessages.INVALID_TOKEN_TITLE,
+                detail=str(exc),
+            )
+        )
+    elif isinstance(exc, GoogleRefreshTokenExpiredError):
+        status_code = status.HTTP_401_UNAUTHORIZED
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.HEADER: "Authorization"},
+                title=AuthErrorMessages.TOKEN_EXPIRED_TITLE,
+                detail=str(exc),
+            )
+        )
+    elif isinstance(exc, GoogleAuthException):
+        status_code = status.HTTP_400_BAD_REQUEST
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.PARAMETER: "google_auth"},
+                title=ApiErrors.GOOGLE_AUTH_FAILED,
+                detail=str(exc),
+            )
+        )
+    elif isinstance(exc, GoogleAPIException):
+        status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.PARAMETER: "google_api"},
+                title=ApiErrors.GOOGLE_API_ERROR,
+                detail=str(exc),
+            )
+        )
+    elif isinstance(exc, GoogleUserNotFoundException):
         status_code = status.HTTP_404_NOT_FOUND
-        detail_message_str = str(exc)
-        determined_message = detail_message_str
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.PARAMETER: "user_id"},
+                title=ApiErrors.RESOURCE_NOT_FOUND_TITLE,
+                detail=str(exc),
+            )
+        )
+    elif isinstance(exc, TaskNotFoundException):
+        status_code = status.HTTP_404_NOT_FOUND
         error_list.append(
             ApiErrorDetail(
                 source={ApiErrorSource.PATH: "task_id"} if task_id else None,
                 title=ApiErrors.RESOURCE_NOT_FOUND_TITLE,
-                detail=detail_message_str,
+                detail=str(exc),
             )
         )
     elif isinstance(exc, BsonInvalidId):
         status_code = status.HTTP_400_BAD_REQUEST
-        determined_message = ValidationErrors.INVALID_TASK_ID_FORMAT
         error_list.append(
             ApiErrorDetail(
                 source={ApiErrorSource.PATH: "task_id"} if task_id else None,
@@ -67,7 +153,6 @@ def handle_exception(exc, context):
         and (exc.args[0] == ValidationErrors.INVALID_TASK_ID_FORMAT or exc.args[0] == "Invalid ObjectId format")
     ):
         status_code = status.HTTP_400_BAD_REQUEST
-        determined_message = ValidationErrors.INVALID_TASK_ID_FORMAT
         error_list.append(
             ApiErrorDetail(
                 source={ApiErrorSource.PATH: "task_id"} if task_id else None,
@@ -84,7 +169,6 @@ def handle_exception(exc, context):
         )
     elif isinstance(exc, DRFValidationError):
         status_code = status.HTTP_400_BAD_REQUEST
-        determined_message = "Invalid request"
         error_list = format_validation_errors(exc.detail)
         if not error_list and exc.detail:
             error_list.append(ApiErrorDetail(detail=str(exc.detail), title=ApiErrors.VALIDATION_ERROR))
@@ -94,23 +178,20 @@ def handle_exception(exc, context):
             status_code = response.status_code
             if isinstance(response.data, dict) and "detail" in response.data:
                 detail_str = str(response.data["detail"])
-                determined_message = detail_str
                 error_list.append(ApiErrorDetail(detail=detail_str, title=detail_str))
             elif isinstance(response.data, list):
                 for item_error in response.data:
-                    error_list.append(ApiErrorDetail(detail=str(item_error), title=determined_message))
+                    error_list.append(ApiErrorDetail(detail=str(item_error), title=str(exc)))
             else:
                 error_list.append(
                     ApiErrorDetail(
                         detail=str(response.data) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR,
-                        title=determined_message,
+                        title=str(exc),
                     )
                 )
         else:
             error_list.append(
-                ApiErrorDetail(
-                    detail=str(exc) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR, title=determined_message
-                )
+                ApiErrorDetail(detail=str(exc) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR, title=str(exc))
             )
 
     if not error_list and not (
@@ -118,11 +199,11 @@ def handle_exception(exc, context):
     ):
         default_detail_str = str(exc) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR
 
-        error_list.append(ApiErrorDetail(detail=default_detail_str, title=determined_message))
+        error_list.append(ApiErrorDetail(detail=default_detail_str, title=str(exc)))
 
     final_response_data = ApiErrorResponse(
         statusCode=status_code,
-        message=determined_message,
+        message=str(exc) if not error_list else error_list[0].detail,
         errors=error_list,
     )
     return Response(data=final_response_data.model_dump(mode="json", exclude_none=True), status=status_code)

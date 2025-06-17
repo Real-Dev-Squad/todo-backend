@@ -18,7 +18,7 @@ from .google_auth_exceptions import (
     GoogleRefreshTokenExpiredError,
     GoogleAPIException,
     GoogleUserNotFoundException,
-    GoogleTokenMissingError
+    GoogleTokenMissingError,
 )
 
 
@@ -89,7 +89,7 @@ def handle_exception(exc, context):
             authenticated=False,
         )
         return Response(data=final_response_data.model_dump(mode="json", exclude_none=True), status=status_code)
-    
+
     elif isinstance(exc, GoogleTokenMissingError):
         status_code = status.HTTP_401_UNAUTHORIZED
         error_list.append(

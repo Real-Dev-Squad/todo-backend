@@ -31,14 +31,13 @@ class GoogleLoginView(APIView):
         request.session["oauth_state"] = state
 
         if request.headers.get("Accept") == "application/json" or request.query_params.get("format") == "json":
-            return Response({
-                "statusCode": status.HTTP_200_OK,
-                "message": "Google OAuth URL generated successfully",
-                "data": {
-                    "authUrl": auth_url,
-                    "state": state
+            return Response(
+                {
+                    "statusCode": status.HTTP_200_OK,
+                    "message": "Google OAuth URL generated successfully",
+                    "data": {"authUrl": auth_url, "state": state},
                 }
-            })
+            )
 
         return HttpResponseRedirect(auth_url)
 
@@ -90,22 +89,24 @@ class GoogleCallbackView(APIView):
             )
 
             if wants_json:
-                response = Response({
-                    "statusCode": status.HTTP_200_OK,
-                    "message": AppMessages.GOOGLE_LOGIN_SUCCESS,
-                    "data": {
-                        "user": {
-                            "id": str(user.id),
-                            "name": user.name,
-                            "email": user.email_id,
-                            "google_id": user.google_id,
+                response = Response(
+                    {
+                        "statusCode": status.HTTP_200_OK,
+                        "message": AppMessages.GOOGLE_LOGIN_SUCCESS,
+                        "data": {
+                            "user": {
+                                "id": str(user.id),
+                                "name": user.name,
+                                "email": user.email_id,
+                                "google_id": user.google_id,
+                            },
+                            "tokens": {
+                                "access_token_expires_in": tokens["expires_in"],
+                                "refresh_token_expires_in": settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"],
+                            },
                         },
-                        "tokens": {
-                            "access_token_expires_in": tokens["expires_in"],
-                            "refresh_token_expires_in": settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"]
-                        }
                     }
-                })
+                )
             else:
                 response = HttpResponse(f"""
                     <html>
@@ -286,19 +287,21 @@ class GoogleAuthStatusView(APIView):
         except Exception as e:
             raise GoogleTokenInvalidError(str(e))
 
-        return Response({
-            "statusCode": status.HTTP_200_OK,
-            "message": "Authentication status retrieved successfully",
-            "data": {
-                "authenticated": True,
-                "user": {
-                    "id": str(user.id),
-                    "email": user.email_id,
-                    "name": user.name,
-                    "google_id": user.google_id,
-                }
+        return Response(
+            {
+                "statusCode": status.HTTP_200_OK,
+                "message": "Authentication status retrieved successfully",
+                "data": {
+                    "authenticated": True,
+                    "user": {
+                        "id": str(user.id),
+                        "email": user.email_id,
+                        "name": user.name,
+                        "google_id": user.google_id,
+                    },
+                },
             }
-        })
+        )
 
 
 class GoogleRefreshView(APIView):
@@ -318,13 +321,9 @@ class GoogleRefreshView(APIView):
             }
             new_access_token = generate_google_access_token(user_data)
 
-            response = Response({
-                "statusCode": status.HTTP_200_OK,
-                "message": AppMessages.TOKEN_REFRESHED,
-                "data": {
-                    "success": True
-                }
-            })
+            response = Response(
+                {"statusCode": status.HTTP_200_OK, "message": AppMessages.TOKEN_REFRESHED, "data": {"success": True}}
+            )
 
             config = self._get_cookie_config()
             response.set_cookie(
@@ -362,13 +361,13 @@ class GoogleLogoutView(APIView):
         )
 
         if wants_json:
-            response = Response({
-                "statusCode": status.HTTP_200_OK,
-                "message": AppMessages.GOOGLE_LOGOUT_SUCCESS,
-                "data": {
-                    "success": True
+            response = Response(
+                {
+                    "statusCode": status.HTTP_200_OK,
+                    "message": AppMessages.GOOGLE_LOGOUT_SUCCESS,
+                    "data": {"success": True},
                 }
-            })
+            )
         else:
             redirect_url = redirect_url or "/"
             response = HttpResponseRedirect(redirect_url)

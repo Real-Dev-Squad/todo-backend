@@ -30,12 +30,16 @@ class JWTAuthenticationMiddleware:
                 error_response = ApiErrorResponse(
                     statusCode=status.HTTP_401_UNAUTHORIZED,
                     message=AuthErrorMessages.AUTHENTICATION_REQUIRED,
-                    errors=[ApiErrorDetail(
-                        title=ApiErrors.AUTHENTICATION_FAILED.format(""),
-                        detail=AuthErrorMessages.AUTHENTICATION_REQUIRED
-                    )],
+                    errors=[
+                        ApiErrorDetail(
+                            title=ApiErrors.AUTHENTICATION_FAILED,
+                            detail=AuthErrorMessages.AUTHENTICATION_REQUIRED,
+                        )
+                    ],
                 )
-                return JsonResponse(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED)
+                return JsonResponse(
+                    data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED
+                )
 
         except (TokenMissingError, TokenExpiredError, TokenInvalidError) as e:
             return self._handle_rds_auth_error(e)
@@ -44,13 +48,17 @@ class JWTAuthenticationMiddleware:
         except Exception:
             error_response = ApiErrorResponse(
                 statusCode=status.HTTP_401_UNAUTHORIZED,
-                message=ApiErrors.AUTHENTICATION_FAILED.format(""),
-                errors=[ApiErrorDetail(
-                    title=ApiErrors.AUTHENTICATION_FAILED.format(""),
-                    detail=AuthErrorMessages.AUTHENTICATION_REQUIRED
-                )],
+                message=ApiErrors.AUTHENTICATION_FAILED,
+                errors=[
+                    ApiErrorDetail(
+                        title=ApiErrors.AUTHENTICATION_FAILED,
+                        detail=AuthErrorMessages.AUTHENTICATION_REQUIRED,
+                    )
+                ],
             )
-            return JsonResponse(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED)
+            return JsonResponse(
+                data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED
+            )
 
     def _try_authentication(self, request) -> bool:
         if self._try_google_auth(request):
@@ -111,23 +119,21 @@ class JWTAuthenticationMiddleware:
         error_response = ApiErrorResponse(
             statusCode=status.HTTP_401_UNAUTHORIZED,
             message=str(exception),
-            errors=[ApiErrorDetail(
-                title=ApiErrors.AUTHENTICATION_FAILED.format(""),
-                detail=str(exception)
-            )],
+            errors=[ApiErrorDetail(title=ApiErrors.AUTHENTICATION_FAILED, detail=str(exception))],
         )
-        return JsonResponse(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED)
+        return JsonResponse(
+            data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED
+        )
 
     def _handle_google_auth_error(self, exception):
         error_response = ApiErrorResponse(
             statusCode=status.HTTP_401_UNAUTHORIZED,
             message=str(exception),
-            errors=[ApiErrorDetail(
-                title=ApiErrors.AUTHENTICATION_FAILED.format(""),
-                detail=str(exception)
-            )],
+            errors=[ApiErrorDetail(title=ApiErrors.AUTHENTICATION_FAILED, detail=str(exception))],
         )
-        return JsonResponse(data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED)
+        return JsonResponse(
+            data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED
+        )
 
 
 def is_google_user(request) -> bool:

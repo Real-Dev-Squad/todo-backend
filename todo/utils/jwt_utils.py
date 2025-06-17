@@ -4,6 +4,7 @@ from todo.exceptions.auth_exceptions import TokenExpiredError, TokenInvalidError
 
 
 def verify_jwt_token(token: str) -> dict:
+    
     if not token or not token.strip():
         raise TokenMissingError()
 

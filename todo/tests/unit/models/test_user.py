@@ -1,6 +1,6 @@
 from unittest import TestCase
 from datetime import datetime, timezone
-from pydantic_core._pydantic_core import ValidationError
+from pydantic import ValidationError
 from todo.models.user import UserModel
 from todo.tests.fixtures.user import users_db_data
 

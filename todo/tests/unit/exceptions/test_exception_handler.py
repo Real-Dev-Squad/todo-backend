@@ -12,8 +12,7 @@ from todo.constants.messages import ApiErrors
 
 
 class ExceptionHandlerTests(TestCase):
-    @patch("todo.exceptions.exception_handler.format_validation_errors")
-    def test_returns_400_for_validation_error(self, mock_format_validation_errors: Mock):
+    def test_returns_400_for_validation_error(self):
         error_detail = {"field": ["error message"]}
         exception = DRFValidationError(detail=error_detail)
         request = Mock()

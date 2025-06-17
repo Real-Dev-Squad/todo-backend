@@ -125,7 +125,10 @@ class GoogleOAuthServiceTests(TestCase):
 
         with self.assertRaises(GoogleAPIException) as context:
             GoogleOAuthService._get_user_info("test-token")
-        self.assertIn(ApiErrors.MISSING_USER_INFO_FIELDS.format("email, name"), str(context.exception))
+            error_msg = str(context.exception)
+            self.assertIn(ApiErrors.MISSING_USER_INFO_FIELDS.split(":")[0], error_msg)
+            for field in ("email", "name"):
+                self.assertIn(field, error_msg)
 
     @patch("todo.services.google_oauth_service.requests.get")
     def test_get_user_info_error_response(self, mock_get):

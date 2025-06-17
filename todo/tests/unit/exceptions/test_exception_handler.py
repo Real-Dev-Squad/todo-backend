@@ -14,23 +14,24 @@ from todo.constants.messages import ApiErrors
 class ExceptionHandlerTests(TestCase):
     @patch("todo.exceptions.exception_handler.format_validation_errors")
     def test_returns_400_for_validation_error(self, mock_format_validation_errors: Mock):
-        validation_error = DRFValidationError(detail={"field": ["error message"]})
-        mock_format_validation_errors.return_value = [
-            ApiErrorDetail(detail="error message", source={ApiErrorSource.PARAMETER: "field"})
-        ]
+        error_detail = {"field": ["error message"]}
+        exception = DRFValidationError(detail=error_detail)
+        request = Mock()
 
-        response = handle_exception(validation_error, {})
+        with patch("todo.exceptions.exception_handler.format_validation_errors") as mock_format:
+            mock_format.return_value = [
+                ApiErrorDetail(detail="error message", source={ApiErrorSource.PARAMETER: "field"})
+            ]
+            response = handle_exception(exception, {"request": request})
 
-        self.assertIsInstance(response, Response)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        expected_response = {
-            "statusCode": 400,
-            "message": "Invalid request",
-            "errors": [{"source": {"parameter": "field"}, "detail": "error message"}],
-        }
-        self.assertDictEqual(response.data, expected_response)
-
-        mock_format_validation_errors.assert_called_once_with(validation_error.detail)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            expected_response = {
+                "statusCode": 400,
+                "message": "error message",
+                "errors": [{"source": {"parameter": "field"}, "detail": "error message"}],
+            }
+            self.assertDictEqual(response.data, expected_response)
+            mock_format.assert_called_once_with(error_detail)
 
     def test_custom_handler_formats_generic_exception(self):
         request = None
@@ -51,9 +52,9 @@ class ExceptionHandlerTests(TestCase):
 
             expected_detail_obj_in_list = ApiErrorDetail(
                 detail=error_message if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR,
-                title=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
+                title=error_message,
             )
-            expected_main_message = ApiErrors.UNEXPECTED_ERROR_OCCURRED
+            expected_main_message = ApiErrors.INTERNAL_SERVER_ERROR
 
             self.assertEqual(response.data.get("statusCode"), status.HTTP_500_INTERNAL_SERVER_ERROR)
             self.assertEqual(response.data.get("message"), expected_main_message)

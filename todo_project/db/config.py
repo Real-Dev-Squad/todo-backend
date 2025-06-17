@@ -39,7 +39,7 @@ class DatabaseManager:
         except ConnectionFailure as e:
             logger.error(f"Failed to establish database connection: {e}")
             return False
-        
+
     @classmethod
     def reset(cls):
         if cls.__instance is not None and cls.__instance._database_client is not None:

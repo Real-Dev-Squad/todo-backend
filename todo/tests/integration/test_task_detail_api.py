@@ -20,7 +20,7 @@ class TaskDetailAPIIntegrationTest(BaseMongoTestCase):
         self.client = APIClient()
 
     def test_get_task_by_id_success(self):
-        url = reverse('task_detail', args=[self.existing_task_id])
+        url = reverse("task_detail", args=[self.existing_task_id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, HTTPStatus.OK)
         data = response.json()["data"]
@@ -29,11 +29,10 @@ class TaskDetailAPIIntegrationTest(BaseMongoTestCase):
         self.assertEqual(data["priority"], "MEDIUM")
         self.assertEqual(data["status"], self.task_doc["status"])
         self.assertEqual(data["displayId"], self.task_doc["displayId"])
-        self.assertEqual(data["createdBy"]["id"],
-                         self.task_doc["createdBy"])
+        self.assertEqual(data["createdBy"]["id"], self.task_doc["createdBy"])
 
     def test_get_task_by_id_not_found(self):
-        url = reverse('task_detail', args=[self.non_existent_id])
+        url = reverse("task_detail", args=[self.non_existent_id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
@@ -46,15 +45,12 @@ class TaskDetailAPIIntegrationTest(BaseMongoTestCase):
         self.assertEqual(error["detail"], error_message)
 
     def test_get_task_by_id_invalid_format(self):
-        url = reverse('task_detail', args=[self.invalid_task_id])
+        url = reverse("task_detail", args=[self.invalid_task_id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         data = response.json()
         self.assertEqual(data["statusCode"], 400)
-        self.assertEqual(
-            data["message"], ValidationErrors.INVALID_TASK_ID_FORMAT)
+        self.assertEqual(data["message"], ValidationErrors.INVALID_TASK_ID_FORMAT)
         self.assertEqual(data["errors"][0]["source"]["path"], "task_id")
-        self.assertEqual(data["errors"][0]["title"],
-                         ApiErrors.VALIDATION_ERROR)
-        self.assertEqual(data["errors"][0]["detail"],
-                         ValidationErrors.INVALID_TASK_ID_FORMAT)
+        self.assertEqual(data["errors"][0]["title"], ApiErrors.VALIDATION_ERROR)
+        self.assertEqual(data["errors"][0]["detail"], ValidationErrors.INVALID_TASK_ID_FORMAT)

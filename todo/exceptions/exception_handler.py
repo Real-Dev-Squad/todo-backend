@@ -9,7 +9,11 @@ from bson.errors import InvalidId as BsonInvalidId
 
 from todo.dto.responses.error_response import ApiErrorDetail, ApiErrorResponse, ApiErrorSource
 from todo.constants.messages import ApiErrors, ValidationErrors, AuthErrorMessages
-from todo.exceptions.task_exceptions import TaskNotFoundException
+from todo.exceptions.task_exceptions import (
+    TaskNotFoundException,
+    UnprocessableEntityException,
+    TaskStateConflictException,
+)
 from .auth_exceptions import TokenExpiredError, TokenMissingError, TokenInvalidError
 from .google_auth_exceptions import (
     GoogleAuthException,
@@ -189,6 +193,9 @@ def handle_exception(exc, context):
         error_list.append(
             ApiErrorDetail(source=exc.source, title=ApiErrors.VALIDATION_ERROR, detail=determined_message)
         )
+    elif isinstance(exc, TaskStateConflictException):
+        status_code = status.HTTP_409_CONFLICT
+        error_list.append(ApiErrorDetail(title=ApiErrors.STATE_CONFLICT_TITLE, detail=str(exc)))
     elif isinstance(exc, BsonInvalidId):
         status_code = status.HTTP_400_BAD_REQUEST
         error_list.append(

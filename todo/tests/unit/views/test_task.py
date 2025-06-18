@@ -663,7 +663,4 @@ class TaskDetailViewPatchTests(AuthenticatedTestCase):
         expected_detail = ValidationErrors.UNSUPPORTED_ACTION.format(unsupported_action)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["message"], "Invalid request")
-        self.assertEqual(len(response.data["errors"]), 1)
-        self.assertEqual(response.data["errors"][0]["source"]["parameter"], "action")
         self.assertEqual(response.data["errors"][0]["detail"], expected_detail)

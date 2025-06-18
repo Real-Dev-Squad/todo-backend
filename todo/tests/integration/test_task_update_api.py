@@ -8,13 +8,31 @@ from rest_framework.test import APIClient
 from todo.constants.messages import ApiErrors, ValidationErrors
 from todo.tests.integration.base_mongo_test import BaseMongoTestCase
 from todo.tests.fixtures.task import tasks_db_data
+from todo.utils.google_jwt_utils import generate_google_token_pair
 
 
-class TaskUpdateAPIIntegrationTest(BaseMongoTestCase):
+class AuthenticatedMongoTestCase(BaseMongoTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client = APIClient()
+        self._setup_auth_cookies()
+
+    def _setup_auth_cookies(self):
+        user_data = {
+            "user_id": str(ObjectId()),
+            "google_id": "test_google_id",
+            "email": "test@example.com",
+            "name": "Test User",
+        }
+        tokens = generate_google_token_pair(user_data)
+        self.client.cookies["ext-access"] = tokens["access_token"]
+        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
+
+
+class TaskUpdateAPIIntegrationTest(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.db.tasks.delete_many({})
-        self.client = APIClient()
 
         doc = tasks_db_data[0].copy()
         self.task_id = ObjectId()
@@ -29,7 +47,6 @@ class TaskUpdateAPIIntegrationTest(BaseMongoTestCase):
 
     def test_update_task_success(self):
         url = reverse("task_detail", args=[self.valid_id])
-
         payload = {
             "title": "Updated Task Title",
             "description": "Updated via integration-test.",
@@ -37,10 +54,8 @@ class TaskUpdateAPIIntegrationTest(BaseMongoTestCase):
             "status": "IN_PROGRESS",
             "isAcknowledged": False,
         }
-
         res = self.client.patch(url, data=payload, format="json")
         self.assertEqual(res.status_code, HTTPStatus.OK)
-
         body = res.json()
         self.assertEqual(body["id"], self.valid_id)
         self.assertEqual(body["title"], payload["title"])
@@ -48,18 +63,15 @@ class TaskUpdateAPIIntegrationTest(BaseMongoTestCase):
         self.assertEqual(body["priority"], payload["priority"])
         self.assertEqual(body["status"], payload["status"])
         self.assertEqual(body["isAcknowledged"], payload["isAcknowledged"])
-
         updated_at = datetime.fromisoformat(body["updatedAt"].replace("Z", ""))
         self.assertTrue(datetime.utcnow() - updated_at < timedelta(minutes=1))
 
     def test_update_task_not_found(self):
         url = reverse("task_detail", args=[self.missing_id])
         res = self.client.patch(url, data={"title": "ghost"}, format="json")
-
         self.assertEqual(res.status_code, HTTPStatus.NOT_FOUND)
         msg = ApiErrors.TASK_NOT_FOUND.format(self.missing_id)
         self.assertEqual(res.json()["message"], msg)
-
         err = res.json()["errors"][0]
         self.assertEqual(err["title"], ApiErrors.RESOURCE_NOT_FOUND_TITLE)
         self.assertEqual(err["detail"], msg)
@@ -68,13 +80,10 @@ class TaskUpdateAPIIntegrationTest(BaseMongoTestCase):
     def test_update_task_invalid_id_format(self):
         url = reverse("task_detail", args=[self.bad_id])
         res = self.client.patch(url, data={"title": "bad"}, format="json")
-
         self.assertEqual(res.status_code, HTTPStatus.BAD_REQUEST)
-
         body = res.json()
         self.assertEqual(body["statusCode"], HTTPStatus.BAD_REQUEST)
         self.assertEqual(body["message"], ValidationErrors.INVALID_TASK_ID_FORMAT)
-
         err = body["errors"][0]
         self.assertEqual(err["title"], ApiErrors.VALIDATION_ERROR)
         self.assertEqual(err["detail"], ValidationErrors.INVALID_TASK_ID_FORMAT)

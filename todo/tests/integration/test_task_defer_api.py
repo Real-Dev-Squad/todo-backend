@@ -7,14 +7,31 @@ from todo.constants.messages import ApiErrors, ValidationErrors
 from todo.constants.task import MINIMUM_DEFERRAL_NOTICE_DAYS, TaskPriority, TaskStatus
 from todo.tests.integration.base_mongo_test import BaseMongoTestCase
 from todo.tests.fixtures.task import tasks_db_data
+from todo.utils.google_jwt_utils import generate_google_token_pair
 
 
-class TaskDeferAPIIntegrationTest(BaseMongoTestCase):
+class AuthenticatedMongoTestCase(BaseMongoTestCase):
     def setUp(self):
         super().setUp()
-
-        self.db.tasks.delete_many({})
         self.client = APIClient()
+        self._setup_auth_cookies()
+
+    def _setup_auth_cookies(self):
+        user_data = {
+            "user_id": str(ObjectId()),
+            "google_id": "test_google_id",
+            "email": "test@example.com",
+            "name": "Test User",
+        }
+        tokens = generate_google_token_pair(user_data)
+        self.client.cookies["ext-access"] = tokens["access_token"]
+        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
+
+
+class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
+    def setUp(self):
+        super().setUp()
+        self.db.tasks.delete_many({})
 
     def _insert_task(self, *, status: str = TaskStatus.TODO.value, due_at: datetime | None = None) -> str:
         task_fixture = tasks_db_data[0].copy()
@@ -93,3 +110,20 @@ class TaskDeferAPIIntegrationTest(BaseMongoTestCase):
         self.assertEqual(error["title"], ApiErrors.STATE_CONFLICT_TITLE)
         self.assertEqual(error["detail"], ValidationErrors.CANNOT_DEFER_A_DONE_TASK)
         self.assertEqual(error["source"]["path"], "task_id")
+
+    def test_defer_task_with_invalid_date_format_returns_400(self):
+        task_id = self._insert_task()
+        url = reverse("task_detail", args=[task_id]) + "?action=defer"
+        response = self.client.patch(url, data={"deferredTill": "invalid-date-format"}, format="json")
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
+        response_data = response.json()
+        self.assertEqual(response_data["errors"][0]["source"]["parameter"], "deferredTill")
+
+    def test_defer_task_with_missing_date_returns_400(self):
+        task_id = self._insert_task()
+        url = reverse("task_detail", args=[task_id]) + "?action=defer"
+        response = self.client.patch(url, data={}, format="json")
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
+        response_data = response.json()
+        self.assertEqual(response_data["errors"][0]["source"]["parameter"], "deferredTill")
+        self.assertIn("required", response_data["errors"][0]["detail"])

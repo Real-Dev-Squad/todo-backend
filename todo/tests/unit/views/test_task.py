@@ -21,6 +21,7 @@ from todo.constants.messages import ValidationErrors, ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from todo.utils.google_jwt_utils import generate_google_token_pair
+from todo.dto.deferred_details_dto import DeferredDetailsDTO
 
 
 class AuthenticatedTestCase(APISimpleTestCase):

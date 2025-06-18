@@ -195,7 +195,13 @@ def handle_exception(exc, context):
         )
     elif isinstance(exc, TaskStateConflictException):
         status_code = status.HTTP_409_CONFLICT
-        error_list.append(ApiErrorDetail(title=ApiErrors.STATE_CONFLICT_TITLE, detail=str(exc)))
+        error_list.append(
+            ApiErrorDetail(
+                source={"path": "task_id"},
+                title=ApiErrors.STATE_CONFLICT_TITLE,
+                detail=str(exc),
+            )
+        )
     elif isinstance(exc, BsonInvalidId):
         status_code = status.HTTP_400_BAD_REQUEST
         error_list.append(

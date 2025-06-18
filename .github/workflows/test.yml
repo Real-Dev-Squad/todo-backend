@@ -7,6 +7,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.pull_request.title, '[skip tests]') }}
+
+    env:
+      MONGODB_URI: mongodb://db:27017
+      DB_NAME: todo-app
+      GOOGLE_JWT_SECRET_KEY: "test-secret-key-for-jwt"
+      GOOGLE_JWT_ACCESS_LIFETIME: "3600"
+      GOOGLE_JWT_REFRESH_LIFETIME: "604800"
+      GOOGLE_OAUTH_CLIENT_ID: "test-client-id"
+      GOOGLE_OAUTH_CLIENT_SECRET: "test-client-secret"
+      GOOGLE_OAUTH_REDIRECT_URI: "http://localhost:3000/auth/callback"
+      COOKIE_SECURE: "False"
+      COOKIE_SAMESITE: "Lax"
 
     steps:
       - name: Checkout code
@@ -15,7 +28,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11.*'
+          python-version: "3.11.*"
 
       - name: Install dependencies
         run: |

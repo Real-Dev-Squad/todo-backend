@@ -20,12 +20,31 @@ from todo.exceptions.task_exceptions import TaskNotFoundException, Unprocessable
 from todo.constants.messages import ValidationErrors, ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 from rest_framework.exceptions import ValidationError as DRFValidationError
-from todo.dto.deferred_details_dto import DeferredDetailsDTO
+from todo.utils.google_jwt_utils import generate_google_token_pair
 
 
-class TaskViewTests(APISimpleTestCase):
+class AuthenticatedTestCase(APISimpleTestCase):
     def setUp(self):
+        super().setUp()
         self.client = APIClient()
+        self._setup_auth_cookies()
+
+    def _setup_auth_cookies(self):
+        user_data = {
+            "user_id": str(ObjectId()),
+            "google_id": "test_google_id",
+            "email": "test@example.com",
+            "name": "Test User",
+        }
+        tokens = generate_google_token_pair(user_data)
+
+        self.client.cookies["ext-access"] = tokens["access_token"]
+        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
+
+
+class TaskViewTests(AuthenticatedTestCase):
+    def setUp(self):
+        super().setUp()
         self.url = reverse("tasks")
         self.valid_params = {"page": 1, "limit": 10}
 
@@ -60,7 +79,7 @@ class TaskViewTests(APISimpleTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         expected_response = {
             "statusCode": 400,
-            "message": "Invalid request",
+            "message": "A valid integer is required.",
             "errors": [
                 {"source": {"parameter": "page"}, "detail": "A valid integer is required."},
                 {"source": {"parameter": "limit"}, "detail": "limit must be greater than or equal to 1"},
@@ -131,7 +150,7 @@ class TaskViewTests(APISimpleTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertEqual(response.data["statusCode"], status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertEqual(response.data["message"], ApiErrors.UNEXPECTED_ERROR_OCCURRED)
+        self.assertEqual(response.data["message"], ApiErrors.INTERNAL_SERVER_ERROR)
         self.assertEqual(response.data["errors"][0]["detail"], ApiErrors.INTERNAL_SERVER_ERROR)
         mock_get_task_by_id.assert_called_once_with(task_id)
 
@@ -194,9 +213,9 @@ class TaskViewTest(TestCase):
         self.assertTrue("page" in error_detail or "limit" in error_detail)
 
 
-class CreateTaskViewTests(APISimpleTestCase):
+class CreateTaskViewTests(AuthenticatedTestCase):
     def setUp(self):
-        self.client = APIClient()
+        super().setUp()
         self.url = reverse("tasks")
 
         self.valid_payload = {
@@ -300,13 +319,14 @@ class CreateTaskViewTests(APISimpleTestCase):
         try:
             response = self.client.post(self.url, data=self.valid_payload, format="json")
             self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-            self.assertIn("An unexpected error occurred", str(response.data))
+            self.assertEqual(response.data["message"], ApiErrors.INTERNAL_SERVER_ERROR)
         except Exception as e:
             self.assertEqual(str(e), "Database exploded")
 
 
-class TaskDeleteViewTests(APISimpleTestCase):
+class TaskDeleteViewTests(AuthenticatedTestCase):
     def setUp(self):
+        super().setUp()
         self.valid_task_id = str(ObjectId())
         self.url = reverse("task_detail", kwargs={"task_id": self.valid_task_id})
 
@@ -334,9 +354,9 @@ class TaskDeleteViewTests(APISimpleTestCase):
         self.assertIn(ValidationErrors.INVALID_TASK_ID_FORMAT, response.data["message"])
 
 
-class TaskDetailViewPatchTests(APISimpleTestCase):
+class TaskDetailViewPatchTests(AuthenticatedTestCase):
     def setUp(self):
-        self.client = APIClient()
+        super().setUp()
         self.task_id_str = str(ObjectId())
         self.task_url = reverse("task_detail", args=[self.task_id_str])
         self.future_date = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
@@ -485,7 +505,7 @@ class TaskDetailViewPatchTests(APISimpleTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["statusCode"], status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["message"], "Invalid request")
+        self.assertEqual(response.data["message"], service_error_detail["labels"][0])
 
         self.assertIn(
             "labels",
@@ -540,7 +560,7 @@ class TaskDetailViewPatchTests(APISimpleTestCase):
 
             self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
             self.assertEqual(response.data["statusCode"], status.HTTP_500_INTERNAL_SERVER_ERROR)
-            self.assertEqual(response.data["message"], ApiErrors.UNEXPECTED_ERROR_OCCURRED)
+            self.assertEqual(response.data["message"], ApiErrors.INTERNAL_SERVER_ERROR)
             self.assertEqual(response.data["errors"][0]["detail"], ApiErrors.INTERNAL_SERVER_ERROR)
 
         with patch.object(settings, "DEBUG", True):

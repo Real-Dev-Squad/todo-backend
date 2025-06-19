@@ -21,7 +21,6 @@ services:
       - "27017:27017"
     volumes:
       - ./mongo_data:/data/db
-      - ./scripts/init-replica-set.js:/docker-entrypoint-initdb.d/init-replica-set.js:ro
 
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.runCommand({ping:1}).ok", "--quiet"]
@@ -29,6 +28,28 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+      
+# Initialize replica set - this runs once and exits
+  mongo-init:
+    image: mongo:latest
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      mongosh --host db:27017 --eval "
+      try {
+        rs.status();
+        print('Replica set already initialized');
+      } catch(e) {
+        print('Initializing replica set...');
+        rs.initiate({
+          _id: 'rs0',
+          members: [{ _id: 0, host: 'todo-mongo:27017' }]
+        });
+        print('Replica set initialized');
+      }
+      "
+    restart: "no"
  
   mongo-express:
     image: mongo-express

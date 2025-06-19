@@ -12,6 +12,7 @@ services:
       - "8000:8000"
     depends_on:
       - db
+      - mongo-init
 
   db:
     image: mongo:latest
@@ -21,15 +22,14 @@ services:
       - "27017:27017"
     volumes:
       - ./mongo_data:/data/db
-
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.runCommand({ping:1}).ok", "--quiet"]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "if (db.runCommand({ping:1}).ok) process.exit(0); else process.exit(1)"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 15s
       
-# Initialize replica set - this runs once and exits
+  # Initialize replica set - this runs once and exits
   mongo-init:
     image: mongo:latest
     depends_on:
@@ -61,3 +61,4 @@ services:
       ME_CONFIG_BASICAUTH: false
     depends_on:
       - db
+      - mongo-init

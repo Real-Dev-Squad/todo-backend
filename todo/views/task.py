@@ -117,7 +117,7 @@ class TaskDetailView(APIView):
 
             updated_task_dto = TaskService.defer_task(
                 task_id=task_id,
-                deferred_till=serializer.validated_data["deferredTill"],
+                deferred_till=serializer.validated_data["deferred_till"],
                 user_id=user_id_placeholder,
             )
         elif action == "update":

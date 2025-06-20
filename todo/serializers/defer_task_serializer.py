@@ -4,9 +4,9 @@ from todo.constants.messages import ValidationErrors
 
 
 class DeferTaskSerializer(serializers.Serializer):
-    deferredTill = serializers.DateTimeField()
+    deferred_till = serializers.DateTimeField(source="deferredTill")
 
-    def validate_deferredTill(self, value):
+    def validate_deferred_till(self, value):
         if value < datetime.now(timezone.utc):
             raise serializers.ValidationError(ValidationErrors.PAST_DEFERRED_TILL_DATE)
         return value

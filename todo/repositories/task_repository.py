@@ -10,8 +10,7 @@ from todo.constants.messages import RepositoryErrors
 
 class TaskRepository(MongoRepository):
     collection_name = TaskModel.collection_name
-    _filter_dict = {};
-    _filter_dict['isDeleted'] = {'$ne': True}
+    _exclude_deleted = {'$ne': True}
 
 
     def _add_soft_delete_filter(cls, filter_dict: dict = None) -> dict:
@@ -28,13 +27,13 @@ class TaskRepository(MongoRepository):
     @classmethod
     def list(cls, page: int, limit: int) -> List[TaskModel]:
         tasks_collection = cls.get_collection()
-        tasks_cursor = tasks_collection.find(cls._filter_dict).skip((page - 1) * limit).limit(limit)
+        tasks_cursor = tasks_collection.find(cls._exclude_deleted).skip((page - 1) * limit).limit(limit)
         return [TaskModel(**task) for task in tasks_cursor]
 
     @classmethod
     def count(cls) -> int:
         tasks_collection = cls.get_collection()
-        return tasks_collection.count_documents(cls._filter_dict)
+        return tasks_collection.count_documents(cls._exclude_deleted)
 
     @classmethod
     def get_all(cls) -> List[TaskModel]:
@@ -45,7 +44,7 @@ class TaskRepository(MongoRepository):
             List[TaskModel]: List of all task models
         """
         tasks_collection = cls.get_collection()
-        tasks_cursor = tasks_collection.find(cls._filter_dict)
+        tasks_cursor = tasks_collection.find(cls._exclude_deleted)
         return [TaskModel(**task) for task in tasks_cursor]
 
     @classmethod
@@ -92,19 +91,31 @@ class TaskRepository(MongoRepository):
 
     @classmethod
     def get_by_id(cls, task_id: str) -> TaskModel | None:
-        tasks_collection = cls.get_collection()
-        filter_dict = {**cls._filter_dict, "_id": ObjectId(task_id)}    
-        task_data = tasks_collection.find_one(filter_dict)
+        """
+        Gets a specific task by its ID.
+        """
+
+        tasks_collection = cls.get_collection()   
+        task_data = tasks_collection.find_one({**cls._exclude_deleted, "_id": ObjectId(task_id)})
+
         if task_data:
             return TaskModel(**task_data)
         return None
 
     @classmethod
     def delete_by_id(cls, task_id: str) -> TaskModel | None:
+        """
+        Deletes a specific task by its ID.
+        """
         tasks_collection = cls.get_collection()
 
+        try:
+            obj_id = ObjectId(task_id)
+        except Exception:
+            return None
+
         deleted_task_data = tasks_collection.find_one_and_update(
-            {"_id": ObjectId(task_id), **cls._filter_dict},
+            {"_id": obj_id, **cls._exclude_deleted},
             {
                 "$set": {
                     "isDeleted": True,
@@ -139,7 +150,7 @@ class TaskRepository(MongoRepository):
         tasks_collection = cls.get_collection()
 
         updated_task_doc = tasks_collection.find_one_and_update(
-            {"_id": obj_id, **cls._filter_dict}, {"$set": update_data_with_timestamp}, return_document=ReturnDocument.AFTER
+            {"_id": obj_id, **cls._exclude_deleted}, {"$set": update_data_with_timestamp}, return_document=ReturnDocument.AFTER
         )
 
         if updated_task_doc:

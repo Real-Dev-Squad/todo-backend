@@ -13,17 +13,6 @@ class TaskRepository(MongoRepository):
     _exclude_deleted = {"isDeleted":{'$ne': True}}
 
 
-    def _add_soft_delete_filter(cls, filter_dict: dict = None) -> dict:
-        """Add soft delete filter to query if not already present"""
-        if filter_dict is None:
-            filter_dict = {}
-        
-        # Only add the filter if isDeleted is not already specified
-        if 'isDeleted' not in filter_dict:
-            filter_dict['isDeleted'] = {'$ne': True}
-        
-        return filter_dict
-
     @classmethod
     def list(cls, page: int, limit: int) -> List[TaskModel]:
         tasks_collection = cls.get_collection()

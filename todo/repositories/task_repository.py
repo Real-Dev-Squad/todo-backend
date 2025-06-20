@@ -10,7 +10,7 @@ from todo.constants.messages import RepositoryErrors
 
 class TaskRepository(MongoRepository):
     collection_name = TaskModel.collection_name
-    _exclude_deleted = {'$ne': True}
+    _exclude_deleted = {"isDeleted":{'$ne': True}}
 
 
     def _add_soft_delete_filter(cls, filter_dict: dict = None) -> dict:

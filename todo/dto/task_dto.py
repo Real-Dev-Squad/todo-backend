@@ -3,6 +3,7 @@ from typing import List
 from pydantic import BaseModel, field_validator
 
 from todo.constants.task import TaskPriority, TaskStatus
+from todo.dto.deferred_details_dto import DeferredDetailsDTO
 from todo.dto.label_dto import LabelDTO
 from todo.dto.user_dto import UserDTO
 
@@ -19,6 +20,7 @@ class TaskDTO(BaseModel):
     labels: List[LabelDTO] = []
     startedAt: datetime | None = None
     dueAt: datetime | None = None
+    deferredDetails: DeferredDetailsDTO | None = None
     createdAt: datetime
     updatedAt: datetime | None = None
     createdBy: UserDTO

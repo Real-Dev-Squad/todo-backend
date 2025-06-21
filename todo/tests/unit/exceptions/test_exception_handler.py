@@ -8,7 +8,9 @@ from django.conf import settings
 
 from todo.exceptions.exception_handler import handle_exception, format_validation_errors
 from todo.dto.responses.error_response import ApiErrorDetail, ApiErrorSource
-from todo.constants.messages import ApiErrors
+from todo.constants.messages import ApiErrors, ValidationErrors
+from todo.exceptions.task_exceptions import TaskStateConflictException, UnprocessableEntityException
+from bson.errors import InvalidId as BsonInvalidId
 
 
 class ExceptionHandlerTests(TestCase):
@@ -31,6 +33,44 @@ class ExceptionHandlerTests(TestCase):
             }
             self.assertDictEqual(response.data, expected_response)
             mock_format.assert_called_once_with(error_detail)
+
+    def test_handles_task_state_conflict_exception(self):
+        task_id = "some_task_id"
+        exception = TaskStateConflictException(ValidationErrors.CANNOT_DEFER_A_DONE_TASK)
+        context = {"kwargs": {"task_id": task_id}}
+
+        response = handle_exception(exception, context)
+
+        self.assertIsInstance(response, Response)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.data["statusCode"], status.HTTP_409_CONFLICT)
+        self.assertEqual(response.data["message"], ValidationErrors.CANNOT_DEFER_A_DONE_TASK)
+        self.assertEqual(len(response.data["errors"]), 1)
+        self.assertEqual(response.data["errors"][0]["title"], ApiErrors.STATE_CONFLICT_TITLE)
+        self.assertEqual(response.data["errors"][0]["source"], {"path": "task_id"})
+
+    def test_handles_unprocessable_entity_exception(self):
+        source = {ApiErrorSource.PARAMETER.value: "test_field"}
+        exception = UnprocessableEntityException("Cannot process this", source=source)
+        context = {}
+        response = handle_exception(exception, context)
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data["message"], "Cannot process this")
+        self.assertEqual(response.data["errors"][0]["title"], ApiErrors.VALIDATION_ERROR)
+        self.assertEqual(response.data["errors"][0]["source"], source)
+
+    def test_handles_bson_invalid_id_exception(self):
+        task_id = "invalid-id"
+        exception = BsonInvalidId("Invalid ID")
+        context = {"kwargs": {"task_id": task_id}}
+        response = handle_exception(exception, context)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["message"], ValidationErrors.INVALID_TASK_ID_FORMAT)
+        self.assertEqual(response.data["errors"][0]["title"], ApiErrors.VALIDATION_ERROR)
+        self.assertEqual(response.data["errors"][0]["detail"], ValidationErrors.INVALID_TASK_ID_FORMAT)
+        self.assertEqual(response.data["errors"][0]["source"], {"path": "task_id"})
 
     def test_custom_handler_formats_generic_exception(self):
         request = None
@@ -64,6 +104,13 @@ class ExceptionHandlerTests(TestCase):
                 actual_error_detail_dict = response.data["errors"][0]
                 self.assertEqual(actual_error_detail_dict.get("detail"), expected_detail_obj_in_list.detail)
                 self.assertEqual(actual_error_detail_dict.get("title"), expected_detail_obj_in_list.title)
+
+
+class CustomExceptionsTests(TestCase):
+    def test_task_state_conflict_exception(self):
+        message = "Test conflict message"
+        exception = TaskStateConflictException(message)
+        self.assertEqual(str(exception), message)
 
 
 class FormatValidationErrorsTests(TestCase):

@@ -13,3 +13,6 @@ class TaskPriority(Enum):
     HIGH = 1
     MEDIUM = 2
     LOW = 3
+
+
+MINIMUM_DEFERRAL_NOTICE_DAYS = 20

@@ -18,7 +18,7 @@ class DatabaseManager:
 
     def _get_database_client(self):
         if self._database_client is None:
-            self._database_client = MongoClient(settings.MONGODB_URI)
+            self._database_client = MongoClient(settings.MONGODB_URI, tz_aware=True)
         return self._database_client
 
     def get_database(self):

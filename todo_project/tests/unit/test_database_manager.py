@@ -27,7 +27,7 @@ class DatabaseManagerTests(TestCase):
         mock_mongo_client.return_value = mock_client_instance
         db_client = self.database_manager._get_database_client()
 
-        mock_mongo_client.assert_called_once_with(settings.MONGODB_URI)
+        mock_mongo_client.assert_called_once_with(settings.MONGODB_URI, tz_aware=True)
 
         self.assertIs(db_client, mock_client_instance)
 

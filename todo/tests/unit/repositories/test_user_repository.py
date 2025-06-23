@@ -5,7 +5,7 @@ from bson import ObjectId
 from todo.repositories.user_repository import UserRepository
 from todo.models.user import UserModel
 from todo.models.common.pyobjectid import PyObjectId
-from todo.exceptions.google_auth_exceptions import GoogleUserNotFoundException, GoogleAPIException
+from todo.exceptions.google_auth_exceptions import GoogleAPIException
 from todo.tests.fixtures.user import users_db_data
 from todo.constants.messages import RepositoryErrors
 

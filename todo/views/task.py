@@ -95,6 +95,13 @@ class TaskDetailView(APIView):
         return Response(data=response_data.model_dump(mode="json"), status=status.HTTP_200_OK)
 
     def delete(self, request: Request, task_id: str):
+        """
+        Delete a task by ID.
+
+        .. deprecated:: 1.0.0
+            This endpoint is deprecated and will be removed in a future version.
+            Consider using the PATCH endpoint with action=delete instead.
+        """
         task_id = ObjectId(task_id)
         TaskService.delete_task(task_id)
         return Response(status=status.HTTP_204_NO_CONTENT)

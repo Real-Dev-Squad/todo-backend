@@ -22,11 +22,14 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework",
     "todo",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "todo.middlewares.DisableCSRFMiddleware.DisableCSRFMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.middleware.common.CommonMiddleware",
     "todo.middlewares.jwt_auth.JWTAuthenticationMiddleware",

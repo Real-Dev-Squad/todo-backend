@@ -38,6 +38,7 @@ class CreateTaskDTO(BaseModel):
     assignee: str | None = None
     labels: List[str] = []
     dueAt: datetime | None = None
+    createdBy: str
 
     @field_validator("priority", mode="before")
     def parse_priority(cls, value):

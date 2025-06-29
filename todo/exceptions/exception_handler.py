@@ -14,6 +14,7 @@ from todo.exceptions.task_exceptions import (
     UnprocessableEntityException,
     TaskStateConflictException,
 )
+from todo.exceptions.user_exceptions import UserNotFoundException
 from .auth_exceptions import TokenExpiredError, TokenMissingError, TokenInvalidError
 from .google_auth_exceptions import (
     GoogleAuthException,
@@ -48,6 +49,7 @@ def format_validation_errors(errors) -> List[ApiErrorDetail]:
 def handle_exception(exc, context):
     response = drf_exception_handler(exc, context)
     task_id = context.get("kwargs", {}).get("task_id")
+    user_id = context.get("kwargs", {}).get("user_id")
 
     error_list = []
     status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -187,6 +189,28 @@ def handle_exception(exc, context):
                 detail=str(exc),
             )
         )
+
+    elif isinstance(exc, UserNotFoundException):
+        status_code = status.HTTP_404_NOT_FOUND
+        error_list.append(
+            ApiErrorDetail(
+                source={ApiErrorSource.PATH: "user_id"} if user_id else None,
+                title=ApiErrors.RESOURCE_NOT_FOUND_TITLE,
+                detail=str(exc),
+            )
+        )
+
+    elif isinstance(exc, PermissionError):
+        status_code = status.HTTP_403_FORBIDDEN
+        error_list.append(
+            ApiErrorDetail(
+                title=ApiErrors.PERMISSION_DENIED_TITLE
+                if hasattr(ApiErrors, "PERMISSION_DENIED_TITLE")
+                else "Permission Denied",
+                detail=str(exc),
+            )
+        )
+
     elif isinstance(exc, UnprocessableEntityException):
         status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
         determined_message = str(exc)

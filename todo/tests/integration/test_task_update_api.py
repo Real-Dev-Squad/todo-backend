@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 
 from bson import ObjectId
@@ -15,16 +15,31 @@ class AuthenticatedMongoTestCase(BaseMongoTestCase):
     def setUp(self):
         super().setUp()
         self.client = APIClient()
+        self._init_test_user()
         self._setup_auth_cookies()
 
-    def _setup_auth_cookies(self):
-        user_data = {
-            "user_id": str(ObjectId()),
+    def _init_test_user(self):
+        self.user_id = ObjectId()
+        self.user_data = {
+            "user_id": str(self.user_id),
             "google_id": "test_google_id",
             "email": "test@example.com",
             "name": "Test User",
         }
-        tokens = generate_google_token_pair(user_data)
+
+        self.db.users.insert_one(
+            {
+                "_id": self.user_id,
+                "google_id": self.user_data["google_id"],
+                "email_id": self.user_data["email"],
+                "name": self.user_data["name"],
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc),
+            }
+        )
+
+    def _setup_auth_cookies(self):
+        tokens = generate_google_token_pair(self.user_data)
         self.client.cookies["ext-access"] = tokens["access_token"]
         self.client.cookies["ext-refresh"] = tokens["refresh_token"]
 
@@ -38,6 +53,9 @@ class TaskUpdateAPIIntegrationTest(AuthenticatedMongoTestCase):
         self.task_id = ObjectId()
         doc["_id"] = self.task_id
         doc.pop("id", None)
+        doc["assignee"] = str(self.user_id)
+        doc["createdBy"] = str(self.user_id)
+
         doc["createdAt"] = datetime.utcnow() - timedelta(days=1)
         self.db.tasks.insert_one(doc)
 

@@ -183,7 +183,6 @@ class TaskService:
     def get_task_by_id(cls, task_id: str) -> TaskDTO:
         try:
             task_model = TaskRepository.get_by_id(task_id)
-            print(task_model)
             if not task_model:
                 raise TaskNotFoundException(task_id)
             return cls.prepare_task_dto(task_model)

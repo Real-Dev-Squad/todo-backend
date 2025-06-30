@@ -14,16 +14,31 @@ class AuthenticatedMongoTestCase(BaseMongoTestCase):
     def setUp(self):
         super().setUp()
         self.client = APIClient()
+        self._init_test_user()
         self._setup_auth_cookies()
 
-    def _setup_auth_cookies(self):
-        user_data = {
-            "user_id": str(ObjectId()),
+    def _init_test_user(self):
+        self.user_id = ObjectId()
+        self.user_data = {
+            "user_id": str(self.user_id),
             "google_id": "test_google_id",
             "email": "test@example.com",
             "name": "Test User",
         }
-        tokens = generate_google_token_pair(user_data)
+
+        self.db.users.insert_one(
+            {
+                "_id": self.user_id,
+                "google_id": self.user_data["google_id"],
+                "email_id": self.user_data["email"],
+                "name": self.user_data["name"],
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc),
+            }
+        )
+
+    def _setup_auth_cookies(self):
+        tokens = generate_google_token_pair(self.user_data)
         self.client.cookies["ext-access"] = tokens["access_token"]
         self.client.cookies["ext-refresh"] = tokens["refresh_token"]
 
@@ -40,6 +55,8 @@ class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
         task_fixture.pop("id", None)
         task_fixture["displayId"] = "#IT-DEF"
         task_fixture["status"] = status
+        task_fixture["assignee"] = str(self.user_id)
+        task_fixture["createdBy"] = str(self.user_id)
         task_fixture["priority"] = TaskPriority.MEDIUM.value
         task_fixture["createdAt"] = datetime.now(timezone.utc)
         if due_at:
@@ -58,7 +75,6 @@ class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
 
         url = reverse("task_detail", args=[task_id]) + "?action=defer"
         response = self.client.patch(url, data={"deferredTill": deferred_till.isoformat()}, format="json")
-
         self.assertEqual(response.status_code, HTTPStatus.OK)
         response_data = response.json()
         self.assertIn("deferredDetails", response_data)

@@ -176,7 +176,7 @@ class TaskService:
     def prepare_user_dto(cls, user_id: str) -> UserDTO:
         user = UserRepository.get_by_id(user_id)
         if user:
-            return UserDTO(id=user_id, name=user.name)
+            return UserDTO(id=str(user_id), name=user.name)
         raise UserNotFoundException(user_id)
 
     @classmethod

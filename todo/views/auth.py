@@ -4,7 +4,6 @@ from rest_framework.request import Request
 from rest_framework import status
 from django.http import HttpResponseRedirect, HttpResponse
 from django.conf import settings
-
 from todo.services.google_oauth_service import GoogleOAuthService
 from todo.services.user_service import UserService
 from todo.utils.google_jwt_utils import (

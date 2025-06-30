@@ -96,8 +96,12 @@ class TaskRepository(MongoRepository):
 
         assignee_id = task.get("assignee")
 
-        if assignee_id != user_id:
-            raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+        if assignee_id:
+            if assignee_id != user_id:
+                raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+        else:
+            if user_id != task.get("createdBy"):
+                raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
 
         deleted_task_data = tasks_collection.find_one_and_update(
             {"_id": task_id},

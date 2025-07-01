@@ -129,7 +129,7 @@ class TaskDetailView(APIView):
             serializer.is_valid(raise_exception=True)
 
             updated_task_dto = TaskService.update_task(
-                task_id=(task_id), validated_data=serializer.validated_data, user_id=user["user_id"]
+                task_id=task_id, validated_data=serializer.validated_data, user_id=user["user_id"]
             )
         else:
             raise ValidationError({"action": ValidationErrors.UNSUPPORTED_ACTION.format(action)})

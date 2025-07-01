@@ -2,45 +2,10 @@ from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 from bson import ObjectId
 from django.urls import reverse
-from rest_framework.test import APIClient
 from todo.constants.messages import ApiErrors, ValidationErrors
 from todo.constants.task import MINIMUM_DEFERRAL_NOTICE_DAYS, TaskPriority, TaskStatus
-from todo.tests.integration.base_mongo_test import BaseMongoTestCase
+from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
 from todo.tests.fixtures.task import tasks_db_data
-from todo.utils.google_jwt_utils import generate_google_token_pair
-
-
-class AuthenticatedMongoTestCase(BaseMongoTestCase):
-    def setUp(self):
-        super().setUp()
-        self.client = APIClient()
-        self._init_test_user()
-        self._setup_auth_cookies()
-
-    def _init_test_user(self):
-        self.user_id = ObjectId()
-        self.user_data = {
-            "user_id": str(self.user_id),
-            "google_id": "test_google_id",
-            "email": "test@example.com",
-            "name": "Test User",
-        }
-
-        self.db.users.insert_one(
-            {
-                "_id": self.user_id,
-                "google_id": self.user_data["google_id"],
-                "email_id": self.user_data["email"],
-                "name": self.user_data["name"],
-                "created_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc),
-            }
-        )
-
-    def _setup_auth_cookies(self):
-        tokens = generate_google_token_pair(self.user_data)
-        self.client.cookies["ext-access"] = tokens["access_token"]
-        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
 
 
 class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):

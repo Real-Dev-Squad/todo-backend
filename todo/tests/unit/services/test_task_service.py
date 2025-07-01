@@ -26,47 +26,10 @@ from todo.repositories.task_repository import TaskRepository
 from todo.models.label import LabelModel
 from todo.models.common.pyobjectid import PyObjectId
 from rest_framework.exceptions import ValidationError as DRFValidationError
-from rest_framework.test import APIClient
-from todo.tests.integration.base_mongo_test import BaseMongoTestCase
-from todo.models.user import UserModel
+from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
 
 
-class AuthenticatedTestCase(BaseMongoTestCase):
-    def setUp(self):
-        super().setUp()
-        self.client = APIClient()
-        self._init_test_user()
-
-    def _init_test_user(self):
-        self.user_id = ObjectId()
-        self.user_data = {
-            "user_id": str(self.user_id),
-            "google_id": "test_google_id",
-            "email": "test@example.com",
-            "name": "Test User",
-        }
-        self.user_model = UserModel(
-            id=self.user_id,
-            google_id=self.user_data["google_id"],
-            email_id=self.user_data["email"],
-            name=self.user_data["name"],
-            createdAt=datetime.now(timezone.utc),
-            updatedAt=datetime.now(timezone.utc),
-        )
-
-        self.db.users.insert_one(
-            {
-                "_id": self.user_id,
-                "google_id": self.user_data["google_id"],
-                "email_id": self.user_data["email"],
-                "name": self.user_data["name"],
-                "created_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc),
-            }
-        )
-
-
-class TaskServiceTests(AuthenticatedTestCase):
+class TaskServiceTests(AuthenticatedMongoTestCase):
     @patch("todo.services.task_service.reverse_lazy", return_value="/v1/tasks")
     def setUp(self, mock_reverse_lazy):
         super().setUp()
@@ -81,7 +44,7 @@ class TaskServiceTests(AuthenticatedTestCase):
     ):
         mock_get_all.return_value = tasks_models
         mock_label_repo.return_value = label_models
-        mock_user_repo.return_value = self.user_model
+        mock_user_repo.return_value = self.get_user_model()
 
         mock_page = MagicMock(spec=Page)
         mock_page.object_list = [tasks_models[0]]
@@ -116,7 +79,7 @@ class TaskServiceTests(AuthenticatedTestCase):
     ):
         mock_get_all.return_value = tasks_models
         mock_label_repo.return_value = label_models
-        mock_user_repo.return_value = self.user_model
+        mock_user_repo.return_value = self.get_user_model()
 
         mock_page = MagicMock(spec=Page)
         mock_page.object_list = [tasks_models[0]]
@@ -167,7 +130,7 @@ class TaskServiceTests(AuthenticatedTestCase):
     def test_prepare_task_dto_maps_model_to_dto(self, mock_label_repo: Mock, mock_user_repo: Mock):
         task_model = tasks_models[0]
         mock_label_repo.return_value = label_models
-        mock_user_repo.return_value = self.user_model
+        mock_user_repo.return_value = self.get_user_model()
 
         result: TaskDTO = TaskService.prepare_task_dto(task_model)
 
@@ -179,13 +142,13 @@ class TaskServiceTests(AuthenticatedTestCase):
     @patch("todo.services.task_service.UserRepository.get_by_id")
     def test_prepare_user_dto_maps_model_to_dto(self, mock_user_repo: Mock):
         user_id = self.user_id
-        mock_user_repo.return_value = self.user_model
+        mock_user_repo.return_value = self.get_user_model()
 
         result: UserDTO = TaskService.prepare_user_dto(user_id)
 
         self.assertIsInstance(result, UserDTO)
         self.assertEqual(result.id, str(user_id))
-        self.assertEqual(result.name, self.user_model.name)
+        self.assertEqual(result.name, self.user_data["name"])
 
     def test_validate_pagination_params_with_valid_params(self):
         TaskService._validate_pagination_params(1, 10)
@@ -207,7 +170,7 @@ class TaskServiceTests(AuthenticatedTestCase):
     @patch("todo.services.task_service.UserRepository.get_by_id")
     def test_prepare_label_dtos_converts_ids_to_dtos(self, mock_user_repo: Mock):
         label_ids = ["label_id_1", "label_id_2"]
-        mock_user_repo.return_value = self.user_model
+        mock_user_repo.return_value = self.get_user_model()
 
         with patch("todo.services.task_service.LabelRepository.list_by_ids") as mock_list_by_ids:
             mock_list_by_ids.return_value = label_models

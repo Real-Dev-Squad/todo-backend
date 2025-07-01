@@ -1,5 +1,5 @@
 from unittest import TestCase
-from rest_framework.test import APIClient, APIRequestFactory
+from rest_framework.test import APIRequestFactory
 from rest_framework.reverse import reverse
 from rest_framework import status
 from unittest.mock import patch, Mock
@@ -8,7 +8,7 @@ from django.conf import settings
 from datetime import datetime, timedelta, timezone
 from bson.objectid import ObjectId
 from bson.errors import InvalidId as BsonInvalidId
-from todo.tests.integration.base_mongo_test import BaseMongoTestCase
+from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
 from todo.views.task import TaskListView
 from todo.dto.user_dto import UserDTO
 from todo.dto.task_dto import TaskDTO
@@ -21,44 +21,10 @@ from todo.exceptions.task_exceptions import TaskNotFoundException, Unprocessable
 from todo.constants.messages import ValidationErrors, ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 from rest_framework.exceptions import ValidationError as DRFValidationError
-from todo.utils.google_jwt_utils import generate_google_token_pair
 from todo.dto.deferred_details_dto import DeferredDetailsDTO
 
 
-class AuthenticatedTestCase(BaseMongoTestCase):
-    def setUp(self):
-        super().setUp()
-        self.client = APIClient()
-        self._init_test_user()
-        self._setup_auth_cookies()
-
-    def _init_test_user(self):
-        self.user_id = ObjectId()
-        self.user_data = {
-            "user_id": str(self.user_id),
-            "google_id": "test_google_id",
-            "email": "test@example.com",
-            "name": "Test User",
-        }
-
-        self.db.users.insert_one(
-            {
-                "_id": self.user_id,
-                "google_id": self.user_data["google_id"],
-                "email_id": self.user_data["email"],
-                "name": self.user_data["name"],
-                "created_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc),
-            }
-        )
-
-    def _setup_auth_cookies(self):
-        tokens = generate_google_token_pair(self.user_data)
-        self.client.cookies["ext-access"] = tokens["access_token"]
-        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
-
-
-class TaskViewTests(AuthenticatedTestCase):
+class TaskViewTests(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.url = reverse("tasks")
@@ -229,7 +195,7 @@ class TaskViewTest(TestCase):
         self.assertTrue("page" in error_detail or "limit" in error_detail)
 
 
-class CreateTaskViewTests(AuthenticatedTestCase):
+class CreateTaskViewTests(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.url = reverse("tasks")
@@ -341,7 +307,7 @@ class CreateTaskViewTests(AuthenticatedTestCase):
             self.assertEqual(str(e), "Database exploded")
 
 
-class TaskDeleteViewTests(AuthenticatedTestCase):
+class TaskDeleteViewTests(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.valid_task_id = str(ObjectId())
@@ -371,7 +337,7 @@ class TaskDeleteViewTests(AuthenticatedTestCase):
         self.assertIn(ValidationErrors.INVALID_TASK_ID_FORMAT, response.data["message"])
 
 
-class TaskDetailViewPatchTests(AuthenticatedTestCase):
+class TaskDetailViewPatchTests(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.task_id_str = str(ObjectId())

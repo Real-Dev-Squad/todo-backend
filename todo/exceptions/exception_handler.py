@@ -204,9 +204,7 @@ def handle_exception(exc, context):
         status_code = status.HTTP_403_FORBIDDEN
         error_list.append(
             ApiErrorDetail(
-                title=ApiErrors.PERMISSION_DENIED_TITLE
-                if hasattr(ApiErrors, "PERMISSION_DENIED_TITLE")
-                else "Permission Denied",
+                title=ApiErrors.UNAUTHORIZED_TITLE if hasattr(ApiErrors, "UNAUTHORIZED_TITLE") else "Permission Denied",
                 detail=str(exc),
             )
         )

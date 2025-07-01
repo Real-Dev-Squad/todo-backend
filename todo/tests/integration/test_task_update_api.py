@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 
 from bson import ObjectId
@@ -20,7 +20,7 @@ class TaskUpdateAPIIntegrationTest(AuthenticatedMongoTestCase):
         doc["assignee"] = str(self.user_id)
         doc["createdBy"] = str(self.user_id)
 
-        doc["createdAt"] = datetime.utcnow() - timedelta(days=1)
+        doc["createdAt"] = datetime.now(timezone.utc) - timedelta(days=1)
         self.db.tasks.insert_one(doc)
 
         self.valid_id = str(self.task_id)

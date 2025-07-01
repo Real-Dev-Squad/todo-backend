@@ -219,12 +219,16 @@ class TaskService:
         if not current_task:
             raise TaskNotFoundException(task_id)
 
-        if current_task.assignee:
-            if current_task.assignee != user_id:
-                raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
-        else:
-            if current_task.createdBy != user_id:
-                raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+        if current_task.assignee and current_task.assignee != user_id:
+            raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+
+        if not current_task.assignee and current_task.createdBy != user_id:
+            raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+
+        if validated_data.get("assignee"):
+            assignee_data = UserRepository.get_by_id(validated_data["assignee"])
+            if not assignee_data:
+                raise UserNotFoundException(validated_data["assignee"])
 
         update_payload = {}
         enum_fields = {"priority": TaskPriority, "status": TaskStatus}
@@ -255,12 +259,11 @@ class TaskService:
         if not current_task:
             raise TaskNotFoundException(task_id)
 
-        if current_task.assignee:
-            if current_task.assignee != user_id:
-                raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
-        else:
-            if current_task.createdBy != user_id:
-                raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+        if current_task.assignee and current_task.assignee != user_id:
+            raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+
+        if not current_task.assignee and current_task.createdBy != user_id:
+            raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
 
         if current_task.status == TaskStatus.DONE:
             raise TaskStateConflictException(ValidationErrors.CANNOT_DEFER_A_DONE_TASK)

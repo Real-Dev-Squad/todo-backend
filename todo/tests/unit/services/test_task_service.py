@@ -289,7 +289,7 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
 class TaskServiceUpdateTests(TestCase):
     def setUp(self):
         self.task_id_str = str(ObjectId())
-        self.user_id_str = "test_user_123"
+        self.user_id_str = str(ObjectId())
         self.default_task_model = TaskModel(
             id=ObjectId(self.task_id_str),
             displayId="#TSK1",
@@ -317,71 +317,81 @@ class TaskServiceUpdateTests(TestCase):
             createdAt=datetime.now(timezone.utc),
         )
 
-    @patch("todo.services.task_service.TaskRepository.get_by_id")
-    @patch("todo.services.task_service.TaskRepository.update")
-    @patch("todo.services.task_service.LabelRepository.list_by_ids")
-    @patch("todo.services.task_service.TaskService.prepare_task_dto")
-    def test_update_task_success_full_payload(
-        self, mock_prepare_dto, mock_list_labels, mock_repo_update, mock_repo_get_by_id
-    ):
-        mock_repo_get_by_id.return_value = self.default_task_model
 
-        updated_task_model_from_repo = self.default_task_model.model_copy(deep=True)
-        updated_task_model_from_repo.title = "Updated Title via Service"
-        updated_task_model_from_repo.status = TaskStatus.IN_PROGRESS
-        updated_task_model_from_repo.priority = TaskPriority.HIGH
-        updated_task_model_from_repo.description = "New Description"
-        updated_task_model_from_repo.assignee = "new_assignee_id"
-        updated_task_model_from_repo.dueAt = datetime.now(timezone.utc) + timedelta(days=5)
-        updated_task_model_from_repo.startedAt = datetime.now(timezone.utc) - timedelta(hours=2)
-        updated_task_model_from_repo.isAcknowledged = True
-        updated_task_model_from_repo.labels = [PyObjectId(self.label_id_1_str)]
-        updated_task_model_from_repo.updatedBy = self.user_id_str
-        updated_task_model_from_repo.updatedAt = datetime.now(timezone.utc)
-        mock_repo_update.return_value = updated_task_model_from_repo
+@patch("todo.services.task_service.UserRepository.get_by_id")
+@patch("todo.services.task_service.TaskRepository.get_by_id")
+@patch("todo.services.task_service.TaskRepository.update")
+@patch("todo.services.task_service.LabelRepository.list_by_ids")
+@patch("todo.services.task_service.TaskService.prepare_task_dto")
+def test_update_task_success_full_payload(
+    mock_prepare_dto,
+    mock_list_labels,
+    mock_repo_update,
+    mock_repo_get_by_id,
+    mock_user_get_by_id,
+):
+    user_id_str = str(ObjectId())
+    task_id_str = str(ObjectId())
+    label_id_1_str = str(ObjectId())
 
-        mock_dto_response = MagicMock(spec=TaskDTO)
-        mock_prepare_dto.return_value = mock_dto_response
+    mock_user_get_by_id.return_value = MagicMock()
 
-        mock_list_labels.return_value = [self.mock_label_1]
+    default_task_model = MagicMock(spec=TaskModel)
+    mock_repo_get_by_id.return_value = default_task_model
 
-        validated_data_from_serializer = {
-            "title": "Updated Title via Service",
-            "description": "New Description",
-            "priority": TaskPriority.HIGH.name,
-            "status": TaskStatus.IN_PROGRESS.name,
-            "assignee": "new_assignee_id",
-            "labels": [self.label_id_1_str],
-            "dueAt": datetime.now(timezone.utc) + timedelta(days=5),
-            "startedAt": datetime.now(timezone.utc) - timedelta(hours=2),
-            "isAcknowledged": True,
-        }
+    updated_task_model_from_repo = default_task_model.model_copy(deep=True)
+    updated_task_model_from_repo.title = "Updated Title via Service"
+    updated_task_model_from_repo.status = TaskStatus.IN_PROGRESS
+    updated_task_model_from_repo.priority = TaskPriority.HIGH
+    updated_task_model_from_repo.description = "New Description"
+    updated_task_model_from_repo.assignee = user_id_str
+    updated_task_model_from_repo.dueAt = datetime.now(timezone.utc) + timedelta(days=5)
+    updated_task_model_from_repo.startedAt = datetime.now(timezone.utc) - timedelta(hours=2)
+    updated_task_model_from_repo.isAcknowledged = True
+    updated_task_model_from_repo.labels = [PyObjectId(label_id_1_str)]
+    updated_task_model_from_repo.updatedBy = user_id_str
+    updated_task_model_from_repo.updatedAt = datetime.now(timezone.utc)
 
-        result_dto = TaskService.update_task(self.task_id_str, validated_data_from_serializer, self.user_id_str)
+    mock_repo_update.return_value = updated_task_model_from_repo
 
-        mock_repo_get_by_id.assert_called_once_with(self.task_id_str)
-        mock_list_labels.assert_called_once_with([PyObjectId(self.label_id_1_str)])
+    mock_dto_response = MagicMock(spec=TaskDTO)
+    mock_prepare_dto.return_value = mock_dto_response
 
-        mock_repo_update.assert_called_once()
-        call_args = mock_repo_update.call_args[0]
-        self.assertEqual(call_args[0], self.task_id_str)
-        update_payload_sent_to_repo = call_args[1]
+    mock_label = MagicMock()
+    mock_list_labels.return_value = [mock_label]
 
-        self.assertEqual(update_payload_sent_to_repo["title"], validated_data_from_serializer["title"])
-        self.assertEqual(update_payload_sent_to_repo["status"], TaskStatus.IN_PROGRESS.value)
-        self.assertEqual(update_payload_sent_to_repo["priority"], TaskPriority.HIGH.value)
-        self.assertEqual(update_payload_sent_to_repo["description"], validated_data_from_serializer["description"])
-        self.assertEqual(update_payload_sent_to_repo["assignee"], validated_data_from_serializer["assignee"])
-        self.assertEqual(update_payload_sent_to_repo["dueAt"], validated_data_from_serializer["dueAt"])
-        self.assertEqual(update_payload_sent_to_repo["startedAt"], validated_data_from_serializer["startedAt"])
-        self.assertEqual(
-            update_payload_sent_to_repo["isAcknowledged"], validated_data_from_serializer["isAcknowledged"]
-        )
-        self.assertEqual(update_payload_sent_to_repo["labels"], [PyObjectId(self.label_id_1_str)])
-        self.assertEqual(update_payload_sent_to_repo["updatedBy"], self.user_id_str)
+    validated_data_from_serializer = {
+        "title": "Updated Title via Service",
+        "description": "New Description",
+        "priority": TaskPriority.HIGH.name,
+        "status": TaskStatus.IN_PROGRESS.name,
+        "assignee": user_id_str,
+        "labels": [label_id_1_str],
+        "dueAt": updated_task_model_from_repo.dueAt,
+        "startedAt": updated_task_model_from_repo.startedAt,
+        "isAcknowledged": True,
+    }
 
-        mock_prepare_dto.assert_called_once_with(updated_task_model_from_repo)
-        self.assertEqual(result_dto, mock_dto_response)
+    result_dto = TaskService.update_task(task_id_str, validated_data_from_serializer, user_id_str)
+
+    mock_repo_get_by_id.assert_called_once_with(task_id_str)
+    mock_list_labels.assert_called_once_with([PyObjectId(label_id_1_str)])
+    mock_repo_update.assert_called_once()
+    update_payload = mock_repo_update.call_args[0][1]
+
+    assert update_payload["title"] == validated_data_from_serializer["title"]
+    assert update_payload["status"] == TaskStatus.IN_PROGRESS.value
+    assert update_payload["priority"] == TaskPriority.HIGH.value
+    assert update_payload["description"] == validated_data_from_serializer["description"]
+    assert update_payload["assignee"] == validated_data_from_serializer["assignee"]
+    assert update_payload["dueAt"] == validated_data_from_serializer["dueAt"]
+    assert update_payload["startedAt"] == validated_data_from_serializer["startedAt"]
+    assert update_payload["isAcknowledged"] == validated_data_from_serializer["isAcknowledged"]
+    assert update_payload["labels"] == [PyObjectId(label_id_1_str)]
+    assert update_payload["updatedBy"] == user_id_str
+
+    mock_prepare_dto.assert_called_once_with(updated_task_model_from_repo)
+    assert result_dto == mock_dto_response
 
     @patch("todo.services.task_service.TaskRepository.get_by_id")
     @patch("todo.services.task_service.TaskRepository.update")
@@ -623,13 +633,13 @@ class TaskServiceDeferTests(TestCase):
             title="Completed Task",
             status=TaskStatus.DONE.value,
             createdAt=datetime.now(timezone.utc),
-            createdBy="test_user",
+            createdBy=str(ObjectId()),
         )
         mock_repo_get_by_id.return_value = done_task
         valid_deferred_till = datetime.now(timezone.utc) + timedelta(days=5)
 
         with self.assertRaises(TaskStateConflictException) as context:
-            TaskService.defer_task(self.task_id, valid_deferred_till, "test_user")
+            TaskService.defer_task(self.task_id, valid_deferred_till, done_task.createdBy)
 
         self.assertEqual(str(context.exception), ValidationErrors.CANNOT_DEFER_A_DONE_TASK)
         mock_repo_get_by_id.assert_called_once_with(self.task_id)

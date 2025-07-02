@@ -145,6 +145,7 @@ class TaskService:
 
         return [
             LabelDTO(
+                id=str(label_model.id),
                 name=label_model.name,
                 color=label_model.color,
                 createdAt=label_model.createdAt,

@@ -16,6 +16,10 @@ class LabelModelTest(TestCase):
         self.assertFalse(label.isDeleted)  # Default value
         self.assertIsNone(label.updatedAt)  # Default value
         self.assertIsNone(label.updatedBy)  # Default value
+        if "_id" in self.valid_data:
+            self.assertIsNotNone(label.id)
+        else:
+            self.assertIsNone(label.id)
 
     def test_lable_model_throws_error_when_missing_required_fields(self):
         incomplete_data = self.valid_data.copy()

@@ -44,55 +44,34 @@ class LabelRepositoryTests(TestCase):
         self.mock_collection.assert_not_called()
 
     def test_get_all_returns_paginated_labels(self):
-<<<<<<< Updated upstream
-        self.mock_collection.count_documents.return_value = len(self.label_data)
-        self.mock_collection.find.return_value.sort.return_value.skip.return_value.limit.return_value = self.label_data
-=======
-        mock_agg_result = iter([{
-            "total": [{"count": len(self.label_data)}],
-            "data": self.label_data,
-        }])
+        mock_agg_result = iter(
+            [
+                {
+                    "total": [{"count": len(self.label_data)}],
+                    "data": self.label_data,
+                }
+            ]
+        )
         self.mock_collection.aggregate.return_value = mock_agg_result
->>>>>>> Stashed changes
 
         total, labels = LabelRepository.get_all(page=1, limit=2, search="")
 
         self.assertEqual(total, len(self.label_data))
         self.assertEqual(len(labels), len(self.label_data))
         self.assertTrue(all(isinstance(label, LabelModel) for label in labels))
-<<<<<<< Updated upstream
-
-        self.mock_collection.count_documents.assert_called_once()
-        self.mock_collection.find.assert_called_once()
-=======
         self.mock_collection.aggregate.assert_called_once()
->>>>>>> Stashed changes
 
     def test_get_all_applies_search_filter(self):
         search_term = "Label 1"
         escaped_search = re.escape(search_term)
-<<<<<<< Updated upstream
-        expected_query = {
-            "isDeleted": {"$ne": True},
-            "name": {"$regex": escaped_search, "$options": "i"},
-        }
-
-        self.mock_collection.count_documents.return_value = 1
-        self.mock_collection.find.return_value.sort.return_value.skip.return_value.limit.return_value = self.label_data
-
-        LabelRepository.get_all(page=1, limit=2, search=search_term)
-
-        self.mock_collection.count_documents.assert_called_once_with(expected_query)
-        self.mock_collection.find.assert_called_once_with(expected_query)
-
-    def test_get_all_returns_empty_list_when_no_labels(self):
-        self.mock_collection.count_documents.return_value = 0
-        self.mock_collection.find.return_value.sort.return_value.skip.return_value.limit.return_value = []
-=======
-        mock_agg_result = iter([{
-            "total": [{"count": 1}],
-            "data": self.label_data[:1],
-        }])
+        mock_agg_result = iter(
+            [
+                {
+                    "total": [{"count": 1}],
+                    "data": self.label_data[:1],
+                }
+            ]
+        )
         self.mock_collection.aggregate.return_value = mock_agg_result
 
         total, labels = LabelRepository.get_all(page=1, limit=2, search=search_term)
@@ -105,44 +84,33 @@ class LabelRepositoryTests(TestCase):
         self.assertEqual(match_stage["name"], {"$regex": escaped_search, "$options": "i"})
 
     def test_get_all_returns_empty_list_when_no_labels(self):
-        mock_agg_result = iter([{
-            "total": [],
-            "data": [],
-        }])
+        mock_agg_result = iter(
+            [
+                {
+                    "total": [],
+                    "data": [],
+                }
+            ]
+        )
         self.mock_collection.aggregate.return_value = mock_agg_result
->>>>>>> Stashed changes
 
         total, labels = LabelRepository.get_all(page=1, limit=2, search="")
 
         self.assertEqual(total, 0)
         self.assertEqual(labels, [])
-<<<<<<< Updated upstream
-=======
         self.mock_collection.aggregate.assert_called_once()
->>>>>>> Stashed changes
 
     def test_get_all_returns_empty_list_when_search_term_does_not_match(self):
         search_term = "random search term"
         escaped_search = re.escape(search_term)
-<<<<<<< Updated upstream
-        expected_query = {
-            "isDeleted": {"$ne": True},
-            "name": {"$regex": escaped_search, "$options": "i"},
-        }
-        self.mock_collection.count_documents.return_value = 0
-        self.mock_collection.find.return_value.sort.return_value.skip.return_value.limit.return_value = []
-
-        total, labels = LabelRepository.get_all(page=1, limit=2, search=search_term)
-
-        self.assertEqual(total, 0)
-        self.assertEqual(labels, [])
-        self.mock_collection.count_documents.assert_called_once_with(expected_query)
-        self.mock_collection.find.assert_called_once_with(expected_query)
-=======
-        mock_agg_result = iter([{
-            "total": [],
-            "data": [],
-        }])
+        mock_agg_result = iter(
+            [
+                {
+                    "total": [],
+                    "data": [],
+                }
+            ]
+        )
         self.mock_collection.aggregate.return_value = mock_agg_result
 
         total, labels = LabelRepository.get_all(page=1, limit=2, search=search_term)
@@ -153,31 +121,18 @@ class LabelRepositoryTests(TestCase):
         self.assertEqual(labels, [])
         self.mock_collection.aggregate.assert_called_once()
         self.assertEqual(match_stage["name"]["$regex"], escaped_search)
->>>>>>> Stashed changes
 
     def test_get_all_escapes_invalid_regex_characters(self):
         search_term = "122[]"
         escaped_search = re.escape(search_term)
-<<<<<<< Updated upstream
-        expected_query = {
-            "isDeleted": {"$ne": True},
-            "name": {"$regex": escaped_search, "$options": "i"},
-        }
-
-        self.mock_collection.count_documents.return_value = 0
-        self.mock_collection.find.return_value.sort.return_value.skip.return_value.limit.return_value = []
-
-        total, labels = LabelRepository.get_all(page=1, limit=10, search=search_term)
-
-        self.assertEqual(total, 0)
-        self.assertEqual(labels, [])
-        self.mock_collection.count_documents.assert_called_once_with(expected_query)
-        self.mock_collection.find.assert_called_once_with(expected_query)
-=======
-        mock_agg_result = iter([{
-            "total": [],
-            "data": [],
-        }])
+        mock_agg_result = iter(
+            [
+                {
+                    "total": [],
+                    "data": [],
+                }
+            ]
+        )
         self.mock_collection.aggregate.return_value = mock_agg_result
 
         total, labels = LabelRepository.get_all(page=1, limit=10, search=search_term)
@@ -188,4 +143,3 @@ class LabelRepositoryTests(TestCase):
         self.assertEqual(labels, [])
         self.mock_collection.aggregate.assert_called_once()
         self.assertEqual(match_stage["name"]["$regex"], escaped_search)
->>>>>>> Stashed changes

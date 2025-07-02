@@ -20,7 +20,4 @@ class LabelListView(APIView):
             limit=query.validated_data["limit"],
             search=query.validated_data["search"].strip(),
         )
-        return Response(
-            data=response.model_dump(mode="json", exclude_none=True), 
-            status=status.HTTP_200_OK
-        )
+        return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)

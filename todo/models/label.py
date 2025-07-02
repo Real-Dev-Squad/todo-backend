@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import ClassVar
 
 from todo.models.common.document import Document
-from todo.models.common.pyobjectid import PyObjectId
 
 
 class LabelModel(Document):

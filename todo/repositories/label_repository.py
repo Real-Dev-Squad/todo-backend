@@ -1,5 +1,4 @@
 from typing import List, Tuple
-from pymongo import ASCENDING
 from bson import ObjectId
 import re
 
@@ -49,13 +48,9 @@ class LabelRepository(MongoRepository):
             {
                 "$facet": {
                     "total": [{"$count": "count"}],
-                    "data": [
-                        {"$sort": {"name": 1}},
-                        {"$skip": skip},
-                        {"$limit": limit}
-                    ]
+                    "data": [{"$sort": {"name": 1}}, {"$skip": skip}, {"$limit": limit}],
                 }
-            }
+            },
         ]
 
         aggregation_result = labels_collection.aggregate(pipeline)

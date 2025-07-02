@@ -54,6 +54,7 @@ class ValidationErrors:
     PAGE_POSITIVE = "Page must be a positive integer"
     LIMIT_POSITIVE = "Limit must be a positive integer"
     MAX_LIMIT_EXCEEDED = "Maximum limit of {0} exceeded"
+    INVALID_SEARCH_QUERY_TYPE = "Search query must be a string."
     MISSING_LABEL_IDS = "The following label ID(s) do not exist: {0}."
     INVALID_TASK_ID_FORMAT = "Please enter a valid Task ID format."
     UNSUPPORTED_ACTION = "Unsupported action '{0}'."

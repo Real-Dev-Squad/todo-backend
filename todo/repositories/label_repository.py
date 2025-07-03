@@ -1,5 +1,4 @@
 from typing import List, Tuple
-from pymongo import ASCENDING
 from bson import ObjectId
 import re
 
@@ -41,10 +40,25 @@ class LabelRepository(MongoRepository):
 
         total_count = labels_collection.count_documents(query)
 
-        zero_indexed_page = int(page) - 1
+        zero_indexed_page = page - 1
         skip = zero_indexed_page * limit
 
-        labels_cursor = labels_collection.find(query).sort("name", ASCENDING).skip(skip).limit(limit)
-        labels = [LabelModel(**label) for label in labels_cursor]
+        pipeline = [
+            {"$match": query},
+            {
+                "$facet": {
+                    "total": [{"$count": "count"}],
+                    "data": [{"$sort": {"name": 1}}, {"$skip": skip}, {"$limit": limit}],
+                }
+            },
+        ]
+
+        aggregation_result = labels_collection.aggregate(pipeline)
+        result = next(aggregation_result, {"total": [], "data": []})
+
+        total_docs = result.get("total", [])
+        total_count = total_docs[0].get("count", 0) if total_docs else 0
+
+        labels = [LabelModel(**doc) for doc in result.get("data", [])]
 
         return total_count, labels

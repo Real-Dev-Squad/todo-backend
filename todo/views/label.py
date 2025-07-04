@@ -18,6 +18,6 @@ class LabelListView(APIView):
         response = LabelService.get_labels(
             page=query.validated_data["page"],
             limit=query.validated_data["limit"],
-            search=query.validated_data["search"].strip(),
+            search=query.validated_data["search"],
         )
         return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)

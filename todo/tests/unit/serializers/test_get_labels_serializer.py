@@ -70,3 +70,20 @@ class GetLabelQueryParamsSerializerTest(TestCase):
         serializer = GetLabelQueryParamsSerializer(data=data)
         self.assertTrue(serializer.is_valid())
         self.assertEqual(serializer.validated_data["limit"], max_limit)
+
+    def test_get_labels_search_field_strips_whitespace(self):
+        data = {"search": "   LabelName   "}
+        serializer = GetLabelQueryParamsSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.validated_data["search"], "LabelName")
+
+    def test_get_labels_search_field_returns_empty_string_for_blank_whitespace(self):
+        data = {"search": "     "}
+        serializer = GetLabelQueryParamsSerializer(data=data)
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.validated_data["search"], "")
+
+    def test_get_labels_default_search_value_is_empty_string(self):
+        serializer = GetLabelQueryParamsSerializer(data={})
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.validated_data["search"], "")

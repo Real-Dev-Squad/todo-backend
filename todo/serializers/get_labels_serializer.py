@@ -30,3 +30,6 @@ class GetLabelQueryParamsSerializer(serializers.Serializer):
             "invalid": ValidationErrors.INVALID_SEARCH_QUERY_TYPE,
         },
     )
+
+    def validate_search(self, value: str) -> str:
+        return value.strip() if value else ""

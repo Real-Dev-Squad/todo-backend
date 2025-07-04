@@ -21,14 +21,6 @@ class LabelRepository(MongoRepository):
     def get_all(cls, page, limit, search) -> Tuple[int, List[LabelModel]]:
         """
         Get paginated list of labels with optional search on name.
-
-        Args:
-            page (int): Page number (default: 1)
-            limit (int): Number of items per page (default: 10)
-            search (str): Search term for label name
-
-        Returns:
-            Tuple[int, List[LabelModel]]: Total count and paginated label list
         """
         labels_collection = cls.get_collection()
 
@@ -37,8 +29,6 @@ class LabelRepository(MongoRepository):
         if search:
             escaped_search = re.escape(search)
             query["name"] = {"$regex": escaped_search, "$options": "i"}
-
-        total_count = labels_collection.count_documents(query)
 
         zero_indexed_page = page - 1
         skip = zero_indexed_page * limit

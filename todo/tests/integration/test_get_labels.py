@@ -1,7 +1,9 @@
 from http import HTTPStatus
 from django.urls import reverse
+from django.conf import settings
 from bson import ObjectId
 
+from todo.constants.messages import ValidationErrors
 from todo.tests.fixtures.label import label_db_data
 from todo.tests.integration.base_mongo_test import BaseMongoTestCase
 from todo.constants.messages import ApiErrors
@@ -104,16 +106,18 @@ class LabelListAPIIntegrationTest(AuthenticatedMongoTestCase):
         data = response.json()
         self.assertEqual(data["statusCode"], 400)
         self.assertEqual(data["errors"][0]["source"]["parameter"], "limit")
-        self.assertIn("Limit must be a positive integer", data["errors"][0]["detail"])
+        self.assertIn(ValidationErrors.LIMIT_POSITIVE, data["errors"][0]["detail"])
 
     def test_get_labels_greater_than_max_limit_query_param(self):
         response = self.client.get(self.url, {"limit": 1000})
         self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
 
+        MAX_PAGE_LIMIT = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["MAX_PAGE_LIMIT"]
+
         data = response.json()
         self.assertEqual(data["statusCode"], 400)
         self.assertEqual(data["errors"][0]["source"]["parameter"], "limit")
-        self.assertIn("Ensure this value is less than or equal to 200.", data["errors"][0]["detail"])
+        self.assertIn(f"Ensure this value is less than or equal to {MAX_PAGE_LIMIT}.", data["errors"][0]["detail"])
 
     def test_get_labels_invalid_page_type_query_param(self):
         response = self.client.get(self.url, {"page": "invalid"})
@@ -131,4 +135,4 @@ class LabelListAPIIntegrationTest(AuthenticatedMongoTestCase):
         data = response.json()
         self.assertEqual(data["statusCode"], 400)
         self.assertEqual(data["errors"][0]["source"]["parameter"], "page")
-        self.assertIn("Page must be a positive integer", data["errors"][0]["detail"])
+        self.assertIn(ValidationErrors.PAGE_POSITIVE, data["errors"][0]["detail"])

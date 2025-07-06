@@ -107,14 +107,46 @@ class GoogleCallbackView(APIView):
         state = request.query_params.get("state")
         error = request.query_params.get("error")
 
-        frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
-
         if error:
+            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error={error}")
-        elif code and state:
-            return HttpResponseRedirect(f"{frontend_callback}?code={code}&state={state}")
-        else:
-            return HttpResponseRedirect(f"{frontend_callback}?error=missing_parameters")
+
+        if not code:
+            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
+            return HttpResponseRedirect(f"{frontend_callback}?error=missing_code")
+
+        if not state:
+            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
+            return HttpResponseRedirect(f"{frontend_callback}?error=missing_state")
+
+        stored_state = request.session.get("oauth_state")
+        if not stored_state or stored_state != state:
+            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
+            return HttpResponseRedirect(f"{frontend_callback}?error=invalid_state")
+
+        try:
+            google_data = GoogleOAuthService.handle_callback(code)
+            user = UserService.create_or_update_user(google_data)
+
+            tokens = generate_google_token_pair(
+                {
+                    "user_id": str(user.id),
+                    "google_id": user.google_id,
+                    "email": user.email_id,
+                    "name": user.name,
+                }
+            )
+
+            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
+            response = HttpResponseRedirect(f"{frontend_callback}?success=true")
+
+            self._set_auth_cookies(response, tokens)
+            request.session.pop("oauth_state", None)
+
+            return response
+        except Exception:
+            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
+            return HttpResponseRedirect(f"{frontend_callback}?error=auth_failed")
 
     @extend_schema(
         operation_id="google_callback_post",

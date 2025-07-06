@@ -8,7 +8,7 @@ from todo.exceptions.google_auth_exceptions import (
     GoogleRefreshTokenExpiredError,
 )
 
-from todo.constants.messages import AuthErrorMessages, ApiErrors
+from todo.constants.messages import AuthErrorMessages
 
 
 def generate_google_access_token(user_data: dict) -> str:
@@ -28,14 +28,11 @@ def generate_google_access_token(user_data: dict) -> str:
             "token_type": "access",
         }
 
-        token = jwt.encode(
-            payload=payload, key=settings.GOOGLE_JWT["SECRET_KEY"], algorithm=settings.GOOGLE_JWT["ALGORITHM"]
-        )
-
+        token = jwt.encode(payload=payload, key=settings.GOOGLE_JWT["PRIVATE_KEY"], algorithm=settings.GOOGLE_JWT["ALGORITHM"])
         return token
 
-    except Exception:
-        raise GoogleTokenInvalidError(ApiErrors.GOOGLE_API_ERROR)
+    except Exception as e:
+        raise GoogleTokenInvalidError(f"Token generation failed: {str(e)}")
 
 
 def generate_google_refresh_token(user_data: dict) -> str:
@@ -53,22 +50,17 @@ def generate_google_refresh_token(user_data: dict) -> str:
             "email": user_data["email"],
             "token_type": "refresh",
         }
-
-        token = jwt.encode(
-            payload=payload, key=settings.GOOGLE_JWT["SECRET_KEY"], algorithm=settings.GOOGLE_JWT["ALGORITHM"]
-        )
+        token = jwt.encode(payload=payload, key=settings.GOOGLE_JWT["PRIVATE_KEY"], algorithm=settings.GOOGLE_JWT["ALGORITHM"])
 
         return token
 
-    except Exception:
-        raise GoogleTokenInvalidError(ApiErrors.GOOGLE_API_ERROR)
+    except Exception as e:
+        raise GoogleTokenInvalidError(f"Refresh token generation failed: {str(e)}")
 
 
 def validate_google_access_token(token: str) -> dict:
     try:
-        payload = jwt.decode(
-            jwt=token, key=settings.GOOGLE_JWT["SECRET_KEY"], algorithms=[settings.GOOGLE_JWT["ALGORITHM"]]
-        )
+        payload = jwt.decode(jwt=token, key=settings.GOOGLE_JWT["PUBLIC_KEY"], algorithms=[settings.GOOGLE_JWT["ALGORITHM"]])
 
         if payload.get("token_type") != "access":
             raise GoogleTokenInvalidError(AuthErrorMessages.GOOGLE_TOKEN_INVALID)
@@ -77,16 +69,15 @@ def validate_google_access_token(token: str) -> dict:
 
     except jwt.ExpiredSignatureError:
         raise GoogleTokenExpiredError()
-    except jwt.InvalidTokenError:
-        raise GoogleTokenInvalidError(AuthErrorMessages.GOOGLE_TOKEN_INVALID)
+    except jwt.InvalidTokenError as e:
+        raise GoogleTokenInvalidError(f"Invalid token: {str(e)}")
+    except Exception as e:
+        raise GoogleTokenInvalidError(f"Token validation failed: {str(e)}")
 
 
 def validate_google_refresh_token(token: str) -> dict:
     try:
-        payload = jwt.decode(
-            jwt=token, key=settings.GOOGLE_JWT["SECRET_KEY"], algorithms=[settings.GOOGLE_JWT["ALGORITHM"]]
-        )
-
+        payload = jwt.decode(jwt=token, key=settings.GOOGLE_JWT["PUBLIC_KEY"], algorithms=[settings.GOOGLE_JWT["ALGORITHM"]])
         if payload.get("token_type") != "refresh":
             raise GoogleTokenInvalidError(AuthErrorMessages.GOOGLE_TOKEN_INVALID)
 
@@ -94,8 +85,10 @@ def validate_google_refresh_token(token: str) -> dict:
 
     except jwt.ExpiredSignatureError:
         raise GoogleRefreshTokenExpiredError()
-    except jwt.InvalidTokenError:
-        raise GoogleTokenInvalidError(AuthErrorMessages.GOOGLE_TOKEN_INVALID)
+    except jwt.InvalidTokenError as e:
+        raise GoogleTokenInvalidError(f"Invalid refresh token: {str(e)}")
+    except Exception as e:
+        raise GoogleTokenInvalidError(f"Refresh token validation failed: {str(e)}")
 
 
 def generate_google_token_pair(user_data: dict) -> dict:

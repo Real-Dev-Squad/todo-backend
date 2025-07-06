@@ -43,9 +43,52 @@ class TaskListView(APIView):
             ),
         ],
         responses={
-            200: GetTaskQueryParamsSerializer,
-            400: ApiErrorResponse,
-            500: ApiErrorResponse,
+            200: {
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string"},
+                                "title": {"type": "string"},
+                                "description": {"type": "string"},
+                                "status": {"type": "string"},
+                                "priority": {"type": "string"},
+                                "dueDate": {"type": "string", "format": "date-time"},
+                                "createdAt": {"type": "string", "format": "date-time"},
+                                "updatedAt": {"type": "string", "format": "date-time"},
+                            },
+                        },
+                    },
+                    "pagination": {
+                        "type": "object",
+                        "properties": {
+                            "page": {"type": "integer"},
+                            "limit": {"type": "integer"},
+                            "total": {"type": "integer"},
+                            "pages": {"type": "integer"},
+                        },
+                    },
+                },
+            },
+            400: {
+                "type": "object",
+                "properties": {
+                    "statusCode": {"type": "integer"},
+                    "message": {"type": "string"},
+                    "errors": {"type": "array"},
+                },
+            },
+            500: {
+                "type": "object",
+                "properties": {
+                    "statusCode": {"type": "integer"},
+                    "message": {"type": "string"},
+                    "errors": {"type": "array"},
+                },
+            },
         },
         examples=[
             OpenApiExample(
@@ -92,9 +135,36 @@ class TaskListView(APIView):
         tags=["tasks"],
         request=CreateTaskSerializer,
         responses={
-            201: CreateTaskResponse,
-            400: ApiErrorResponse,
-            500: ApiErrorResponse,
+            201: {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "title": {"type": "string"},
+                    "description": {"type": "string"},
+                    "status": {"type": "string"},
+                    "priority": {"type": "string"},
+                    "dueDate": {"type": "string", "format": "date-time"},
+                    "labels": {"type": "array", "items": {"type": "string"}},
+                    "createdAt": {"type": "string", "format": "date-time"},
+                    "updatedAt": {"type": "string", "format": "date-time"},
+                },
+            },
+            400: {
+                "type": "object",
+                "properties": {
+                    "statusCode": {"type": "integer"},
+                    "message": {"type": "string"},
+                    "errors": {"type": "array"},
+                },
+            },
+            500: {
+                "type": "object",
+                "properties": {
+                    "statusCode": {"type": "integer"},
+                    "message": {"type": "string"},
+                    "errors": {"type": "array"},
+                },
+            },
         },
         examples=[
             OpenApiExample(
@@ -202,9 +272,36 @@ class TaskDetailView(APIView):
             ),
         ],
         responses={
-            200: GetTaskByIdResponse,
-            404: ApiErrorResponse,
-            500: ApiErrorResponse,
+            200: {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "title": {"type": "string"},
+                    "description": {"type": "string"},
+                    "status": {"type": "string"},
+                    "priority": {"type": "string"},
+                    "dueDate": {"type": "string", "format": "date-time"},
+                    "labels": {"type": "array", "items": {"type": "string"}},
+                    "createdAt": {"type": "string", "format": "date-time"},
+                    "updatedAt": {"type": "string", "format": "date-time"},
+                },
+            },
+            404: {
+                "type": "object",
+                "properties": {
+                    "statusCode": {"type": "integer"},
+                    "message": {"type": "string"},
+                    "errors": {"type": "array"},
+                },
+            },
+            500: {
+                "type": "object",
+                "properties": {
+                    "statusCode": {"type": "integer"},
+                    "message": {"type": "string"},
+                    "errors": {"type": "array"},
+                },
+            },
         },
     )
     def get(self, request: Request, task_id: str):
@@ -231,8 +328,22 @@ class TaskDetailView(APIView):
         ],
         responses={
             204: None,
-            404: ApiErrorResponse,
-            500: ApiErrorResponse,
+            404: {
+                "type": "object",
+                "properties": {
+                    "statusCode": {"type": "integer"},
+                    "message": {"type": "string"},
+                    "errors": {"type": "array"},
+                },
+            },
+            500: {
+                "type": "object",
+                "properties": {
+                    "statusCode": {"type": "integer"},
+                    "message": {"type": "string"},
+                    "errors": {"type": "array"},
+                },
+            },
         },
     )
     def delete(self, request: Request, task_id: str):
@@ -266,10 +377,44 @@ class TaskDetailView(APIView):
         ],
         request=UpdateTaskSerializer,
         responses={
-            200: GetTaskByIdResponse,
-            400: ApiErrorResponse,
-            404: ApiErrorResponse,
-            500: ApiErrorResponse,
+            200: {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string"},
+                    "title": {"type": "string"},
+                    "description": {"type": "string"},
+                    "status": {"type": "string"},
+                    "priority": {"type": "string"},
+                    "dueDate": {"type": "string", "format": "date-time"},
+                    "labels": {"type": "array", "items": {"type": "string"}},
+                    "createdAt": {"type": "string", "format": "date-time"},
+                    "updatedAt": {"type": "string", "format": "date-time"},
+                },
+            },
+            400: {
+                "type": "object",
+                "properties": {
+                    "statusCode": {"type": "integer"},
+                    "message": {"type": "string"},
+                    "errors": {"type": "array"},
+                },
+            },
+            404: {
+                "type": "object",
+                "properties": {
+                    "statusCode": {"type": "integer"},
+                    "message": {"type": "string"},
+                    "errors": {"type": "array"},
+                },
+            },
+            500: {
+                "type": "object",
+                "properties": {
+                    "statusCode": {"type": "integer"},
+                    "message": {"type": "string"},
+                    "errors": {"type": "array"},
+                },
+            },
         },
         examples=[
             OpenApiExample(

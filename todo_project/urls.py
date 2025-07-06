@@ -2,6 +2,8 @@ from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 urlpatterns = [
+    # Swagger UI at base path
+    path("", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui-base"),
     path("v1/", include("todo.urls"), name="api"),
     # Swagger/OpenAPI endpoints
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

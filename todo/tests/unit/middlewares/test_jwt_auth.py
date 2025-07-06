@@ -1,7 +1,6 @@
 from unittest import TestCase
 from unittest.mock import Mock, patch
 from django.http import HttpRequest, JsonResponse
-from django.conf import settings
 from rest_framework import status
 import json
 

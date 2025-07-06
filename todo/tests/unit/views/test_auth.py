@@ -108,7 +108,7 @@ class GoogleCallbackViewTests(APITestCase):
         self.url = reverse("google_callback")
         self.factory = APIRequestFactory()
         self.view = GoogleCallbackView.as_view()
-        
+
         self.test_user_data = users_db_data[0]
 
     def test_get_redirects_for_oauth_error(self):
@@ -148,7 +148,7 @@ class GoogleCallbackViewTests(APITestCase):
             "email": self.test_user_data["email_id"],
             "name": self.test_user_data["name"],
         }
-        
+
         user_id = str(ObjectId())
         mock_user = Mock()
         mock_user.id = ObjectId(user_id)
@@ -241,7 +241,7 @@ class GoogleLogoutViewTests(APITestCase):
     def test_logout_clears_sessionid_cookie(self):
         """Test that logout clears sessionid cookie"""
         self.client.cookies["sessionid"] = "test_session_id"
-        
+
         response = self.client.post(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)

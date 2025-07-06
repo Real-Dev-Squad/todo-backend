@@ -121,11 +121,7 @@ GOOGLE_OAUTH = {
 }
 
 # JWT Configuration - Use different settings for tests vs production
-TESTING = (
-    'test' in sys.argv or 
-    'pytest' in sys.modules or 
-    os.getenv('TESTING') == 'True'
-)
+TESTING = "test" in sys.argv or "pytest" in sys.modules or os.getenv("TESTING") == "True"
 
 if TESTING:
     # Test JWT configuration (HS256 - simpler for tests)

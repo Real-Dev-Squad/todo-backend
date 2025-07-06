@@ -11,7 +11,7 @@ SECRET_KEY = os.getenv(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = []
 
@@ -19,8 +19,10 @@ MONGODB_URI = os.getenv("MONGODB_URI")
 DB_NAME = os.getenv("DB_NAME")
 
 INSTALLED_APPS = [
+    "django.contrib.staticfiles",
     "corsheaders",
     "rest_framework",
+    "drf_spectacular",
     "todo",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -37,6 +39,22 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "todo_project.urls"
 WSGI_APPLICATION = "todo_project.wsgi.application"
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
 
 LANGUAGE_CODE = "en-us"
 
@@ -76,6 +94,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 JWT_AUTH = {
@@ -135,6 +154,11 @@ PUBLIC_PATHS = [
     "/favicon.ico",
     "/v1/health",
     "/api/docs",
+    "/api/docs/",
+    "/api/schema",
+    "/api/schema/",
+    "/api/redoc",
+    "/api/redoc/",
     "/static/",
     "/v1/auth/google/login",
     "/v1/auth/google/callback",
@@ -142,3 +166,32 @@ PUBLIC_PATHS = [
     "/v1/auth/google/status",
     "/v1/auth/google/refresh",
 ]
+
+# Swagger/OpenAPI Configuration
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Todo API",
+    "DESCRIPTION": "A comprehensive Todo API with authentication and task management",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SCHEMA_PATH_PREFIX": "/v1/",
+    "TAGS": [
+        {"name": "tasks", "description": "Task management operations"},
+        {"name": "auth", "description": "Authentication operations"},
+        {"name": "health", "description": "Health check endpoints"},
+    ],
+    "CONTACT": {
+        "name": "API Support",
+        "email": "support@example.com",
+    },
+    "LICENSE": {
+        "name": "MIT License",
+        "url": "https://opensource.org/licenses/MIT",
+    },
+    "EXTERNAL_DOCS": {
+        "description": "Find more info here",
+        "url": "https://github.com/your-repo/todo-backend",
+    },
+}
+
+STATIC_URL = "/static/"

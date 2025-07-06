@@ -5,6 +5,8 @@ from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.exceptions import ValidationError
 from django.conf import settings
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
+from drf_spectacular.types import OpenApiTypes
 from todo.middlewares.jwt_auth import get_current_user_info
 from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer
 from todo.serializers.create_task_serializer import CreateTaskSerializer
@@ -20,6 +22,31 @@ from todo.constants.messages import ValidationErrors
 
 
 class TaskListView(APIView):
+    @extend_schema(
+        operation_id="get_tasks",
+        summary="Get paginated list of tasks",
+        description="Retrieve a paginated list of tasks with optional filtering and sorting",
+        tags=["tasks"],
+        parameters=[
+            OpenApiParameter(
+                name="page",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description="Page number for pagination",
+            ),
+            OpenApiParameter(
+                name="limit",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description="Number of tasks per page",
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(description="Successful response"),
+            400: OpenApiResponse(description="Bad request"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+    )
     def get(self, request: Request):
         """
         Retrieve a paginated list of tasks.
@@ -30,6 +57,18 @@ class TaskListView(APIView):
         response = TaskService.get_tasks(page=query.validated_data["page"], limit=query.validated_data["limit"])
         return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
 
+    @extend_schema(
+        operation_id="create_task",
+        summary="Create a new task",
+        description="Create a new task with the provided details",
+        tags=["tasks"],
+        request=CreateTaskSerializer,
+        responses={
+            201: OpenApiResponse(description="Task created successfully"),
+            400: OpenApiResponse(description="Bad request"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+    )
     def post(self, request: Request):
         """
         Create a new task.
@@ -92,6 +131,25 @@ class TaskListView(APIView):
 
 
 class TaskDetailView(APIView):
+    @extend_schema(
+        operation_id="get_task_by_id",
+        summary="Get task by ID",
+        description="Retrieve a single task by its unique identifier",
+        tags=["tasks"],
+        parameters=[
+            OpenApiParameter(
+                name="task_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the task",
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(description="Task retrieved successfully"),
+            404: OpenApiResponse(description="Task not found"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+    )
     def get(self, request: Request, task_id: str):
         """
         Retrieve a single task by ID.
@@ -100,12 +158,58 @@ class TaskDetailView(APIView):
         response_data = GetTaskByIdResponse(data=task_dto)
         return Response(data=response_data.model_dump(mode="json"), status=status.HTTP_200_OK)
 
+    @extend_schema(
+        operation_id="delete_task",
+        summary="Delete task",
+        description="Delete a task by its unique identifier",
+        tags=["tasks"],
+        parameters=[
+            OpenApiParameter(
+                name="task_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the task to delete",
+            ),
+        ],
+        responses={
+            204: OpenApiResponse(description="Task deleted successfully"),
+            404: OpenApiResponse(description="Task not found"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+    )
     def delete(self, request: Request, task_id: str):
         user = get_current_user_info(request)
         task_id = ObjectId(task_id)
         TaskService.delete_task(task_id, user["user_id"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @extend_schema(
+        operation_id="update_task",
+        summary="Update or defer task",
+        description="Partially update a task or defer it based on the action parameter",
+        tags=["tasks"],
+        parameters=[
+            OpenApiParameter(
+                name="task_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the task",
+            ),
+            OpenApiParameter(
+                name="action",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Action to perform: 'update' or 'defer'",
+            ),
+        ],
+        request=UpdateTaskSerializer,
+        responses={
+            200: OpenApiResponse(description="Task updated successfully"),
+            400: OpenApiResponse(description="Bad request"),
+            404: OpenApiResponse(description="Task not found"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+    )
     def patch(self, request: Request, task_id: str):
         """
         Partially updates a task by its ID.

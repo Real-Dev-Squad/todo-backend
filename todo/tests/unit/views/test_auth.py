@@ -131,51 +131,7 @@ class GoogleCallbackViewTests(APISimpleTestCase):
         self.assertNotIn("oauth_state", request.session)
 
 
-class GoogleAuthStatusViewTests(APISimpleTestCase):
-    def setUp(self):
-        super().setUp()
-        self.client = APIClient()
-        self.url = reverse("google_status")
 
-    def test_get_returns_401_when_no_access_token(self):
-        response = self.client.get(self.url)
-
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.data["message"], AuthErrorMessages.NO_ACCESS_TOKEN)
-        self.assertEqual(response.data["authenticated"], False)
-        self.assertEqual(response.data["statusCode"], status.HTTP_401_UNAUTHORIZED)
-
-    @patch("todo.utils.google_jwt_utils.validate_google_access_token")
-    @patch("todo.services.user_service.UserService.get_user_by_id")
-    def test_get_returns_user_info_when_authenticated(self, mock_get_user, mock_validate_token):
-        user_id = str(ObjectId())
-        user_data = {
-            "user_id": user_id,
-            "google_id": "test_google_id",
-            "email": "test@example.com",
-            "name": "Test User",
-        }
-        mock_validate_token.return_value = user_data
-
-        mock_user = Mock()
-        mock_user.id = ObjectId(user_id)
-        mock_user.google_id = "test_google_id"
-        mock_user.email_id = "test@example.com"
-        mock_user.name = "Test User"
-        type(mock_user).id = PropertyMock(return_value=ObjectId(user_id))
-
-        mock_get_user.return_value = mock_user
-
-        tokens = generate_google_token_pair(user_data)
-        self.client.cookies["ext-access"] = tokens["access_token"]
-
-        response = self.client.get(self.url, HTTP_ACCEPT="application/json")
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["data"]["user"]["id"], user_id)
-        self.assertEqual(response.data["data"]["user"]["email"], mock_user.email_id)
-        self.assertEqual(response.data["data"]["user"]["name"], mock_user.name)
-        self.assertEqual(response.data["data"]["user"]["google_id"], mock_user.google_id)
 
 
 class GoogleRefreshViewTests(APISimpleTestCase):

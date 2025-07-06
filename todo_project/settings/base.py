@@ -19,6 +19,7 @@ MONGODB_URI = os.getenv("MONGODB_URI")
 DB_NAME = os.getenv("DB_NAME")
 
 INSTALLED_APPS = [
+    "django.contrib.staticfiles",
     "corsheaders",
     "rest_framework",
     "drf_spectacular",
@@ -36,6 +37,22 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "todo_project.urls"
 WSGI_APPLICATION = "todo_project.wsgi.application"
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
 
 LANGUAGE_CODE = "en-us"
 
@@ -169,3 +186,5 @@ SPECTACULAR_SETTINGS = {
         "url": "https://github.com/your-repo/todo-backend",
     },
 }
+
+STATIC_URL = "/static/"

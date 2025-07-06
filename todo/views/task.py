@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.exceptions import ValidationError
 from django.conf import settings
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 from todo.middlewares.jwt_auth import get_current_user_info
 from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer

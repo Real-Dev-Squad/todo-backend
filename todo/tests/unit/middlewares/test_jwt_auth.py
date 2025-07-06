@@ -4,6 +4,7 @@ from django.http import HttpRequest, JsonResponse
 from django.conf import settings
 from rest_framework import status
 import json
+from django.urls import reverse
 
 from todo.middlewares.jwt_auth import JWTAuthenticationMiddleware, is_google_user, is_rds_user, get_current_user_info
 from todo.constants.messages import AuthErrorMessages
@@ -14,16 +15,16 @@ class JWTAuthenticationMiddlewareTests(TestCase):
         self.get_response = Mock(return_value=JsonResponse({"data": "test"}))
         self.middleware = JWTAuthenticationMiddleware(self.get_response)
         self.request = Mock(spec=HttpRequest)
-        self.request.path = "/v1/tasks"
+        self.request.path = reverse("tasks")
         self.request.headers = {}
         self.request.COOKIES = {}
         self._original_public_paths = settings.PUBLIC_PATHS
-        settings.PUBLIC_PATHS = ["/v1/auth/google/login"]
+        settings.PUBLIC_PATHS = [reverse("google_login")]
         self.addCleanup(setattr, settings, "PUBLIC_PATHS", self._original_public_paths)
 
     def test_public_path_authentication_bypass(self):
         """Test that requests to public paths bypass authentication"""
-        self.request.path = "/v1/auth/google/login"
+        self.request.path = reverse("google_login")
         response = self.middleware(self.request)
         self.get_response.assert_called_once_with(self.request)
         self.assertEqual(response.status_code, 200)

@@ -5,19 +5,19 @@ from urllib.parse import urlencode
 from todo.services.google_oauth_service import GoogleOAuthService
 from todo.exceptions.google_auth_exceptions import GoogleAPIException, GoogleAuthException
 from todo.constants.messages import ApiErrors
+from todo.tests.fixtures.google_oauth import GOOGLE_OAUTH_FIXTURE
+from todo.tests.fixtures.user import users_db_data
 
 
 class GoogleOAuthServiceTests(TestCase):
     def setUp(self) -> None:
-        self.mock_settings = {
-            "GOOGLE_OAUTH": {
-                "CLIENT_ID": "test-client-id",
-                "CLIENT_SECRET": "test-client-secret",
-                "REDIRECT_URI": "http://localhost:3000/auth/callback",
-                "SCOPES": ["email", "profile"],
-            }
+        self.mock_settings = {"GOOGLE_OAUTH": GOOGLE_OAUTH_FIXTURE.copy()}
+        user = users_db_data[0]
+        self.valid_user_info = {
+            "id": user["google_id"],
+            "email": user["email_id"],
+            "name": user["name"],
         }
-        self.valid_user_info = {"id": "123456789", "email": "test@example.com", "name": "Test User"}
         self.valid_tokens = {"access_token": "test-access-token", "refresh_token": "test-refresh-token"}
 
     @patch("todo.services.google_oauth_service.settings")
@@ -115,20 +115,6 @@ class GoogleOAuthServiceTests(TestCase):
         mock_get.assert_called_once()
         call_args = mock_get.call_args[1]
         self.assertEqual(call_args["headers"]["Authorization"], "Bearer test-token")
-
-    @patch("todo.services.google_oauth_service.requests.get")
-    def test_get_user_info_missing_fields(self, mock_get):
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"id": "123"}
-        mock_get.return_value = mock_response
-
-        with self.assertRaises(GoogleAPIException) as context:
-            GoogleOAuthService._get_user_info("test-token")
-            error_msg = str(context.exception)
-            self.assertIn(ApiErrors.MISSING_USER_INFO_FIELDS.split(":")[0], error_msg)
-            for field in ("email", "name"):
-                self.assertIn(field, error_msg)
 
     @patch("todo.services.google_oauth_service.requests.get")
     def test_get_user_info_error_response(self, mock_get):

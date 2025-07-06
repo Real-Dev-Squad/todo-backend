@@ -11,7 +11,8 @@ from todo.constants.messages import ValidationErrors, RepositoryErrors
 
 class UserServiceTests(TestCase):
     def setUp(self) -> None:
-        self.valid_google_user_data = {"google_id": "123456789", "email": "test@example.com", "name": "Test User"}
+        self.valid_google_user_data = users_db_data[0].copy()
+        self.valid_google_user_data["email"] = self.valid_google_user_data.pop("email_id")
         self.user_model = UserModel(**users_db_data[0])
 
     @patch("todo.services.user_service.UserRepository")
@@ -65,11 +66,13 @@ class UserServiceTests(TestCase):
             self.fail("ValidationError raised unexpectedly!")
 
     def test_validate_google_user_data_missing_fields(self):
-        test_cases = [
-            {"email": "test@example.com", "name": "Test User"},
-            {"google_id": "123", "name": "Test User"},
-            {"google_id": "123", "email": "test@example.com"},
-        ]
+        base_data = users_db_data[0].copy()
+        base_data["email"] = base_data.pop("email_id")
+        test_cases = []
+        for missing_key in ["google_id", "email", "name"]:
+            case = base_data.copy()
+            case.pop(missing_key)
+            test_cases.append(case)
 
         for invalid_data in test_cases:
             with self.subTest(f"Testing missing field in {invalid_data}"):

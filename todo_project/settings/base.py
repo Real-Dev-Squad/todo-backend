@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -119,13 +120,38 @@ GOOGLE_OAUTH = {
     "SCOPES": ["openid", "email", "profile"],
 }
 
-GOOGLE_JWT = {
-    "ALGORITHM": "RS256",
-    "PRIVATE_KEY": os.getenv("GOOGLE_JWT_PRIVATE_KEY"),
-    "PUBLIC_KEY": os.getenv("GOOGLE_JWT_PUBLIC_KEY"),
-    "ACCESS_TOKEN_LIFETIME": int(os.getenv("GOOGLE_JWT_ACCESS_LIFETIME", "3600")),
-    "REFRESH_TOKEN_LIFETIME": int(os.getenv("GOOGLE_JWT_REFRESH_LIFETIME", "604800")),
-}
+# JWT Configuration - Use different settings for tests vs production
+TESTING = (
+    'test' in sys.argv or 
+    'pytest' in sys.modules or 
+    os.getenv('TESTING') == 'True'
+)
+
+if TESTING:
+    # Test JWT configuration (HS256 - simpler for tests)
+    GOOGLE_JWT = {
+        "ALGORITHM": "HS256",
+        "PRIVATE_KEY": "test-secret-key-for-jwt-signing-very-long-key-needed-for-security",
+        "PUBLIC_KEY": "test-secret-key-for-jwt-signing-very-long-key-needed-for-security",
+        "ACCESS_TOKEN_LIFETIME": int(os.getenv("GOOGLE_JWT_ACCESS_LIFETIME", "3600")),
+        "REFRESH_TOKEN_LIFETIME": int(os.getenv("GOOGLE_JWT_REFRESH_LIFETIME", "604800")),
+    }
+else:
+    GOOGLE_JWT = {
+        "ALGORITHM": "RS256",
+        "PRIVATE_KEY": os.getenv("GOOGLE_JWT_PRIVATE_KEY"),
+        "PUBLIC_KEY": os.getenv("GOOGLE_JWT_PUBLIC_KEY"),
+        "ACCESS_TOKEN_LIFETIME": int(os.getenv("GOOGLE_JWT_ACCESS_LIFETIME", "3600")),
+        "REFRESH_TOKEN_LIFETIME": int(os.getenv("GOOGLE_JWT_REFRESH_LIFETIME", "604800")),
+    }
+
+# GOOGLE_JWT = {
+#     "ALGORITHM": "RS256",
+#     "PRIVATE_KEY": os.getenv("GOOGLE_JWT_PRIVATE_KEY"),
+#     "PUBLIC_KEY": os.getenv("GOOGLE_JWT_PUBLIC_KEY"),
+#     "ACCESS_TOKEN_LIFETIME": int(os.getenv("GOOGLE_JWT_ACCESS_LIFETIME", "3600")),
+#     "REFRESH_TOKEN_LIFETIME": int(os.getenv("GOOGLE_JWT_REFRESH_LIFETIME", "604800")),
+# }
 
 GOOGLE_COOKIE_SETTINGS = {
     "ACCESS_COOKIE_NAME": os.getenv("GOOGLE_ACCESS_COOKIE_NAME", "ext-access"),

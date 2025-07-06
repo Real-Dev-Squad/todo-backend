@@ -17,9 +17,6 @@ class JWTAuthenticationMiddlewareTests(TestCase):
         self.request.path = "/v1/tasks"
         self.request.headers = {}
         self.request.COOKIES = {}
-        self._original_public_paths = settings.PUBLIC_PATHS
-        settings.PUBLIC_PATHS = ["/v1/auth/google/login"]
-        self.addCleanup(setattr, settings, "PUBLIC_PATHS", self._original_public_paths)
 
     def test_public_path_authentication_bypass(self):
         """Test that requests to public paths bypass authentication"""

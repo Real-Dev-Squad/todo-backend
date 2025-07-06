@@ -51,7 +51,12 @@ jobs:
             docker run -d -p ${{ vars.PORT }}:8000 \
               --name ${{ github.event.repository.name }}-${{ vars.ENV }} \
               --network=${{ vars.DOCKER_NETWORK }} \
+              -e ENV="${{ vars.ENV }}" \
               -e DB_NAME="${{ secrets.DB_NAME }}" \
               -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
               -e ALLOWED_HOSTS="${{ vars.ALLOWED_HOSTS }}" \
+              -e GOOGLE_OAUTH_CLIENT_ID="${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}" \
+              -e GOOGLE_OAUTH_CLIENT_SECRET="${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}" \
+              -e PUBLIC_KEY="${{ secrets.PUBLIC_KEY }}" \
+              -e PRIVATE_KEY="${{ secrets.PRIVATE_KEY }}" \
               ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}

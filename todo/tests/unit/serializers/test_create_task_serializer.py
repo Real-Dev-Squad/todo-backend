@@ -1,5 +1,7 @@
 from unittest import TestCase
 
+from bson import ObjectId
+
 from todo.serializers.create_task_serializer import CreateTaskSerializer
 from datetime import datetime, timedelta, timezone
 
@@ -11,7 +13,7 @@ class CreateTaskSerializerTest(TestCase):
             "description": "Some test description",
             "priority": "LOW",
             "status": "TODO",
-            "assignee": "dev001",
+            "assignee": str(ObjectId()),
             "labels": [],
             "dueAt": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat().replace("+00:00", "Z"),
         }

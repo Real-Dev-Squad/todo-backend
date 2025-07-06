@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+from bson import ObjectId
+
 users_db_data = [
     {
         "google_id": "123456789",
@@ -16,3 +18,10 @@ users_db_data = [
         "updated_at": datetime.now(timezone.utc),
     },
 ]
+
+google_auth_user_payload = {
+    "user_id": str(ObjectId()),
+    "google_id": "test_google_id",
+    "email": "test@example.com",
+    "name": "Test User",
+}

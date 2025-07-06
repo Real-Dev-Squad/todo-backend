@@ -14,6 +14,7 @@ from todo.dto.responses.get_tasks_response import GetTasksResponse
 from todo.dto.responses.create_task_response import CreateTaskResponse
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.dto.responses.paginated_response import LinksData
+from todo.exceptions.user_exceptions import UserNotFoundException
 from todo.models.task import TaskModel, DeferredDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_repository import TaskRepository
@@ -27,6 +28,8 @@ from todo.exceptions.task_exceptions import (
     TaskStateConflictException,
 )
 from bson.errors import InvalidId as BsonInvalidId
+
+from todo.repositories.user_repository import UserRepository
 
 
 @dataclass
@@ -112,9 +115,8 @@ class TaskService:
     @classmethod
     def prepare_task_dto(cls, task_model: TaskModel) -> TaskDTO:
         label_dtos = cls._prepare_label_dtos(task_model.labels) if task_model.labels else []
-
         assignee = cls.prepare_user_dto(task_model.assignee) if task_model.assignee else None
-        created_by = cls.prepare_user_dto(task_model.createdBy)
+        created_by = cls.prepare_user_dto(task_model.createdBy) if task_model.createdBy else None
         updated_by = cls.prepare_user_dto(task_model.updatedBy) if task_model.updatedBy else None
         deferred_details = (
             cls.prepare_deferred_details_dto(task_model.deferredDetails) if task_model.deferredDetails else None
@@ -172,7 +174,10 @@ class TaskService:
 
     @classmethod
     def prepare_user_dto(cls, user_id: str) -> UserDTO:
-        return UserDTO(id=user_id, name="SYSTEM")
+        user = UserRepository.get_by_id(user_id)
+        if user:
+            return UserDTO(id=str(user_id), name=user.name)
+        raise UserNotFoundException(user_id)
 
     @classmethod
     def get_task_by_id(cls, task_id: str) -> TaskDTO:
@@ -208,10 +213,22 @@ class TaskService:
         return enum_type[value].value
 
     @classmethod
-    def update_task(cls, task_id: str, validated_data: dict, user_id: str = "system") -> TaskDTO:
+    def update_task(cls, task_id: str, validated_data: dict, user_id: str) -> TaskDTO:
         current_task = TaskRepository.get_by_id(task_id)
+
         if not current_task:
             raise TaskNotFoundException(task_id)
+
+        if current_task.assignee and current_task.assignee != user_id:
+            raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+
+        if not current_task.assignee and current_task.createdBy != user_id:
+            raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+
+        if validated_data.get("assignee"):
+            assignee_data = UserRepository.get_by_id(validated_data["assignee"])
+            if not assignee_data:
+                raise UserNotFoundException(validated_data["assignee"])
 
         update_payload = {}
         enum_fields = {"priority": TaskPriority, "status": TaskStatus}
@@ -238,8 +255,15 @@ class TaskService:
     @classmethod
     def defer_task(cls, task_id: str, deferred_till: datetime, user_id: str) -> TaskDTO:
         current_task = TaskRepository.get_by_id(task_id)
+
         if not current_task:
             raise TaskNotFoundException(task_id)
+
+        if current_task.assignee and current_task.assignee != user_id:
+            raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+
+        if not current_task.assignee and current_task.createdBy != user_id:
+            raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
 
         if current_task.status == TaskStatus.DONE:
             raise TaskStateConflictException(ValidationErrors.CANNOT_DEFER_A_DONE_TASK)
@@ -284,6 +308,11 @@ class TaskService:
         now = datetime.now(timezone.utc)
         started_at = now if dto.status == TaskStatus.IN_PROGRESS else None
 
+        if dto.assignee:
+            assignee = UserRepository.get_by_id(dto.assignee)
+            if not assignee:
+                raise UserNotFoundException(dto.assignee)
+
         if dto.labels:
             existing_labels = LabelRepository.list_by_ids(dto.labels)
             if len(existing_labels) != len(dto.labels):
@@ -317,7 +346,7 @@ class TaskService:
             createdAt=now,
             isAcknowledged=False,
             isDeleted=False,
-            createdBy="system",  # placeholder, will be user_id when auth is in place
+            createdBy=dto.createdBy,  # placeholder, will be user_id when auth is in place
         )
 
         try:
@@ -356,8 +385,8 @@ class TaskService:
             )
 
     @classmethod
-    def delete_task(cls, task_id: str) -> None:
-        deleted_task_model = TaskRepository.delete_by_id(task_id)
+    def delete_task(cls, task_id: str, user_id: str) -> None:
+        deleted_task_model = TaskRepository.delete_by_id(task_id, user_id)
         if deleted_task_model is None:
             raise TaskNotFoundException(task_id)
         return None

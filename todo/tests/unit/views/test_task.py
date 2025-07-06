@@ -1,5 +1,5 @@
 from unittest import TestCase
-from rest_framework.test import APISimpleTestCase, APIClient, APIRequestFactory
+from rest_framework.test import APIRequestFactory
 from rest_framework.reverse import reverse
 from rest_framework import status
 from unittest.mock import patch, Mock
@@ -8,6 +8,7 @@ from django.conf import settings
 from datetime import datetime, timedelta, timezone
 from bson.objectid import ObjectId
 from bson.errors import InvalidId as BsonInvalidId
+from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
 from todo.views.task import TaskListView
 from todo.dto.user_dto import UserDTO
 from todo.dto.task_dto import TaskDTO
@@ -20,30 +21,10 @@ from todo.exceptions.task_exceptions import TaskNotFoundException, Unprocessable
 from todo.constants.messages import ValidationErrors, ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 from rest_framework.exceptions import ValidationError as DRFValidationError
-from todo.utils.google_jwt_utils import generate_google_token_pair
 from todo.dto.deferred_details_dto import DeferredDetailsDTO
 
 
-class AuthenticatedTestCase(APISimpleTestCase):
-    def setUp(self):
-        super().setUp()
-        self.client = APIClient()
-        self._setup_auth_cookies()
-
-    def _setup_auth_cookies(self):
-        user_data = {
-            "user_id": str(ObjectId()),
-            "google_id": "test_google_id",
-            "email": "test@example.com",
-            "name": "Test User",
-        }
-        tokens = generate_google_token_pair(user_data)
-
-        self.client.cookies["ext-access"] = tokens["access_token"]
-        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
-
-
-class TaskViewTests(AuthenticatedTestCase):
+class TaskViewTests(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.url = reverse("tasks")
@@ -214,17 +195,18 @@ class TaskViewTest(TestCase):
         self.assertTrue("page" in error_detail or "limit" in error_detail)
 
 
-class CreateTaskViewTests(AuthenticatedTestCase):
+class CreateTaskViewTests(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.url = reverse("tasks")
+        self.user_id = str(ObjectId())
 
         self.valid_payload = {
             "title": "Write tests",
             "description": "Cover all core paths",
             "priority": "HIGH",
             "status": "IN_PROGRESS",
-            "assignee": "developer1",
+            "assignee": self.user_id,
             "labels": [],
             "dueAt": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat().replace("+00:00", "Z"),
         }
@@ -238,7 +220,7 @@ class CreateTaskViewTests(AuthenticatedTestCase):
             description=self.valid_payload["description"],
             priority=TaskPriority[self.valid_payload["priority"]],
             status=TaskStatus[self.valid_payload["status"]],
-            assignee=UserDTO(id="developer1", name="SYSTEM"),
+            assignee=UserDTO(id=self.user_id, name="SYSTEM"),
             isAcknowledged=False,
             labels=[],
             startedAt=datetime.now(timezone.utc),
@@ -325,7 +307,7 @@ class CreateTaskViewTests(AuthenticatedTestCase):
             self.assertEqual(str(e), "Database exploded")
 
 
-class TaskDeleteViewTests(AuthenticatedTestCase):
+class TaskDeleteViewTests(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.valid_task_id = str(ObjectId())
@@ -335,7 +317,7 @@ class TaskDeleteViewTests(AuthenticatedTestCase):
     def test_delete_task_returns_204_on_success(self, mock_delete_task: Mock):
         mock_delete_task.return_value = None
         response = self.client.delete(self.url)
-        mock_delete_task.assert_called_once_with(ObjectId(self.valid_task_id))
+        mock_delete_task.assert_called_once_with(ObjectId(self.valid_task_id), str(self.user_id))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.data, None)
 
@@ -355,7 +337,7 @@ class TaskDeleteViewTests(AuthenticatedTestCase):
         self.assertIn(ValidationErrors.INVALID_TASK_ID_FORMAT, response.data["message"])
 
 
-class TaskDetailViewPatchTests(AuthenticatedTestCase):
+class TaskDetailViewPatchTests(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.task_id_str = str(ObjectId())
@@ -405,7 +387,7 @@ class TaskDetailViewPatchTests(AuthenticatedTestCase):
         mock_update_serializer_class.assert_called_once_with(data=valid_payload, partial=True)
         mock_serializer_instance.is_valid.assert_called_once_with(raise_exception=True)
         mock_service_update_task.assert_called_once_with(
-            task_id=self.task_id_str, validated_data=valid_payload, user_id="system_patch_user"
+            task_id=self.task_id_str, validated_data=valid_payload, user_id=str(self.user_id)
         )
 
         expected_response_data = self.updated_task_dto_fixture.model_dump(mode="json", exclude_none=True)
@@ -605,7 +587,7 @@ class TaskDetailViewPatchTests(AuthenticatedTestCase):
         mock_service_defer_task.assert_called_once_with(
             task_id=self.task_id_str,
             deferred_till=deferred_till_datetime,
-            user_id="system_defer_user",
+            user_id=str(self.user_id),
         )
 
     @patch("todo.views.task.DeferTaskSerializer")

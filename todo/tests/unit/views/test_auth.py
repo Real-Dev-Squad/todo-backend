@@ -108,6 +108,8 @@ class GoogleCallbackViewTests(APITestCase):
         self.url = reverse("google_callback")
         self.factory = APIRequestFactory()
         self.view = GoogleCallbackView.as_view()
+        
+        self.test_user_data = users_db_data[0]
 
         self.test_user_data = users_db_data[0]
 
@@ -148,7 +150,6 @@ class GoogleCallbackViewTests(APITestCase):
             "email": self.test_user_data["email_id"],
             "name": self.test_user_data["name"],
         }
-
         user_id = str(ObjectId())
         mock_user = Mock()
         mock_user.id = ObjectId(user_id)

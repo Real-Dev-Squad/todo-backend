@@ -11,7 +11,7 @@ SECRET_KEY = os.getenv(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = []
 
@@ -152,6 +152,11 @@ PUBLIC_PATHS = [
     "/favicon.ico",
     "/v1/health",
     "/api/docs",
+    "/api/docs/",
+    "/api/schema",
+    "/api/schema/",
+    "/api/redoc",
+    "/api/redoc/",
     "/static/",
     "/v1/auth/google/login",
     "/v1/auth/google/callback",

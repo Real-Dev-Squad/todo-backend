@@ -4,7 +4,7 @@ from rest_framework.request import Request
 from rest_framework import status
 from django.http import HttpResponseRedirect, HttpResponse
 from django.conf import settings
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 
 from todo.services.google_oauth_service import GoogleOAuthService
@@ -46,25 +46,11 @@ class GoogleLoginView(APIView):
                 location=OpenApiParameter.QUERY,
                 description="Response format: 'json' for JSON response, otherwise redirects",
                 required=False,
-                examples=[OpenApiExample("JSON format", value="json")],
             ),
         ],
         responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "data": {
-                        "type": "object",
-                        "properties": {
-                            "authUrl": {"type": "string"},
-                            "state": {"type": "string"},
-                        },
-                    },
-                },
-            },
-            302: {"description": "Redirect to Google OAuth URL"},
+            200: OpenApiResponse(description="Google OAuth URL generated successfully"),
+            302: OpenApiResponse(description="Redirect to Google OAuth URL"),
         },
     )
     def get(self, request: Request):
@@ -123,36 +109,9 @@ class GoogleCallbackView(APIView):
             ),
         ],
         responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "data": {
-                        "type": "object",
-                        "properties": {
-                            "user": {
-                                "type": "object",
-                                "properties": {
-                                    "id": {"type": "string"},
-                                    "name": {"type": "string"},
-                                    "email": {"type": "string"},
-                                    "google_id": {"type": "string"},
-                                },
-                            },
-                            "tokens": {
-                                "type": "object",
-                                "properties": {
-                                    "access_token_expires_in": {"type": "integer"},
-                                    "refresh_token_expires_in": {"type": "integer"},
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            400: {"description": "Bad request - invalid parameters"},
-            500: {"description": "Internal server error"},
+            200: OpenApiResponse(description="OAuth callback processed successfully"),
+            400: OpenApiResponse(description="Bad request - invalid parameters"),
+            500: OpenApiResponse(description="Internal server error"),
         },
     )
     def get(self, request: Request):
@@ -384,30 +343,9 @@ class GoogleAuthStatusView(APIView):
         description="Check if the user is authenticated and return user information",
         tags=["auth"],
         responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "data": {
-                        "type": "object",
-                        "properties": {
-                            "authenticated": {"type": "boolean"},
-                            "user": {
-                                "type": "object",
-                                "properties": {
-                                    "id": {"type": "string"},
-                                    "email": {"type": "string"},
-                                    "name": {"type": "string"},
-                                    "google_id": {"type": "string"},
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            401: {"description": "Unauthorized - invalid or missing token"},
-            500: {"description": "Internal server error"},
+            200: OpenApiResponse(description="Authentication status retrieved successfully"),
+            401: OpenApiResponse(description="Unauthorized - invalid or missing token"),
+            500: OpenApiResponse(description="Internal server error"),
         },
     )
     def get(self, request: Request):
@@ -446,21 +384,9 @@ class GoogleRefreshView(APIView):
         description="Refresh the access token using the refresh token from cookies",
         tags=["auth"],
         responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "data": {
-                        "type": "object",
-                        "properties": {
-                            "success": {"type": "boolean"},
-                        },
-                    },
-                },
-            },
-            401: {"description": "Unauthorized - invalid or missing refresh token"},
-            500: {"description": "Internal server error"},
+            200: OpenApiResponse(description="Token refreshed successfully"),
+            401: OpenApiResponse(description="Unauthorized - invalid or missing refresh token"),
+            500: OpenApiResponse(description="Internal server error"),
         },
     )
     def get(self, request: Request):
@@ -522,24 +448,11 @@ class GoogleLogoutView(APIView):
                 location=OpenApiParameter.QUERY,
                 description="Response format: 'json' for JSON response, otherwise redirects",
                 required=False,
-                examples=[OpenApiExample("JSON format", value="json")],
             ),
         ],
         responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "data": {
-                        "type": "object",
-                        "properties": {
-                            "success": {"type": "boolean"},
-                        },
-                    },
-                },
-            },
-            302: {"description": "Redirect to specified URL or home page"},
+            200: OpenApiResponse(description="Logout successful"),
+            302: OpenApiResponse(description="Redirect to specified URL or home page"),
         },
     )
     def get(self, request: Request):
@@ -551,19 +464,7 @@ class GoogleLogoutView(APIView):
         description="Logout the user by clearing authentication cookies (POST method)",
         tags=["auth"],
         responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "data": {
-                        "type": "object",
-                        "properties": {
-                            "success": {"type": "boolean"},
-                        },
-                    },
-                },
-            },
+            200: OpenApiResponse(description="Logout successful"),
         },
     )
     def post(self, request: Request):

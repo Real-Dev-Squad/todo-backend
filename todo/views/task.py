@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.exceptions import ValidationError
 from django.conf import settings
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer
 from todo.serializers.create_task_serializer import CreateTaskSerializer
@@ -32,91 +32,19 @@ class TaskListView(APIView):
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
                 description="Page number for pagination",
-                examples=[OpenApiExample("Page 1", value=1)],
             ),
             OpenApiParameter(
                 name="limit",
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
                 description="Number of tasks per page",
-                examples=[OpenApiExample("20 tasks", value=20)],
             ),
         ],
         responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "data": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "id": {"type": "string"},
-                                "title": {"type": "string"},
-                                "description": {"type": "string"},
-                                "status": {"type": "string"},
-                                "priority": {"type": "string"},
-                                "dueDate": {"type": "string", "format": "date-time"},
-                                "createdAt": {"type": "string", "format": "date-time"},
-                                "updatedAt": {"type": "string", "format": "date-time"},
-                            },
-                        },
-                    },
-                    "pagination": {
-                        "type": "object",
-                        "properties": {
-                            "page": {"type": "integer"},
-                            "limit": {"type": "integer"},
-                            "total": {"type": "integer"},
-                            "pages": {"type": "integer"},
-                        },
-                    },
-                },
-            },
-            400: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "errors": {"type": "array"},
-                },
-            },
-            500: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "errors": {"type": "array"},
-                },
-            },
+            200: OpenApiResponse(description="Successful response"),
+            400: OpenApiResponse(description="Bad request"),
+            500: OpenApiResponse(description="Internal server error"),
         },
-        examples=[
-            OpenApiExample(
-                "Successful Response",
-                value={
-                    "data": [
-                        {
-                            "id": "507f1f77bcf86cd799439011",
-                            "title": "Complete project documentation",
-                            "description": "Write comprehensive documentation for the API",
-                            "status": "pending",
-                            "priority": "high",
-                            "dueDate": "2024-12-31T23:59:59Z",
-                            "createdAt": "2024-01-01T10:00:00Z",
-                            "updatedAt": "2024-01-01T10:00:00Z",
-                        }
-                    ],
-                    "pagination": {
-                        "page": 1,
-                        "limit": 20,
-                        "total": 1,
-                        "pages": 1,
-                    },
-                },
-                response_only=True,
-                status_codes=["200"],
-            ),
-        ],
     )
     def get(self, request: Request):
         """
@@ -135,67 +63,10 @@ class TaskListView(APIView):
         tags=["tasks"],
         request=CreateTaskSerializer,
         responses={
-            201: {
-                "type": "object",
-                "properties": {
-                    "id": {"type": "string"},
-                    "title": {"type": "string"},
-                    "description": {"type": "string"},
-                    "status": {"type": "string"},
-                    "priority": {"type": "string"},
-                    "dueDate": {"type": "string", "format": "date-time"},
-                    "labels": {"type": "array", "items": {"type": "string"}},
-                    "createdAt": {"type": "string", "format": "date-time"},
-                    "updatedAt": {"type": "string", "format": "date-time"},
-                },
-            },
-            400: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "errors": {"type": "array"},
-                },
-            },
-            500: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "errors": {"type": "array"},
-                },
-            },
+            201: OpenApiResponse(description="Task created successfully"),
+            400: OpenApiResponse(description="Bad request"),
+            500: OpenApiResponse(description="Internal server error"),
         },
-        examples=[
-            OpenApiExample(
-                "Create Task Request",
-                value={
-                    "title": "Complete project documentation",
-                    "description": "Write comprehensive documentation for the API",
-                    "status": "pending",
-                    "priority": "high",
-                    "dueDate": "2024-12-31T23:59:59Z",
-                    "labels": ["documentation", "api"],
-                },
-                request_only=True,
-            ),
-            OpenApiExample(
-                "Successful Response",
-                value={
-                    "id": "507f1f77bcf86cd799439011",
-                    "title": "Complete project documentation",
-                    "description": "Write comprehensive documentation for the API",
-                    "status": "pending",
-                    "priority": "high",
-                    "dueDate": "2024-12-31T23:59:59Z",
-                    "labels": ["documentation", "api"],
-                    "createdAt": "2024-01-01T10:00:00Z",
-                    "updatedAt": "2024-01-01T10:00:00Z",
-                },
-                response_only=True,
-                status_codes=["201"],
-            ),
-        ],
     )
     def post(self, request: Request):
         """
@@ -268,40 +139,12 @@ class TaskDetailView(APIView):
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.PATH,
                 description="Unique identifier of the task",
-                examples=[OpenApiExample("Task ID", value="507f1f77bcf86cd799439011")],
             ),
         ],
         responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "id": {"type": "string"},
-                    "title": {"type": "string"},
-                    "description": {"type": "string"},
-                    "status": {"type": "string"},
-                    "priority": {"type": "string"},
-                    "dueDate": {"type": "string", "format": "date-time"},
-                    "labels": {"type": "array", "items": {"type": "string"}},
-                    "createdAt": {"type": "string", "format": "date-time"},
-                    "updatedAt": {"type": "string", "format": "date-time"},
-                },
-            },
-            404: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "errors": {"type": "array"},
-                },
-            },
-            500: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "errors": {"type": "array"},
-                },
-            },
+            200: OpenApiResponse(description="Task retrieved successfully"),
+            404: OpenApiResponse(description="Task not found"),
+            500: OpenApiResponse(description="Internal server error"),
         },
     )
     def get(self, request: Request, task_id: str):
@@ -323,27 +166,12 @@ class TaskDetailView(APIView):
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.PATH,
                 description="Unique identifier of the task to delete",
-                examples=[OpenApiExample("Task ID", value="507f1f77bcf86cd799439011")],
             ),
         ],
         responses={
-            204: None,
-            404: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "errors": {"type": "array"},
-                },
-            },
-            500: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "errors": {"type": "array"},
-                },
-            },
+            204: OpenApiResponse(description="Task deleted successfully"),
+            404: OpenApiResponse(description="Task not found"),
+            500: OpenApiResponse(description="Internal server error"),
         },
     )
     def delete(self, request: Request, task_id: str):
@@ -362,78 +190,21 @@ class TaskDetailView(APIView):
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.PATH,
                 description="Unique identifier of the task",
-                examples=[OpenApiExample("Task ID", value="507f1f77bcf86cd799439011")],
             ),
             OpenApiParameter(
                 name="action",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
                 description="Action to perform: 'update' or 'defer'",
-                examples=[
-                    OpenApiExample("Update task", value="update"),
-                    OpenApiExample("Defer task", value="defer"),
-                ],
             ),
         ],
         request=UpdateTaskSerializer,
         responses={
-            200: {
-                "type": "object",
-                "properties": {
-                    "id": {"type": "string"},
-                    "title": {"type": "string"},
-                    "description": {"type": "string"},
-                    "status": {"type": "string"},
-                    "priority": {"type": "string"},
-                    "dueDate": {"type": "string", "format": "date-time"},
-                    "labels": {"type": "array", "items": {"type": "string"}},
-                    "createdAt": {"type": "string", "format": "date-time"},
-                    "updatedAt": {"type": "string", "format": "date-time"},
-                },
-            },
-            400: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "errors": {"type": "array"},
-                },
-            },
-            404: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "errors": {"type": "array"},
-                },
-            },
-            500: {
-                "type": "object",
-                "properties": {
-                    "statusCode": {"type": "integer"},
-                    "message": {"type": "string"},
-                    "errors": {"type": "array"},
-                },
-            },
+            200: OpenApiResponse(description="Task updated successfully"),
+            400: OpenApiResponse(description="Bad request"),
+            404: OpenApiResponse(description="Task not found"),
+            500: OpenApiResponse(description="Internal server error"),
         },
-        examples=[
-            OpenApiExample(
-                "Update Task Request",
-                value={
-                    "title": "Updated task title",
-                    "status": "in_progress",
-                    "priority": "medium",
-                },
-                request_only=True,
-            ),
-            OpenApiExample(
-                "Defer Task Request",
-                value={
-                    "deferredTill": "2024-12-31T23:59:59Z",
-                },
-                request_only=True,
-            ),
-        ],
     )
     def patch(self, request: Request, task_id: str):
         """

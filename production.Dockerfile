@@ -7,7 +7,6 @@
 # Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
 
 ARG PYTHON_VERSION=3.12.0
-ARG ENV=PRODUCTION
 FROM python:${PYTHON_VERSION}-slim AS base
 
 # Prevents Python from writing pyc files.
@@ -17,9 +16,9 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # the application crashes without emitting any logs due to buffering.
 ENV PYTHONUNBUFFERED=1
 
-# Set environment for Django settings configuration
-ARG ENV=PRODUCTION
-ENV ENV=${ENV}
+# Set Django settings module
+ENV DJANGO_SETTINGS_MODULE=todo_project.settings.production
+ENV ENV=PRODUCTION
 
 
 WORKDIR /app

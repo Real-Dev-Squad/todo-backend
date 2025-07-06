@@ -113,7 +113,7 @@ class GoogleCallbackViewTests(APITestCase):
 
     def test_post_returns_error_for_missing_code(self):
         response = self.client.post(self.url, {})
-
+        
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["message"], "No authorization code received from Google")
 
@@ -160,7 +160,6 @@ class GoogleCallbackViewTests(APITestCase):
         self.assertIn("ext-access", response.cookies)
         self.assertIn("ext-refresh", response.cookies)
         self.assertNotIn("oauth_state", self.client.session)
-
 
 class GoogleRefreshViewTests(APITestCase):
     def setUp(self):
@@ -215,7 +214,7 @@ class GoogleLogoutViewTests(APITestCase):
         self.client.cookies["ext-refresh"] = tokens["refresh_token"]
 
         response = self.client.get(self.url, HTTP_ACCEPT="application/json")
-
+            
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["data"]["success"], True)
         self.assertEqual(response.data["message"], AppMessages.GOOGLE_LOGOUT_SUCCESS)

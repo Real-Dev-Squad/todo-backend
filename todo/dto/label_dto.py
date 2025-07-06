@@ -5,6 +5,7 @@ from todo.dto.user_dto import UserDTO
 
 
 class LabelDTO(BaseModel):
+    id: str
     name: str
     color: str
     createdAt: datetime | None = None

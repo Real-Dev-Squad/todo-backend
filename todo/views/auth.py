@@ -106,7 +106,7 @@ class GoogleCallbackView(APIView):
         code = request.query_params.get("code")
         state = request.query_params.get("state")
         error = request.query_params.get("error")
-
+        
         if error:
             frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error={error}")
@@ -144,6 +144,7 @@ class GoogleCallbackView(APIView):
             request.session.pop("oauth_state", None)
 
             return response
+
         except Exception:
             frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error=auth_failed")

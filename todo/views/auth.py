@@ -308,9 +308,7 @@ class GoogleLogoutView(APIView):
             redirect_url = redirect_url or "/"
             response = HttpResponseRedirect(redirect_url)
 
-        config = self._get_cookie_config()
-        response.delete_cookie("ext-access", **config)
-        response.delete_cookie("ext-refresh", **config)
+        self._clear_auth_cookies(response)
 
         return response
 
@@ -322,3 +320,12 @@ class GoogleLogoutView(APIView):
             "httponly": True,
             "samesite": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SAMESITE", "Lax"),
         }
+
+    def _clear_auth_cookies(self, response):
+        """Clear authentication cookies with only the parameters that delete_cookie accepts"""
+        delete_config = {
+            "path": "/",
+            "domain": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
+        }
+        response.delete_cookie("ext-access", **delete_config)
+        response.delete_cookie("ext-refresh", **delete_config)

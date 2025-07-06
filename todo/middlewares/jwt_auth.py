@@ -47,8 +47,7 @@ class JWTAuthenticationMiddleware:
                     ],
                 )
                 return JsonResponse(
-                    data=error_response.model_dump(mode="json", exclude_none=True), 
-                    status=status.HTTP_401_UNAUTHORIZED
+                    data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED
                 )
 
         except (TokenMissingError, TokenExpiredError, TokenInvalidError) as e:
@@ -67,8 +66,7 @@ class JWTAuthenticationMiddleware:
                 ],
             )
             return JsonResponse(
-                data=error_response.model_dump(mode="json", exclude_none=True), 
-                status=status.HTTP_401_UNAUTHORIZED
+                data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED
             )
 
     def _try_authentication(self, request) -> bool:
@@ -188,8 +186,7 @@ class JWTAuthenticationMiddleware:
             errors=[ApiErrorDetail(title=ApiErrors.AUTHENTICATION_FAILED, detail=str(exception))],
         )
         return JsonResponse(
-            data=error_response.model_dump(mode="json", exclude_none=True), 
-            status=status.HTTP_401_UNAUTHORIZED
+            data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED
         )
 
     def _handle_google_auth_error(self, exception):
@@ -199,8 +196,7 @@ class JWTAuthenticationMiddleware:
             errors=[ApiErrorDetail(title=ApiErrors.AUTHENTICATION_FAILED, detail=str(exception))],
         )
         return JsonResponse(
-            data=error_response.model_dump(mode="json", exclude_none=True), 
-            status=status.HTTP_401_UNAUTHORIZED
+            data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED
         )
 
 

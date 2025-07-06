@@ -13,6 +13,7 @@ from todo.utils.google_jwt_utils import generate_google_token_pair
 from todo.constants.messages import ApiErrors, AppMessages
 from todo.middlewares.jwt_auth import get_current_user_info
 
+
 class GoogleLoginView(APIView):
     @extend_schema(
         operation_id="google_login",
@@ -154,6 +155,7 @@ class GoogleCallbackView(APIView):
         response.set_cookie(
             "ext-refresh", tokens["refresh_token"], max_age=settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"], **config
         )
+
 
 class GoogleLogoutView(APIView):
     @extend_schema(

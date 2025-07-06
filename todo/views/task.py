@@ -5,6 +5,8 @@ from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.exceptions import ValidationError
 from django.conf import settings
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer
 from todo.serializers.create_task_serializer import CreateTaskSerializer
 from todo.serializers.update_task_serializer import UpdateTaskSerializer
@@ -19,6 +21,60 @@ from todo.constants.messages import ValidationErrors
 
 
 class TaskListView(APIView):
+    @extend_schema(
+        operation_id="get_tasks",
+        summary="Get paginated list of tasks",
+        description="Retrieve a paginated list of tasks with optional filtering and sorting",
+        tags=["tasks"],
+        parameters=[
+            OpenApiParameter(
+                name="page",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description="Page number for pagination",
+                examples=[OpenApiExample("Page 1", value=1)],
+            ),
+            OpenApiParameter(
+                name="limit",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description="Number of tasks per page",
+                examples=[OpenApiExample("20 tasks", value=20)],
+            ),
+        ],
+        responses={
+            200: GetTaskQueryParamsSerializer,
+            400: ApiErrorResponse,
+            500: ApiErrorResponse,
+        },
+        examples=[
+            OpenApiExample(
+                "Successful Response",
+                value={
+                    "data": [
+                        {
+                            "id": "507f1f77bcf86cd799439011",
+                            "title": "Complete project documentation",
+                            "description": "Write comprehensive documentation for the API",
+                            "status": "pending",
+                            "priority": "high",
+                            "dueDate": "2024-12-31T23:59:59Z",
+                            "createdAt": "2024-01-01T10:00:00Z",
+                            "updatedAt": "2024-01-01T10:00:00Z",
+                        }
+                    ],
+                    "pagination": {
+                        "page": 1,
+                        "limit": 20,
+                        "total": 1,
+                        "pages": 1,
+                    },
+                },
+                response_only=True,
+                status_codes=["200"],
+            ),
+        ],
+    )
     def get(self, request: Request):
         """
         Retrieve a paginated list of tasks.
@@ -29,6 +85,48 @@ class TaskListView(APIView):
         response = TaskService.get_tasks(page=query.validated_data["page"], limit=query.validated_data["limit"])
         return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
 
+    @extend_schema(
+        operation_id="create_task",
+        summary="Create a new task",
+        description="Create a new task with the provided details",
+        tags=["tasks"],
+        request=CreateTaskSerializer,
+        responses={
+            201: CreateTaskResponse,
+            400: ApiErrorResponse,
+            500: ApiErrorResponse,
+        },
+        examples=[
+            OpenApiExample(
+                "Create Task Request",
+                value={
+                    "title": "Complete project documentation",
+                    "description": "Write comprehensive documentation for the API",
+                    "status": "pending",
+                    "priority": "high",
+                    "dueDate": "2024-12-31T23:59:59Z",
+                    "labels": ["documentation", "api"],
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Successful Response",
+                value={
+                    "id": "507f1f77bcf86cd799439011",
+                    "title": "Complete project documentation",
+                    "description": "Write comprehensive documentation for the API",
+                    "status": "pending",
+                    "priority": "high",
+                    "dueDate": "2024-12-31T23:59:59Z",
+                    "labels": ["documentation", "api"],
+                    "createdAt": "2024-01-01T10:00:00Z",
+                    "updatedAt": "2024-01-01T10:00:00Z",
+                },
+                response_only=True,
+                status_codes=["201"],
+            ),
+        ],
+    )
     def post(self, request: Request):
         """
         Create a new task.
@@ -89,6 +187,26 @@ class TaskListView(APIView):
 
 
 class TaskDetailView(APIView):
+    @extend_schema(
+        operation_id="get_task_by_id",
+        summary="Get task by ID",
+        description="Retrieve a single task by its unique identifier",
+        tags=["tasks"],
+        parameters=[
+            OpenApiParameter(
+                name="task_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the task",
+                examples=[OpenApiExample("Task ID", value="507f1f77bcf86cd799439011")],
+            ),
+        ],
+        responses={
+            200: GetTaskByIdResponse,
+            404: ApiErrorResponse,
+            500: ApiErrorResponse,
+        },
+    )
     def get(self, request: Request, task_id: str):
         """
         Retrieve a single task by ID.
@@ -97,11 +215,81 @@ class TaskDetailView(APIView):
         response_data = GetTaskByIdResponse(data=task_dto)
         return Response(data=response_data.model_dump(mode="json"), status=status.HTTP_200_OK)
 
+    @extend_schema(
+        operation_id="delete_task",
+        summary="Delete task",
+        description="Delete a task by its unique identifier",
+        tags=["tasks"],
+        parameters=[
+            OpenApiParameter(
+                name="task_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the task to delete",
+                examples=[OpenApiExample("Task ID", value="507f1f77bcf86cd799439011")],
+            ),
+        ],
+        responses={
+            204: None,
+            404: ApiErrorResponse,
+            500: ApiErrorResponse,
+        },
+    )
     def delete(self, request: Request, task_id: str):
         task_id = ObjectId(task_id)
         TaskService.delete_task(task_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @extend_schema(
+        operation_id="update_task",
+        summary="Update or defer task",
+        description="Partially update a task or defer it based on the action parameter",
+        tags=["tasks"],
+        parameters=[
+            OpenApiParameter(
+                name="task_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the task",
+                examples=[OpenApiExample("Task ID", value="507f1f77bcf86cd799439011")],
+            ),
+            OpenApiParameter(
+                name="action",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Action to perform: 'update' or 'defer'",
+                examples=[
+                    OpenApiExample("Update task", value="update"),
+                    OpenApiExample("Defer task", value="defer"),
+                ],
+            ),
+        ],
+        request=UpdateTaskSerializer,
+        responses={
+            200: GetTaskByIdResponse,
+            400: ApiErrorResponse,
+            404: ApiErrorResponse,
+            500: ApiErrorResponse,
+        },
+        examples=[
+            OpenApiExample(
+                "Update Task Request",
+                value={
+                    "title": "Updated task title",
+                    "status": "in_progress",
+                    "priority": "medium",
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Defer Task Request",
+                value={
+                    "deferredTill": "2024-12-31T23:59:59Z",
+                },
+                request_only=True,
+            ),
+        ],
+    )
     def patch(self, request: Request, task_id: str):
         """
         Partially updates a task by its ID.

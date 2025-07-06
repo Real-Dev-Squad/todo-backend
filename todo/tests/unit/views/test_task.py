@@ -1,5 +1,5 @@
 from unittest import TestCase
-from rest_framework.test import APISimpleTestCase, APIClient, APIRequestFactory
+from rest_framework.test import APIRequestFactory
 from rest_framework.reverse import reverse
 from rest_framework import status
 from unittest.mock import patch, Mock
@@ -8,6 +8,7 @@ from django.conf import settings
 from datetime import datetime, timedelta, timezone
 from bson.objectid import ObjectId
 from bson.errors import InvalidId as BsonInvalidId
+from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
 from todo.views.task import TaskListView
 from todo.dto.user_dto import UserDTO
 from todo.dto.task_dto import TaskDTO
@@ -16,15 +17,16 @@ from todo.dto.responses.create_task_response import CreateTaskResponse
 from todo.tests.fixtures.task import task_dtos
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.dto.responses.get_task_by_id_response import GetTaskByIdResponse
-from todo.exceptions.task_exceptions import TaskNotFoundException
+from todo.exceptions.task_exceptions import TaskNotFoundException, UnprocessableEntityException
 from todo.constants.messages import ValidationErrors, ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 from rest_framework.exceptions import ValidationError as DRFValidationError
+from todo.dto.deferred_details_dto import DeferredDetailsDTO
 
 
-class TaskViewTests(APISimpleTestCase):
+class TaskViewTests(AuthenticatedMongoTestCase):
     def setUp(self):
-        self.client = APIClient()
+        super().setUp()
         self.url = reverse("tasks")
         self.valid_params = {"page": 1, "limit": 10}
 
@@ -59,7 +61,7 @@ class TaskViewTests(APISimpleTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         expected_response = {
             "statusCode": 400,
-            "message": "Invalid request",
+            "message": "A valid integer is required.",
             "errors": [
                 {"source": {"parameter": "page"}, "detail": "A valid integer is required."},
                 {"source": {"parameter": "limit"}, "detail": "limit must be greater than or equal to 1"},
@@ -130,7 +132,7 @@ class TaskViewTests(APISimpleTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertEqual(response.data["statusCode"], status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertEqual(response.data["message"], ApiErrors.UNEXPECTED_ERROR_OCCURRED)
+        self.assertEqual(response.data["message"], ApiErrors.INTERNAL_SERVER_ERROR)
         self.assertEqual(response.data["errors"][0]["detail"], ApiErrors.INTERNAL_SERVER_ERROR)
         mock_get_task_by_id.assert_called_once_with(task_id)
 
@@ -193,17 +195,18 @@ class TaskViewTest(TestCase):
         self.assertTrue("page" in error_detail or "limit" in error_detail)
 
 
-class CreateTaskViewTests(APISimpleTestCase):
+class CreateTaskViewTests(AuthenticatedMongoTestCase):
     def setUp(self):
-        self.client = APIClient()
+        super().setUp()
         self.url = reverse("tasks")
+        self.user_id = str(ObjectId())
 
         self.valid_payload = {
             "title": "Write tests",
             "description": "Cover all core paths",
             "priority": "HIGH",
             "status": "IN_PROGRESS",
-            "assignee": "developer1",
+            "assignee": self.user_id,
             "labels": [],
             "dueAt": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat().replace("+00:00", "Z"),
         }
@@ -217,7 +220,7 @@ class CreateTaskViewTests(APISimpleTestCase):
             description=self.valid_payload["description"],
             priority=TaskPriority[self.valid_payload["priority"]],
             status=TaskStatus[self.valid_payload["status"]],
-            assignee=UserDTO(id="developer1", name="SYSTEM"),
+            assignee=UserDTO(id=self.user_id, name="SYSTEM"),
             isAcknowledged=False,
             labels=[],
             startedAt=datetime.now(timezone.utc),
@@ -299,13 +302,14 @@ class CreateTaskViewTests(APISimpleTestCase):
         try:
             response = self.client.post(self.url, data=self.valid_payload, format="json")
             self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-            self.assertIn("An unexpected error occurred", str(response.data))
+            self.assertEqual(response.data["message"], ApiErrors.INTERNAL_SERVER_ERROR)
         except Exception as e:
             self.assertEqual(str(e), "Database exploded")
 
 
-class TaskDeleteViewTests(APISimpleTestCase):
+class TaskDeleteViewTests(AuthenticatedMongoTestCase):
     def setUp(self):
+        super().setUp()
         self.valid_task_id = str(ObjectId())
         self.url = reverse("task_detail", kwargs={"task_id": self.valid_task_id})
 
@@ -313,7 +317,7 @@ class TaskDeleteViewTests(APISimpleTestCase):
     def test_delete_task_returns_204_on_success(self, mock_delete_task: Mock):
         mock_delete_task.return_value = None
         response = self.client.delete(self.url)
-        mock_delete_task.assert_called_once_with(ObjectId(self.valid_task_id))
+        mock_delete_task.assert_called_once_with(ObjectId(self.valid_task_id), str(self.user_id))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.data, None)
 
@@ -333,9 +337,9 @@ class TaskDeleteViewTests(APISimpleTestCase):
         self.assertIn(ValidationErrors.INVALID_TASK_ID_FORMAT, response.data["message"])
 
 
-class TaskDetailViewPatchTests(APISimpleTestCase):
+class TaskDetailViewPatchTests(AuthenticatedMongoTestCase):
     def setUp(self):
-        self.client = APIClient()
+        super().setUp()
         self.task_id_str = str(ObjectId())
         self.task_url = reverse("task_detail", args=[self.task_id_str])
         self.future_date = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
@@ -383,7 +387,7 @@ class TaskDetailViewPatchTests(APISimpleTestCase):
         mock_update_serializer_class.assert_called_once_with(data=valid_payload, partial=True)
         mock_serializer_instance.is_valid.assert_called_once_with(raise_exception=True)
         mock_service_update_task.assert_called_once_with(
-            task_id=self.task_id_str, validated_data=valid_payload, user_id="system_patch_user"
+            task_id=self.task_id_str, validated_data=valid_payload, user_id=str(self.user_id)
         )
 
         expected_response_data = self.updated_task_dto_fixture.model_dump(mode="json", exclude_none=True)
@@ -484,7 +488,7 @@ class TaskDetailViewPatchTests(APISimpleTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["statusCode"], status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data["message"], "Invalid request")
+        self.assertEqual(response.data["message"], service_error_detail["labels"][0])
 
         self.assertIn(
             "labels",
@@ -539,10 +543,106 @@ class TaskDetailViewPatchTests(APISimpleTestCase):
 
             self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
             self.assertEqual(response.data["statusCode"], status.HTTP_500_INTERNAL_SERVER_ERROR)
-            self.assertEqual(response.data["message"], ApiErrors.UNEXPECTED_ERROR_OCCURRED)
+            self.assertEqual(response.data["message"], ApiErrors.INTERNAL_SERVER_ERROR)
             self.assertEqual(response.data["errors"][0]["detail"], ApiErrors.INTERNAL_SERVER_ERROR)
 
         with patch.object(settings, "DEBUG", True):
             response_debug = self.client.patch(self.task_url, data=valid_payload, format="json")
             self.assertEqual(response_debug.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
             self.assertEqual(response_debug.data["errors"][0]["detail"], "Something completely unexpected broke!")
+
+    @patch("todo.views.task.TaskService.update_task")
+    @patch("todo.views.task.UpdateTaskSerializer")
+    def test_patch_task_service_raises_exception(self, mock_update_serializer_class, mock_service_update_task):
+        mock_service_update_task.side_effect = Exception("A wild error appears!")
+        mock_serializer_instance = mock_update_serializer_class.return_value
+        mock_serializer_instance.is_valid.return_value = True
+
+        response = self.client.patch(self.task_url, data={}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @patch("todo.views.task.DeferTaskSerializer")
+    @patch("todo.views.task.TaskService.defer_task")
+    def test_patch_task_defer_action_success(self, mock_service_defer_task, mock_defer_serializer_class):
+        deferred_till_datetime = datetime.now(timezone.utc) + timedelta(days=5)
+        deferred_task_dto = self.updated_task_dto_fixture.model_copy(deep=True)
+        deferred_task_dto.deferredDetails = DeferredDetailsDTO(
+            deferredAt=datetime.now(timezone.utc),
+            deferredTill=deferred_till_datetime,
+            deferredBy=UserDTO(id="system_defer_user", name="SYSTEM"),
+        )
+        mock_service_defer_task.return_value = deferred_task_dto
+        mock_serializer_instance = mock_defer_serializer_class.return_value
+        mock_serializer_instance.is_valid.return_value = True
+        mock_serializer_instance.validated_data = {"deferredTill": deferred_till_datetime}
+
+        url_with_action = f"{self.task_url}?action=defer"
+        request_data = {"deferredTill": deferred_till_datetime.isoformat()}
+        response = self.client.patch(url_with_action, data=request_data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, deferred_task_dto.model_dump(mode="json", exclude_none=True))
+        mock_defer_serializer_class.assert_called_once_with(data=request_data)
+        mock_service_defer_task.assert_called_once_with(
+            task_id=self.task_id_str,
+            deferred_till=deferred_till_datetime,
+            user_id=str(self.user_id),
+        )
+
+    @patch("todo.views.task.DeferTaskSerializer")
+    def test_patch_task_defer_action_serializer_invalid(self, mock_defer_serializer_class):
+        mock_serializer_instance = mock_defer_serializer_class.return_value
+        validation_error = DRFValidationError({"deferredTill": ["This field may not be blank."]})
+        mock_serializer_instance.is_valid.side_effect = validation_error
+
+        url_with_action = f"{self.task_url}?action=defer"
+        response = self.client.patch(url_with_action, data={}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch("todo.views.task.TaskService.defer_task")
+    @patch("todo.views.task.DeferTaskSerializer")
+    def test_patch_task_defer_service_raises_task_not_found(self, mock_defer_serializer_class, mock_service_defer_task):
+        deferred_till_datetime = datetime.now(timezone.utc) + timedelta(days=5)
+        mock_service_defer_task.side_effect = TaskNotFoundException(self.task_id_str)
+        mock_serializer_instance = mock_defer_serializer_class.return_value
+        mock_serializer_instance.is_valid.return_value = True
+        mock_serializer_instance.validated_data = {"deferredTill": deferred_till_datetime}
+
+        url_with_action = f"{self.task_url}?action=defer"
+        response = self.client.patch(
+            url_with_action, data={"deferredTill": deferred_till_datetime.isoformat()}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    @patch("todo.views.task.TaskService.defer_task")
+    @patch("todo.views.task.DeferTaskSerializer")
+    def test_patch_task_defer_service_raises_unprocessable_entity(
+        self, mock_defer_serializer_class, mock_service_defer_task
+    ):
+        deferred_till_datetime = datetime.now(timezone.utc) + timedelta(days=5)
+        error_message = "Cannot defer too close to due date."
+        mock_service_defer_task.side_effect = UnprocessableEntityException(error_message)
+        mock_serializer_instance = mock_defer_serializer_class.return_value
+        mock_serializer_instance.is_valid.return_value = True
+        mock_serializer_instance.validated_data = {"deferredTill": deferred_till_datetime}
+
+        url_with_action = f"{self.task_url}?action=defer"
+        response = self.client.patch(
+            url_with_action, data={"deferredTill": deferred_till_datetime.isoformat()}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(response.data["message"], error_message)
+
+    def test_patch_task_unsupported_action_raises_validation_error(self):
+        unsupported_action = "archive"
+        url = reverse("task_detail", kwargs={"task_id": self.task_id_str})
+        response = self.client.patch(f"{url}?action={unsupported_action}", data={}, format="json")
+
+        expected_detail = ValidationErrors.UNSUPPORTED_ACTION.format(unsupported_action)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["errors"][0]["detail"], expected_detail)

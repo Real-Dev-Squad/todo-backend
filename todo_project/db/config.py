@@ -18,7 +18,7 @@ class DatabaseManager:
 
     def _get_database_client(self):
         if self._database_client is None:
-            self._database_client = MongoClient(settings.MONGODB_URI)
+            self._database_client = MongoClient(settings.MONGODB_URI, tz_aware=True)
         return self._database_client
 
     def get_database(self):
@@ -39,3 +39,9 @@ class DatabaseManager:
         except ConnectionFailure as e:
             logger.error(f"Failed to establish database connection: {e}")
             return False
+
+    @classmethod
+    def reset(cls):
+        if cls.__instance is not None and cls.__instance._database_client is not None:
+            cls.__instance._database_client.close()
+        cls.__instance = None

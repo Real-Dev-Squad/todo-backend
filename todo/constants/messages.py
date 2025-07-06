@@ -1,12 +1,18 @@
 # Application Messages
 class AppMessages:
     TASK_CREATED = "Task created successfully"
+    GOOGLE_LOGIN_SUCCESS = "Successfully logged in with Google"
+    GOOGLE_LOGOUT_SUCCESS = "Successfully logged out"
+    TOKEN_REFRESHED = "Access token refreshed successfully"
 
 
 # Repository error messages
 class RepositoryErrors:
     TASK_CREATION_FAILED = "Failed to create task: {0}"
     DB_INIT_FAILED = "Failed to initialize database: {0}"
+    USER_NOT_FOUND = "User not found: {0}"
+    USER_OPERATION_FAILED = "User operation failed"
+    USER_CREATE_UPDATE_FAILED = "User create/update failed: {0}"
 
 
 # API error messages
@@ -23,6 +29,21 @@ class ApiErrors:
     TASK_NOT_FOUND = "Task with ID {0} not found."
     TASK_NOT_FOUND_GENERIC = "Task not found."
     RESOURCE_NOT_FOUND_TITLE = "Resource Not Found"
+    GOOGLE_AUTH_FAILED = "Google authentication failed"
+    GOOGLE_API_ERROR = "Google API error"
+    INVALID_AUTH_CODE = "Invalid authorization code"
+    TOKEN_EXCHANGE_FAILED = "Failed to exchange authorization code"
+    MISSING_USER_INFO_FIELDS = "Missing user info fields: {0}"
+    USER_INFO_FETCH_FAILED = "Failed to get user info: {0}"
+    OAUTH_INITIALIZATION_FAILED = "OAuth initialization failed: {0}"
+    AUTHENTICATION_FAILED = "Authentication failed: {0}"
+    INVALID_STATE_PARAMETER = "Invalid state parameter"
+    TOKEN_REFRESH_FAILED = "Token refresh failed: {0}"
+    LOGOUT_FAILED = "Logout failed: {0}"
+    STATE_CONFLICT_TITLE = "State Conflict"
+    UNAUTHORIZED_TITLE = "You are not authorized to perform this action"
+    USER_NOT_FOUND = "User with ID {0} not found."
+    USER_NOT_FOUND_GENERIC = "User not found."
 
 
 # Validation error messages
@@ -30,10 +51,34 @@ class ValidationErrors:
     BLANK_TITLE = "Title must not be blank."
     INVALID_OBJECT_ID = "{0} is not a valid ObjectId."
     PAST_DUE_DATE = "Due date must be in the future."
+    PAST_DEFERRED_TILL_DATE = "deferredTill cannot be in the past."
+    CANNOT_DEFER_TOO_CLOSE_TO_DUE_DATE = "Cannot defer task too close to the due date."
+    CANNOT_DEFER_A_DONE_TASK = "Cannot defer a task that is already marked as done."
     PAGE_POSITIVE = "Page must be a positive integer"
     LIMIT_POSITIVE = "Limit must be a positive integer"
     MAX_LIMIT_EXCEEDED = "Maximum limit of {0} exceeded"
+    INVALID_SEARCH_QUERY_TYPE = "Search query must be a string."
     MISSING_LABEL_IDS = "The following label ID(s) do not exist: {0}."
     INVALID_TASK_ID_FORMAT = "Please enter a valid Task ID format."
+    UNSUPPORTED_ACTION = "Unsupported action '{0}'."
     FUTURE_STARTED_AT = "The start date cannot be set in the future."
     INVALID_LABELS_STRUCTURE = "Labels must be provided as a list or tuple of ObjectId strings."
+    MISSING_GOOGLE_ID = "Google ID is required"
+    MISSING_EMAIL = "Email is required"
+    MISSING_NAME = "Name is required"
+
+
+# Auth messages
+class AuthErrorMessages:
+    TOKEN_MISSING = "Authentication token is required"
+    TOKEN_EXPIRED = "Authentication token has expired"
+    TOKEN_INVALID = "Invalid authentication token"
+    AUTHENTICATION_REQUIRED = "Authentication required"
+    TOKEN_EXPIRED_TITLE = "Token Expired"
+    INVALID_TOKEN_TITLE = "Invalid Token"
+    GOOGLE_TOKEN_EXPIRED = "Google access token has expired"
+    GOOGLE_REFRESH_TOKEN_EXPIRED = "Google refresh token has expired, please login again"
+    GOOGLE_TOKEN_INVALID = "Invalid Google token"
+    MISSING_REQUIRED_PARAMETER = "Missing required parameter: {0}"
+    NO_ACCESS_TOKEN = "No access token"
+    NO_REFRESH_TOKEN = "No refresh token found"

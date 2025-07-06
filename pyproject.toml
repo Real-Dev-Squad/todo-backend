@@ -46,6 +46,9 @@ ignore = []
 fixable = ["ALL"]
 unfixable = []
 
+[tool.ruff.lint.per-file-ignores]
+"todo_project/settings/*.py" = ["F403", "F405"]
+
 [tool.ruff.format]
 # Like Black, use double quotes for strings.
 quote-style = "double"

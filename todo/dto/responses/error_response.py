@@ -20,3 +20,4 @@ class ApiErrorResponse(BaseModel):
     statusCode: int
     message: str
     errors: List[ApiErrorDetail]
+    authenticated: bool | None = None

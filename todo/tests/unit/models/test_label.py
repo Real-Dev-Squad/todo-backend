@@ -17,7 +17,7 @@ class LabelModelTest(TestCase):
         self.assertIsNone(label.updatedAt)  # Default value
         self.assertIsNone(label.updatedBy)  # Default value
 
-    def test_lable_model_throws_error_when_missing_required_fields(self):
+    def test_label_model_throws_error_when_missing_required_fields(self):
         incomplete_data = self.valid_data.copy()
         required_fields = ["name", "color", "createdAt", "createdBy"]
         for field_name in required_fields:

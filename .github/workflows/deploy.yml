@@ -32,6 +32,8 @@ jobs:
           file: production.Dockerfile
           platforms: linux/arm64
           push: true
+          build-args: |
+            ENV=${{ vars.ENV }}
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest

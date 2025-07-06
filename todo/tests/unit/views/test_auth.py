@@ -94,7 +94,6 @@ class GoogleCallbackViewTests(APITestCase):
         self.assertEqual(response.data["message"], "No authorization code received from Google")
 
     def test_post_returns_error_for_invalid_state(self):
-
         session = self.client.session
         session["oauth_state"] = "different_state"
         session.save()
@@ -137,9 +136,6 @@ class GoogleCallbackViewTests(APITestCase):
         self.assertIn("ext-access", response.cookies)
         self.assertIn("ext-refresh", response.cookies)
         self.assertNotIn("oauth_state", self.client.session)
-
-
-
 
 
 class GoogleRefreshViewTests(APITestCase):
@@ -195,7 +191,7 @@ class GoogleLogoutViewTests(APITestCase):
         self.client.cookies["ext-refresh"] = tokens["refresh_token"]
 
         response = self.client.get(self.url, HTTP_ACCEPT="application/json")
-            
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["data"]["success"], True)
         self.assertEqual(response.data["message"], AppMessages.GOOGLE_LOGOUT_SUCCESS)

@@ -13,10 +13,50 @@ class TaskRepository(MongoRepository):
     collection_name = TaskModel.collection_name
 
     @classmethod
-    def list(cls, page: int, limit: int) -> List[TaskModel]:
+    def list(cls, page: int, limit: int, sort_by: str = "createdAt", order: str = "desc") -> List[TaskModel]:
         tasks_collection = cls.get_collection()
-        tasks_cursor = tasks_collection.find().skip((page - 1) * limit).limit(limit)
+
+        sort_direction = -1 if order == "desc" else 1
+
+        if sort_by == "priority":
+            sort_criteria = [(sort_by, sort_direction)]
+        elif sort_by == "assignee":
+            return cls._list_sorted_by_assignee(page, limit, order)
+        else:
+            sort_criteria = [(sort_by, sort_direction)]
+
+        tasks_cursor = tasks_collection.find().sort(sort_criteria).skip((page - 1) * limit).limit(limit)
         return [TaskModel(**task) for task in tasks_cursor]
+
+    @classmethod
+    def _list_sorted_by_assignee(cls, page: int, limit: int, order: str) -> List[TaskModel]:
+        """Handle assignee sorting using aggregation pipeline to sort by user names"""
+        tasks_collection = cls.get_collection()
+
+        sort_direction = -1 if order == "desc" else 1
+
+        pipeline = [
+            {
+                "$addFields": {
+                    "assignee_oid": {
+                        "$cond": {
+                            "if": {"$ne": ["$assignee", None]},
+                            "then": {"$toObjectId": "$assignee"},
+                            "else": None,
+                        }
+                    }
+                }
+            },
+            {"$lookup": {"from": "users", "localField": "assignee_oid", "foreignField": "_id", "as": "assignee_user"}},
+            {"$addFields": {"assignee_name": {"$ifNull": [{"$arrayElemAt": ["$assignee_user.name", 0]}, ""]}}},
+            {"$sort": {"assignee_name": sort_direction}},
+            {"$skip": (page - 1) * limit},
+            {"$limit": limit},
+            {"$project": {"assignee_user": 0, "assignee_name": 0, "assignee_oid": 0}},
+        ]
+
+        result = list(tasks_collection.aggregate(pipeline))
+        return [TaskModel(**task) for task in result]
 
     @classmethod
     def count(cls) -> int:

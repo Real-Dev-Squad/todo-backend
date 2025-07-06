@@ -20,3 +20,13 @@ class GetTaskQueryParamsSerializer(serializers.Serializer):
             "min_value": "limit must be greater than or equal to 1",
         },
     )
+    sort_by = serializers.ChoiceField(
+        choices=["priority", "dueAt", "createdAt", "assignee"],
+        required=False,
+        default="createdAt",
+    )
+    order = serializers.ChoiceField(
+        choices=["asc", "desc"],
+        required=False,
+        default="desc",
+    )

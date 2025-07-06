@@ -41,4 +41,4 @@ class TaskModel(Document):
     createdBy: str
     updatedBy: str | None = None
 
-    model_config = ConfigDict(ser_enum="value")
+    model_config = ConfigDict(use_enum_values=True, extra="allow")

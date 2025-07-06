@@ -1,6 +1,5 @@
 from typing import List
 from dataclasses import dataclass
-from django.core.paginator import Paginator, EmptyPage
 from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from urllib.parse import urlencode
@@ -18,6 +17,7 @@ from todo.models.task import TaskModel, DeferredDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.label_repository import LabelRepository
+from todo.repositories.user_repository import UserRepository
 from todo.constants.task import TaskStatus, TaskPriority, MINIMUM_DEFERRAL_NOTICE_DAYS
 from todo.constants.messages import ApiErrors, ValidationErrors
 from django.conf import settings
@@ -41,33 +41,41 @@ class TaskService:
 
     @classmethod
     def get_tasks(
-        cls, page: int = PaginationConfig.DEFAULT_PAGE, limit: int = PaginationConfig.DEFAULT_LIMIT
+        cls,
+        page: int = PaginationConfig.DEFAULT_PAGE,
+        limit: int = PaginationConfig.DEFAULT_LIMIT,
+        sort_by: str = "createdAt",
+        order: str = "desc",
     ) -> GetTasksResponse:
+        """
+        Get a paginated list of tasks with sorting applied at the database level.
+
+        Args:
+            page (int): Page number (1-based)
+            limit (int): Number of items per page
+            sort_by (str): Field to sort by (priority, dueAt, createdAt, assignee)
+            order (str): Sort order (asc or desc)
+
+        Returns:
+            GetTasksResponse: Response containing tasks and pagination links
+        """
         try:
             cls._validate_pagination_params(page, limit)
 
-            tasks = TaskRepository.get_all()
+            tasks = TaskRepository.list(page=page, limit=limit, sort_by=sort_by, order=order)
+
+            total_count = TaskRepository.count()
 
             if not tasks:
                 return GetTasksResponse(tasks=[], links=None)
 
-            paginator = Paginator(tasks, limit)
+            task_dtos = [cls.prepare_task_dto(task) for task in tasks]
 
-            try:
-                current_page = paginator.page(page)
+            links = cls._prepare_pagination_links(
+                page=page, limit=limit, total_count=total_count, sort_by=sort_by, order=order
+            )
 
-                task_dtos = [cls.prepare_task_dto(task) for task in current_page.object_list]
-
-                links = cls._prepare_pagination_links(current_page=current_page, page=page, limit=limit)
-
-                return GetTasksResponse(tasks=task_dtos, links=links)
-
-            except EmptyPage:
-                return GetTasksResponse(
-                    tasks=[],
-                    links=None,
-                    error={"message": ApiErrors.PAGE_NOT_FOUND, "code": "PAGE_NOT_FOUND"},
-                )
+            return GetTasksResponse(tasks=task_dtos, links=links)
 
         except ValidationError as e:
             return GetTasksResponse(tasks=[], links=None, error={"message": str(e), "code": "VALIDATION_ERROR"})
@@ -89,31 +97,50 @@ class TaskService:
             raise ValidationError(f"Maximum limit of {PaginationConfig.MAX_LIMIT} exceeded")
 
     @classmethod
-    def _prepare_pagination_links(cls, current_page, page: int, limit: int) -> LinksData:
+    def _prepare_pagination_links(cls, page: int, limit: int, total_count: int, sort_by: str, order: str) -> LinksData:
+        """
+        Prepare pagination links based on current page and total count.
+        """
+        total_pages = (total_count + limit - 1) // limit
+
         next_link = None
         prev_link = None
 
-        if current_page.has_next():
-            next_page = current_page.next_page_number()
-            next_link = cls.build_page_url(next_page, limit)
+        if page < total_pages:
+            next_link = cls.build_page_url(page + 1, limit, sort_by, order)
 
-        if current_page.has_previous():
-            prev_page = current_page.previous_page_number()
-            prev_link = cls.build_page_url(prev_page, limit)
+        if page > 1:
+            prev_link = cls.build_page_url(page - 1, limit, sort_by, order)
 
         return LinksData(next=next_link, prev=prev_link)
 
     @classmethod
-    def build_page_url(cls, page: int, limit: int) -> str:
+    def build_page_url(cls, page: int, limit: int, sort_by: str, order: str) -> str:
+        """
+        Build URL for pagination links including sorting parameters.
+        """
         base_url = reverse_lazy("tasks")
-        query_params = urlencode({"page": page, "limit": limit})
+        query_params = urlencode({"page": page, "limit": limit, "sort_by": sort_by, "order": order})
         return f"{base_url}?{query_params}"
 
     @classmethod
     def prepare_task_dto(cls, task_model: TaskModel) -> TaskDTO:
+        """
+        Convert TaskModel to TaskDTO, handling assignee information from aggregation.
+        """
         label_dtos = cls._prepare_label_dtos(task_model.labels) if task_model.labels else []
 
-        assignee = cls.prepare_user_dto(task_model.assignee) if task_model.assignee else None
+        assignee = None
+        if task_model.assignee:
+            if hasattr(task_model, "assignee_info") and task_model.assignee_info:
+                assignee_data = task_model.assignee_info[0]
+                assignee = UserDTO(
+                    id=str(assignee_data.get("_id", task_model.assignee)),
+                    name=assignee_data.get("name", "Unknown User"),
+                )
+            else:
+                assignee = cls.prepare_user_dto(task_model.assignee)
+
         created_by = cls.prepare_user_dto(task_model.createdBy)
         updated_by = cls.prepare_user_dto(task_model.updatedBy) if task_model.updatedBy else None
         deferred_details = (
@@ -172,6 +199,16 @@ class TaskService:
 
     @classmethod
     def prepare_user_dto(cls, user_id: str) -> UserDTO:
+        """
+        Prepare UserDTO from user_id, fetching real user data from repository.
+        """
+        try:
+            user_model = UserRepository.get_by_id(user_id)
+            if user_model:
+                return UserDTO(id=str(user_model.id), name=user_model.name)
+        except Exception:
+            pass
+
         return UserDTO(id=user_id, name="SYSTEM")
 
     @classmethod

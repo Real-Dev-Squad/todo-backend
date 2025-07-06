@@ -22,13 +22,13 @@ class TeamModel(Document):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_deleted: bool = False
 
-    @validator('created_by', 'updated_by')
+    @validator("created_by", "updated_by")
     def validate_user_id(cls, v):
         """Validate that the user ID is a valid ObjectId format."""
         if v is None:
-            raise ValueError('User ID cannot be None')
+            raise ValueError("User ID cannot be None")
         if not PyObjectId.is_valid(v):
-            raise ValueError(f'Invalid user ID format: {v}')
+            raise ValueError(f"Invalid user ID format: {v}")
         return v
 
 
@@ -48,11 +48,11 @@ class UserTeamDetailsModel(Document):
     created_by: PyObjectId
     updated_by: PyObjectId
 
-    @validator('user_id', 'team_id', 'created_by', 'updated_by')
+    @validator("user_id", "team_id", "created_by", "updated_by")
     def validate_object_ids(cls, v):
         """Validate that the ObjectId fields are in valid format."""
         if v is None:
-            raise ValueError('ObjectId cannot be None')
+            raise ValueError("ObjectId cannot be None")
         if not PyObjectId.is_valid(v):
-            raise ValueError(f'Invalid ObjectId format: {v}')
+            raise ValueError(f"Invalid ObjectId format: {v}")
         return v

@@ -3,7 +3,6 @@ from todo.dto.responses.create_team_response import CreateTeamResponse
 from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
-from todo.repositories.user_repository import UserRepository
 from todo.constants.messages import AppMessages
 
 

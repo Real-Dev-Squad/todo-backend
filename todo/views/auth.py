@@ -194,10 +194,6 @@ class GoogleCallbackView(APIView):
                             "email": user.email_id,
                             "google_id": user.google_id,
                         },
-                        "tokens": {
-                            "access_token_expires_in": tokens["expires_in"],
-                            "refresh_token_expires_in": settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"],
-                        },
                     },
                 }
             )

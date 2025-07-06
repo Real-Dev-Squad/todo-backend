@@ -4,4 +4,4 @@ from todo.dto.team_dto import TeamDTO
 
 class CreateTeamResponse(BaseModel):
     team: TeamDTO
-    message: str = "Team created successfully" 
+    message: str = "Team created successfully"

@@ -32,14 +32,14 @@ class TeamService:
                 description=dto.description,
                 poc_id=PyObjectId(dto.poc_id) if dto.poc_id else None,
                 created_by=PyObjectId(created_by_user_id),
-                updated_by=PyObjectId(created_by_user_id)
+                updated_by=PyObjectId(created_by_user_id),
             )
 
             created_team = TeamRepository.create(team)
 
             # Create user-team relationships
             user_teams = []
-            
+
             # Add members to the team
             if dto.member_ids:
                 for user_id in dto.member_ids:
@@ -48,9 +48,20 @@ class TeamService:
                         team_id=created_team.id,
                         role_id="1",
                         created_by=PyObjectId(created_by_user_id),
-                        updated_by=PyObjectId(created_by_user_id)
+                        updated_by=PyObjectId(created_by_user_id),
                     )
                     user_teams.append(user_team)
+
+            # Add POC if not already in member_ids
+            if dto.poc_id and dto.poc_id not in dto.member_ids:
+                poc_user_team = UserTeamDetailsModel(
+                    user_id=PyObjectId(dto.poc_id),
+                    team_id=created_team.id,
+                    role_id="2",  # POC role
+                    created_by=PyObjectId(created_by_user_id),
+                    updated_by=PyObjectId(created_by_user_id),
+                )
+                user_teams.append(poc_user_team)
 
             # Add creator if not already in member_ids
             if created_by_user_id not in dto.member_ids:
@@ -59,7 +70,7 @@ class TeamService:
                     team_id=created_team.id,
                     role_id="1",
                     created_by=PyObjectId(created_by_user_id),
-                    updated_by=PyObjectId(created_by_user_id)
+                    updated_by=PyObjectId(created_by_user_id),
                 )
                 user_teams.append(creator_user_team)
 
@@ -82,4 +93,4 @@ class TeamService:
             return CreateTeamResponse(team=team_dto)
 
         except Exception as e:
-            raise ValueError(str(e)) 
+            raise ValueError(str(e))

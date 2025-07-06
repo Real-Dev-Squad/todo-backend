@@ -4,7 +4,6 @@ from bson import ObjectId
 
 from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.repositories.common.mongo_repository import MongoRepository
-from todo.models.common.pyobjectid import PyObjectId
 
 
 class TeamRepository(MongoRepository):
@@ -50,7 +49,7 @@ class UserTeamDetailsRepository(MongoRepository):
         collection = cls.get_collection()
         user_team.created_at = datetime.now(timezone.utc)
         user_team.updated_at = datetime.now(timezone.utc)
-        
+
         user_team_dict = user_team.model_dump(mode="json", by_alias=True, exclude_none=True)
         insert_result = collection.insert_one(user_team_dict)
         user_team.id = insert_result.inserted_id
@@ -63,17 +62,18 @@ class UserTeamDetailsRepository(MongoRepository):
         """
         collection = cls.get_collection()
         current_time = datetime.now(timezone.utc)
-        
+
         for user_team in user_teams:
             user_team.created_at = current_time
             user_team.updated_at = current_time
-        
-        user_teams_dicts = [user_team.model_dump(mode="json", by_alias=True, exclude_none=True) 
-                           for user_team in user_teams]
+
+        user_teams_dicts = [
+            user_team.model_dump(mode="json", by_alias=True, exclude_none=True) for user_team in user_teams
+        ]
         insert_result = collection.insert_many(user_teams_dicts)
-        
+
         # Set the inserted IDs
         for i, user_team in enumerate(user_teams):
             user_team.id = insert_result.inserted_ids[i]
-        
-        return user_teams 
+
+        return user_teams

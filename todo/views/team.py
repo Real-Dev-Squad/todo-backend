@@ -27,18 +27,12 @@ class TeamListView(APIView):
             created_by_user_id = request.user_id
             response: CreateTeamResponse = TeamService.create_team(dto, created_by_user_id)
 
-            return Response(
-                data=response.model_dump(mode="json"), 
-                status=status.HTTP_201_CREATED
-            )
+            return Response(data=response.model_dump(mode="json"), status=status.HTTP_201_CREATED)
 
         except ValueError as e:
             if isinstance(e.args[0], ApiErrorResponse):
                 error_response = e.args[0]
-                return Response(
-                    data=error_response.model_dump(mode="json"), 
-                    status=error_response.statusCode
-                )
+                return Response(data=error_response.model_dump(mode="json"), status=error_response.statusCode)
 
             fallback_response = ApiErrorResponse(
                 statusCode=500,
@@ -46,13 +40,12 @@ class TeamListView(APIView):
                 errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}],
             )
             return Response(
-                data=fallback_response.model_dump(mode="json"), 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                data=fallback_response.model_dump(mode="json"), status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     def _handle_validation_errors(self, errors):
         from todo.dto.responses.error_response import ApiErrorDetail, ApiErrorSource
-        
+
         formatted_errors = []
         for field, messages in errors.items():
             if isinstance(messages, list):
@@ -67,19 +60,10 @@ class TeamListView(APIView):
             else:
                 formatted_errors.append(
                     ApiErrorDetail(
-                        source={ApiErrorSource.PARAMETER: field}, 
-                        title=ApiErrors.VALIDATION_ERROR, 
-                        detail=str(messages)
+                        source={ApiErrorSource.PARAMETER: field}, title=ApiErrors.VALIDATION_ERROR, detail=str(messages)
                     )
                 )
 
-        error_response = ApiErrorResponse(
-            statusCode=400, 
-            message=ApiErrors.VALIDATION_ERROR, 
-            errors=formatted_errors
-        )
+        error_response = ApiErrorResponse(statusCode=400, message=ApiErrors.VALIDATION_ERROR, errors=formatted_errors)
 
-        return Response(
-            data=error_response.model_dump(mode="json"), 
-            status=status.HTTP_400_BAD_REQUEST
-        ) 
+        return Response(data=error_response.model_dump(mode="json"), status=status.HTTP_400_BAD_REQUEST)

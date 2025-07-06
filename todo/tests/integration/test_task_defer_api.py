@@ -2,30 +2,10 @@ from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 from bson import ObjectId
 from django.urls import reverse
-from rest_framework.test import APIClient
 from todo.constants.messages import ApiErrors, ValidationErrors
 from todo.constants.task import MINIMUM_DEFERRAL_NOTICE_DAYS, TaskPriority, TaskStatus
-from todo.tests.integration.base_mongo_test import BaseMongoTestCase
+from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
 from todo.tests.fixtures.task import tasks_db_data
-from todo.utils.google_jwt_utils import generate_google_token_pair
-
-
-class AuthenticatedMongoTestCase(BaseMongoTestCase):
-    def setUp(self):
-        super().setUp()
-        self.client = APIClient()
-        self._setup_auth_cookies()
-
-    def _setup_auth_cookies(self):
-        user_data = {
-            "user_id": str(ObjectId()),
-            "google_id": "test_google_id",
-            "email": "test@example.com",
-            "name": "Test User",
-        }
-        tokens = generate_google_token_pair(user_data)
-        self.client.cookies["ext-access"] = tokens["access_token"]
-        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
 
 
 class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
@@ -40,6 +20,8 @@ class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
         task_fixture.pop("id", None)
         task_fixture["displayId"] = "#IT-DEF"
         task_fixture["status"] = status
+        task_fixture["assignee"] = str(self.user_id)
+        task_fixture["createdBy"] = str(self.user_id)
         task_fixture["priority"] = TaskPriority.MEDIUM.value
         task_fixture["createdAt"] = datetime.now(timezone.utc)
         if due_at:
@@ -58,7 +40,6 @@ class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
 
         url = reverse("task_detail", args=[task_id]) + "?action=defer"
         response = self.client.patch(url, data={"deferredTill": deferred_till.isoformat()}, format="json")
-
         self.assertEqual(response.status_code, HTTPStatus.OK)
         response_data = response.json()
         self.assertIn("deferredDetails", response_data)

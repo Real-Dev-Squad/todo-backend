@@ -24,6 +24,8 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "todo",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
 ]
 
 MIDDLEWARE = [

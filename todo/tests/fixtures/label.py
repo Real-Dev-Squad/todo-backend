@@ -8,14 +8,14 @@ label_db_data = [
         "name": "Label 1",
         "color": "#fa1e4e",
         "createdAt": "2024-11-08T10:14:35",
-        "createdBy": "qMbT6M2GB65W7UHgJS4g",
+        "createdBy": str(ObjectId()),
     },
     {
         "_id": ObjectId("67588c1ac2195684a575840c"),
         "name": "Label 2",
         "color": "#ea1e4e",
         "createdAt": "2024-11-08T10:14:35",
-        "createdBy": "qMbT6M2GB65W7UHgJS4g",
+        "createdBy": str(ObjectId()),
     },
 ]
 

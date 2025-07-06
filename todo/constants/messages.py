@@ -41,6 +41,9 @@ class ApiErrors:
     TOKEN_REFRESH_FAILED = "Token refresh failed: {0}"
     LOGOUT_FAILED = "Logout failed: {0}"
     STATE_CONFLICT_TITLE = "State Conflict"
+    UNAUTHORIZED_TITLE = "You are not authorized to perform this action"
+    USER_NOT_FOUND = "User with ID {0} not found."
+    USER_NOT_FOUND_GENERIC = "User not found."
 
 
 # Validation error messages

@@ -6,7 +6,6 @@ from django.http import HttpResponseRedirect, HttpResponse
 from django.conf import settings
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
-
 from todo.services.google_oauth_service import GoogleOAuthService
 from todo.services.user_service import UserService
 from todo.utils.google_jwt_utils import (

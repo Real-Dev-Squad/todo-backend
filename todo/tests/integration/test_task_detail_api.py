@@ -1,37 +1,22 @@
 from http import HTTPStatus
 from django.urls import reverse
 from bson import ObjectId
-
 from todo.tests.fixtures.task import tasks_db_data
-from todo.tests.integration.base_mongo_test import BaseMongoTestCase
+from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
 from todo.constants.messages import ApiErrors, ValidationErrors
-from todo.utils.google_jwt_utils import generate_google_token_pair
-
-
-class AuthenticatedMongoTestCase(BaseMongoTestCase):
-    def setUp(self):
-        super().setUp()
-        self._setup_auth_cookies()
-
-    def _setup_auth_cookies(self):
-        user_data = {
-            "user_id": str(ObjectId()),
-            "google_id": "test_google_id",
-            "email": "test@example.com",
-            "name": "Test User",
-        }
-        tokens = generate_google_token_pair(user_data)
-        self.client.cookies["ext-access"] = tokens["access_token"]
-        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
 
 
 class TaskDetailAPIIntegrationTest(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
-        self.db.tasks.delete_many({})  # Clear tasks to avoid DuplicateKeyError
+        self.db.tasks.delete_many({})
         self.task_doc = tasks_db_data[1].copy()
         self.task_doc["_id"] = self.task_doc.pop("id")
+        self.task_doc["assignee"] = str(self.user_id)
+        self.task_doc["createdBy"] = str(self.user_id)
+        self.task_doc["updatedBy"] = str(self.user_id)
         self.db.tasks.insert_one(self.task_doc)
+
         self.existing_task_id = str(self.task_doc["_id"])
         self.non_existent_id = str(ObjectId())
         self.invalid_task_id = "invalid-task-id"

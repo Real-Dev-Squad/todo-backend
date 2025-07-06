@@ -7,6 +7,7 @@ from rest_framework.exceptions import ValidationError
 from django.conf import settings
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
+from todo.middlewares.jwt_auth import get_current_user_info
 from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer
 from todo.serializers.create_task_serializer import CreateTaskSerializer
 from todo.serializers.update_task_serializer import UpdateTaskSerializer
@@ -78,13 +79,15 @@ class TaskListView(APIView):
         Returns:
             Response: HTTP response with created task data or error details
         """
+        user = get_current_user_info(request)
+
         serializer = CreateTaskSerializer(data=request.data)
 
         if not serializer.is_valid():
             return self._handle_validation_errors(serializer.errors)
 
         try:
-            dto = CreateTaskDTO(**serializer.validated_data)
+            dto = CreateTaskDTO(**serializer.validated_data, createdBy=user["user_id"])
             response: CreateTaskResponse = TaskService.create_task(dto)
 
             return Response(data=response.model_dump(mode="json"), status=status.HTTP_201_CREATED)
@@ -175,8 +178,9 @@ class TaskDetailView(APIView):
         },
     )
     def delete(self, request: Request, task_id: str):
+        user = get_current_user_info(request)
         task_id = ObjectId(task_id)
-        TaskService.delete_task(task_id)
+        TaskService.delete_task(task_id, user["user_id"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(
@@ -212,26 +216,24 @@ class TaskDetailView(APIView):
         Can also be used to defer a task by using ?action=defer query parameter.
         """
         action = request.query_params.get("action", "update")
+        user = get_current_user_info(request)
 
         if action == "defer":
             serializer = DeferTaskSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            # This is a placeholder for the user ID, NEED TO IMPLEMENT THIS AFTER AUTHENTICATION
-            user_id_placeholder = "system_defer_user"
 
             updated_task_dto = TaskService.defer_task(
                 task_id=task_id,
                 deferred_till=serializer.validated_data["deferredTill"],
-                user_id=user_id_placeholder,
+                user_id=user["user_id"],
             )
         elif action == "update":
             serializer = UpdateTaskSerializer(data=request.data, partial=True)
+
             serializer.is_valid(raise_exception=True)
-            # This is a placeholder for the user ID, NEED TO IMPLEMENT THIS AFTER AUTHENTICATION
-            user_id_placeholder = "system_patch_user"
 
             updated_task_dto = TaskService.update_task(
-                task_id=(task_id), validated_data=serializer.validated_data, user_id=user_id_placeholder
+                task_id=task_id, validated_data=serializer.validated_data, user_id=user["user_id"]
             )
         else:
             raise ValidationError({"action": ValidationErrors.UNSUPPORTED_ACTION.format(action)})

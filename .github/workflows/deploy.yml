@@ -57,6 +57,6 @@ jobs:
               -e ALLOWED_HOSTS="${{ vars.ALLOWED_HOSTS }}" \
               -e GOOGLE_OAUTH_CLIENT_ID: "${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}" \
               -e GOOGLE_OAUTH_CLIENT_SECRET: "${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}" \
-              -e PUBLIC_KEY="${{ secrets.PUBLIC_KEY }}" \
-              -e PRIVATE_KEY="${{ secrets.PRIVATE_KEY }}" \
+              -e PUBLIC_KEY: "${{ secrets.PUBLIC_KEY }}" \
+              -e PRIVATE_KEY: "${{ secrets.PRIVATE_KEY }}" \
               ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}

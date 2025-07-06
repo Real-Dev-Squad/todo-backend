@@ -4,6 +4,7 @@ from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
 from todo.repositories.user_repository import UserRepository
+from todo.constants.messages import AppMessages
 
 
 class TeamService:
@@ -13,18 +14,8 @@ class TeamService:
         Create a new team with members and POC.
         """
         try:
-            # Validate that all member IDs exist
-            if dto.member_ids:
-                for user_id in dto.member_ids:
-                    user = UserRepository.get_by_id(user_id)
-                    if not user:
-                        raise ValueError(f"User with ID {user_id} not found")
-
-            # Validate POC exists if provided
-            if dto.poc_id:
-                poc_user = UserRepository.get_by_id(dto.poc_id)
-                if not poc_user:
-                    raise ValueError(f"POC user with ID {dto.poc_id} not found")
+            # Member IDs and POC ID validation is handled at DTO level
+            member_ids = dto.member_ids or []
 
             # Create team
             team = TeamModel(
@@ -41,8 +32,8 @@ class TeamService:
             user_teams = []
 
             # Add members to the team
-            if dto.member_ids:
-                for user_id in dto.member_ids:
+            if member_ids:
+                for user_id in member_ids:
                     user_team = UserTeamDetailsModel(
                         user_id=PyObjectId(user_id),
                         team_id=created_team.id,
@@ -53,7 +44,7 @@ class TeamService:
                     user_teams.append(user_team)
 
             # Add POC if not already in member_ids
-            if dto.poc_id and dto.poc_id not in dto.member_ids:
+            if dto.poc_id and dto.poc_id not in member_ids:
                 poc_user_team = UserTeamDetailsModel(
                     user_id=PyObjectId(dto.poc_id),
                     team_id=created_team.id,
@@ -64,7 +55,7 @@ class TeamService:
                 user_teams.append(poc_user_team)
 
             # Add creator if not already in member_ids
-            if created_by_user_id not in dto.member_ids:
+            if created_by_user_id not in member_ids:
                 creator_user_team = UserTeamDetailsModel(
                     user_id=PyObjectId(created_by_user_id),
                     team_id=created_team.id,
@@ -90,7 +81,7 @@ class TeamService:
                 updated_at=created_team.updated_at,
             )
 
-            return CreateTeamResponse(team=team_dto)
+            return CreateTeamResponse(team=team_dto, message=AppMessages.TEAM_CREATED)
 
         except Exception as e:
             raise ValueError(str(e))

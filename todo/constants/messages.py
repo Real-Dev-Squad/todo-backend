@@ -1,6 +1,7 @@
 # Application Messages
 class AppMessages:
     TASK_CREATED = "Task created successfully"
+    TEAM_CREATED = "Team created successfully"
     GOOGLE_LOGIN_SUCCESS = "Successfully logged in with Google"
     GOOGLE_LOGOUT_SUCCESS = "Successfully logged out"
     TOKEN_REFRESHED = "Access token refreshed successfully"

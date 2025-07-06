@@ -1,4 +1,5 @@
 import jwt
+import logging
 from datetime import datetime, timedelta, timezone
 from django.conf import settings
 
@@ -9,6 +10,8 @@ from todo.exceptions.google_auth_exceptions import (
 )
 
 from todo.constants.messages import AuthErrorMessages
+
+logger = logging.getLogger(__name__)
 
 
 def generate_google_access_token(user_data: dict) -> str:
@@ -34,7 +37,8 @@ def generate_google_access_token(user_data: dict) -> str:
         return token
 
     except Exception as e:
-        raise GoogleTokenInvalidError(f"Token generation failed: {str(e)}")
+        logger.error(f"Token generation failed: {str(e)}")  # Log the detailed error internally
+        raise GoogleTokenInvalidError(AuthErrorMessages.GOOGLE_TOKEN_INVALID)  # Return generic message to client
 
 
 def generate_google_refresh_token(user_data: dict) -> str:
@@ -59,7 +63,8 @@ def generate_google_refresh_token(user_data: dict) -> str:
         return token
 
     except Exception as e:
-        raise GoogleTokenInvalidError(f"Refresh token generation failed: {str(e)}")
+        logger.error(f"Refresh token generation failed: {str(e)}")  # Log the detailed error internally
+        raise GoogleTokenInvalidError(AuthErrorMessages.GOOGLE_TOKEN_INVALID)  # Return generic message to client
 
 
 def validate_google_access_token(token: str) -> dict:
@@ -76,9 +81,11 @@ def validate_google_access_token(token: str) -> dict:
     except jwt.ExpiredSignatureError:
         raise GoogleTokenExpiredError()
     except jwt.InvalidTokenError as e:
-        raise GoogleTokenInvalidError(f"Invalid token: {str(e)}")
+        logger.error(f"Invalid token: {str(e)}")  # Log the detailed error internally
+        raise GoogleTokenInvalidError(AuthErrorMessages.GOOGLE_TOKEN_INVALID)  # Return generic message to client
     except Exception as e:
-        raise GoogleTokenInvalidError(f"Token validation failed: {str(e)}")
+        logger.error(f"Token validation failed: {str(e)}")  # Log the detailed error internally
+        raise GoogleTokenInvalidError(AuthErrorMessages.GOOGLE_TOKEN_INVALID)  # Return generic message to client
 
 
 def validate_google_refresh_token(token: str) -> dict:
@@ -94,9 +101,11 @@ def validate_google_refresh_token(token: str) -> dict:
     except jwt.ExpiredSignatureError:
         raise GoogleRefreshTokenExpiredError()
     except jwt.InvalidTokenError as e:
-        raise GoogleTokenInvalidError(f"Invalid refresh token: {str(e)}")
+        logger.error(f"Invalid refresh token: {str(e)}")  # Log the detailed error internally
+        raise GoogleTokenInvalidError(AuthErrorMessages.GOOGLE_TOKEN_INVALID)  # Return generic message to client
     except Exception as e:
-        raise GoogleTokenInvalidError(f"Refresh token validation failed: {str(e)}")
+        logger.error(f"Refresh token validation failed: {str(e)}")  # Log the detailed error internally
+        raise GoogleTokenInvalidError(AuthErrorMessages.GOOGLE_TOKEN_INVALID)  # Return generic message to client
 
 
 def generate_google_token_pair(user_data: dict) -> dict:

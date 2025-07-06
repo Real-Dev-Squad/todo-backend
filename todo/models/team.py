@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, validator
 from typing import ClassVar
 from datetime import datetime, timezone
 
@@ -13,7 +13,7 @@ class TeamModel(Document):
 
     collection_name: ClassVar[str] = "teams"
 
-    name: str
+    name: str = Field(..., min_length=1, max_length=100)
     description: str | None = None
     poc_id: PyObjectId
     created_by: PyObjectId
@@ -22,13 +22,22 @@ class TeamModel(Document):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_deleted: bool = False
 
+    @validator('created_by', 'updated_by')
+    def validate_user_id(cls, v):
+        """Validate that the user ID is a valid ObjectId format."""
+        if v is None:
+            raise ValueError('User ID cannot be None')
+        if not PyObjectId.is_valid(v):
+            raise ValueError(f'Invalid user ID format: {v}')
+        return v
+
 
 class UserTeamDetailsModel(Document):
     """
     Model for user-team relationships.
     """
 
-    collection_name: ClassVar[str] = "userTeamDetails"
+    collection_name: ClassVar[str] = "user_team_details"
 
     user_id: PyObjectId
     team_id: PyObjectId
@@ -38,3 +47,12 @@ class UserTeamDetailsModel(Document):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: PyObjectId
     updated_by: PyObjectId
+
+    @validator('user_id', 'team_id', 'created_by', 'updated_by')
+    def validate_object_ids(cls, v):
+        """Validate that the ObjectId fields are in valid format."""
+        if v is None:
+            raise ValueError('ObjectId cannot be None')
+        if not PyObjectId.is_valid(v):
+            raise ValueError(f'Invalid ObjectId format: {v}')
+        return v

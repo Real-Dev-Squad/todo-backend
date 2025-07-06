@@ -22,6 +22,8 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework",
     "todo",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
 ]
 
 MIDDLEWARE = [

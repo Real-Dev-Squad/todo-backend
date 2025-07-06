@@ -1,32 +1,11 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from http import HTTPStatus
 
 from bson import ObjectId
 from django.urls import reverse
-from rest_framework.test import APIClient
-
 from todo.constants.messages import ApiErrors, ValidationErrors
-from todo.tests.integration.base_mongo_test import BaseMongoTestCase
+from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
 from todo.tests.fixtures.task import tasks_db_data
-from todo.utils.google_jwt_utils import generate_google_token_pair
-
-
-class AuthenticatedMongoTestCase(BaseMongoTestCase):
-    def setUp(self):
-        super().setUp()
-        self.client = APIClient()
-        self._setup_auth_cookies()
-
-    def _setup_auth_cookies(self):
-        user_data = {
-            "user_id": str(ObjectId()),
-            "google_id": "test_google_id",
-            "email": "test@example.com",
-            "name": "Test User",
-        }
-        tokens = generate_google_token_pair(user_data)
-        self.client.cookies["ext-access"] = tokens["access_token"]
-        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
 
 
 class TaskUpdateAPIIntegrationTest(AuthenticatedMongoTestCase):
@@ -38,7 +17,10 @@ class TaskUpdateAPIIntegrationTest(AuthenticatedMongoTestCase):
         self.task_id = ObjectId()
         doc["_id"] = self.task_id
         doc.pop("id", None)
-        doc["createdAt"] = datetime.utcnow() - timedelta(days=1)
+        doc["assignee"] = str(self.user_id)
+        doc["createdBy"] = str(self.user_id)
+
+        doc["createdAt"] = datetime.now(timezone.utc) - timedelta(days=1)
         self.db.tasks.insert_one(doc)
 
         self.valid_id = str(self.task_id)

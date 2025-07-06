@@ -45,6 +45,8 @@ class CreateTaskSerializer(serializers.Serializer):
         return value
 
     def validate_assignee(self, value):
-        if isinstance(value, str) and not value.strip():
+        if not value or not value.strip():
             return None
+        if not ObjectId.is_valid(value):
+            raise serializers.ValidationError(ValidationErrors.INVALID_OBJECT_ID.format(value))
         return value

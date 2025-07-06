@@ -3,9 +3,10 @@ from typing import List
 from bson import ObjectId
 from pymongo import ReturnDocument, ASCENDING, DESCENDING
 
+from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.task import TaskModel
 from todo.repositories.common.mongo_repository import MongoRepository
-from todo.constants.messages import RepositoryErrors
+from todo.constants.messages import ApiErrors, RepositoryErrors
 
 
 class TaskRepository(MongoRepository):
@@ -52,6 +53,19 @@ class TaskRepository(MongoRepository):
     def count(cls) -> int:
         tasks_collection = cls.get_collection()
         return tasks_collection.count_documents({})
+
+    @classmethod
+    def get_all(cls) -> List[TaskModel]:
+        """
+        Get all tasks from the repository
+
+        Returns:
+            List[TaskModel]: List of all task models
+        """
+        tasks_collection = cls.get_collection()
+        tasks_cursor = tasks_collection.find()
+
+        return [TaskModel(**task) for task in tasks_cursor]
 
     @classmethod
     def create(cls, task: TaskModel) -> TaskModel:
@@ -104,17 +118,30 @@ class TaskRepository(MongoRepository):
         return None
 
     @classmethod
-    def delete_by_id(cls, task_id: str) -> TaskModel | None:
+    def delete_by_id(cls, task_id: ObjectId, user_id: str) -> TaskModel | None:
         tasks_collection = cls.get_collection()
 
+        task = tasks_collection.find_one({"_id": task_id, "isDeleted": False})
+        if not task:
+            raise TaskNotFoundException(task_id)
+
+        assignee_id = task.get("assignee")
+
+        if assignee_id:
+            if assignee_id != user_id:
+                raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+        else:
+            if user_id != task.get("createdBy"):
+                raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+
         deleted_task_data = tasks_collection.find_one_and_update(
-            {"_id": task_id, "isDeleted": False},
+            {"_id": task_id},
             {
                 "$set": {
                     "isDeleted": True,
                     "updatedAt": datetime.now(timezone.utc),
-                    "updatedBy": "system",
-                }  # TODO: modify to use actual user after auth implementation,
+                    "updatedBy": user_id,
+                }
             },
             return_document=ReturnDocument.AFTER,
         )

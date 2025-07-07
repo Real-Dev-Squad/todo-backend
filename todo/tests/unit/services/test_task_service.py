@@ -1,6 +1,5 @@
 from unittest.mock import Mock, patch, MagicMock
 from unittest import TestCase
-from django.core.paginator import Page, Paginator, EmptyPage
 from django.core.exceptions import ValidationError
 from datetime import datetime, timedelta, timezone
 from bson import ObjectId
@@ -36,26 +35,16 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         self.mock_reverse_lazy = mock_reverse_lazy
 
     @patch("todo.services.task_service.UserRepository.get_by_id")
-    @patch("todo.services.task_service.Paginator")
-    @patch("todo.services.task_service.TaskRepository.get_all")
+    @patch("todo.services.task_service.TaskRepository.count")
+    @patch("todo.services.task_service.TaskRepository.list")
     @patch("todo.services.task_service.LabelRepository.list_by_ids")
     def test_get_tasks_returns_paginated_response(
-        self, mock_label_repo: Mock, mock_get_all: Mock, mock_paginator: Mock, mock_user_repo: Mock
+        self, mock_label_repo: Mock, mock_list: Mock, mock_count: Mock, mock_user_repo: Mock
     ):
-        mock_get_all.return_value = tasks_models
+        mock_list.return_value = [tasks_models[0]]
+        mock_count.return_value = 3
         mock_label_repo.return_value = label_models
         mock_user_repo.return_value = self.get_user_model()
-
-        mock_page = MagicMock(spec=Page)
-        mock_page.object_list = [tasks_models[0]]
-        mock_page.has_previous.return_value = True
-        mock_page.has_next.return_value = True
-        mock_page.previous_page_number.return_value = 1
-        mock_page.next_page_number.return_value = 3
-
-        mock_paginator_instance = MagicMock(spec=Paginator)
-        mock_paginator_instance.page.return_value = mock_page
-        mock_paginator.return_value = mock_paginator_instance
 
         response: GetTasksResponse = TaskService.get_tasks(page=2, limit=1)
 
@@ -63,44 +52,42 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         self.assertEqual(len(response.tasks), 1)
 
         self.assertIsInstance(response.links, LinksData)
-        self.assertEqual(response.links.next, f"{self.mock_reverse_lazy('tasks')}?page=3&limit=1")
-        self.assertEqual(response.links.prev, f"{self.mock_reverse_lazy('tasks')}?page=1&limit=1")
+        self.assertEqual(
+            response.links.next, f"{self.mock_reverse_lazy('tasks')}?page=3&limit=1&sort_by=createdAt&order=desc"
+        )
+        self.assertEqual(
+            response.links.prev, f"{self.mock_reverse_lazy('tasks')}?page=1&limit=1&sort_by=createdAt&order=desc"
+        )
 
-        mock_get_all.assert_called_once()
-        mock_paginator.assert_called_once_with(tasks_models, 1)
-        mock_paginator_instance.page.assert_called_once_with(2)
+        mock_list.assert_called_once_with(2, 1, "createdAt", "desc")
+        mock_count.assert_called_once()
 
     @patch("todo.services.task_service.UserRepository.get_by_id")
-    @patch("todo.services.task_service.Paginator")
-    @patch("todo.services.task_service.TaskRepository.get_all")
+    @patch("todo.services.task_service.TaskRepository.count")
+    @patch("todo.services.task_service.TaskRepository.list")
     @patch("todo.services.task_service.LabelRepository.list_by_ids")
     def test_get_tasks_doesnt_returns_prev_link_for_first_page(
-        self, mock_label_repo: Mock, mock_get_all: Mock, mock_paginator: Mock, mock_user_repo: Mock
+        self, mock_label_repo: Mock, mock_list: Mock, mock_count: Mock, mock_user_repo: Mock
     ):
-        mock_get_all.return_value = tasks_models
+        mock_list.return_value = [tasks_models[0]]
+        mock_count.return_value = 2
         mock_label_repo.return_value = label_models
         mock_user_repo.return_value = self.get_user_model()
-
-        mock_page = MagicMock(spec=Page)
-        mock_page.object_list = [tasks_models[0]]
-        mock_page.has_previous.return_value = False
-        mock_page.has_next.return_value = True
-        mock_page.next_page_number.return_value = 2
-
-        mock_paginator_instance = MagicMock(spec=Paginator)
-        mock_paginator_instance.page.return_value = mock_page
-        mock_paginator.return_value = mock_paginator_instance
 
         response: GetTasksResponse = TaskService.get_tasks(page=1, limit=1)
 
         self.assertIsNotNone(response.links)
         self.assertIsNone(response.links.prev)
 
-        self.assertEqual(response.links.next, f"{self.mock_reverse_lazy('tasks')}?page=2&limit=1")
+        self.assertEqual(
+            response.links.next, f"{self.mock_reverse_lazy('tasks')}?page=2&limit=1&sort_by=createdAt&order=desc"
+        )
 
-    @patch("todo.services.task_service.TaskRepository.get_all")
-    def test_get_tasks_returns_empty_response_if_no_tasks_present(self, mock_get_all: Mock):
-        mock_get_all.return_value = []
+    @patch("todo.services.task_service.TaskRepository.count")
+    @patch("todo.services.task_service.TaskRepository.list")
+    def test_get_tasks_returns_empty_response_if_no_tasks_present(self, mock_list: Mock, mock_count: Mock):
+        mock_list.return_value = []
+        mock_count.return_value = 0
 
         response: GetTasksResponse = TaskService.get_tasks(page=1, limit=10)
 
@@ -108,16 +95,14 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         self.assertEqual(len(response.tasks), 0)
         self.assertIsNone(response.links)
 
-        mock_get_all.assert_called_once()
+        mock_list.assert_called_once_with(1, 10, "createdAt", "desc")
+        mock_count.assert_called_once()
 
-    @patch("todo.services.task_service.Paginator")
-    @patch("todo.services.task_service.TaskRepository.get_all")
-    def test_get_tasks_returns_empty_response_when_page_exceeds_range(self, mock_get_all: Mock, mock_paginator: Mock):
-        mock_get_all.return_value = tasks_models
-
-        mock_paginator_instance = MagicMock(spec=Paginator)
-        mock_paginator_instance.page.side_effect = EmptyPage("Empty page")
-        mock_paginator.return_value = mock_paginator_instance
+    @patch("todo.services.task_service.TaskRepository.count")
+    @patch("todo.services.task_service.TaskRepository.list")
+    def test_get_tasks_returns_empty_response_when_page_exceeds_range(self, mock_list: Mock, mock_count: Mock):
+        mock_list.return_value = []
+        mock_count.return_value = 50
 
         response: GetTasksResponse = TaskService.get_tasks(page=999, limit=10)
 
@@ -183,11 +168,7 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
 
             mock_list_by_ids.assert_called_once_with(label_ids)
 
-    @patch("todo.services.task_service.Paginator")
-    @patch("todo.services.task_service.TaskRepository.get_all")
-    def test_get_tasks_handles_validation_error(self, mock_get_all: Mock, mock_paginator: Mock):
-        mock_get_all.return_value = tasks_models
-
+    def test_get_tasks_handles_validation_error(self):
         with patch("todo.services.task_service.TaskService._validate_pagination_params") as mock_validate:
             mock_validate.side_effect = ValidationError("Test validation error")
 
@@ -197,10 +178,9 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
             self.assertEqual(len(response.tasks), 0)
             self.assertIsNone(response.links)
 
-    @patch("todo.services.task_service.Paginator")
-    @patch("todo.services.task_service.TaskRepository.get_all")
-    def test_get_tasks_handles_general_exception(self, mock_get_all: Mock, mock_paginator: Mock):
-        mock_get_all.side_effect = Exception("Test general error")
+    @patch("todo.services.task_service.TaskRepository.list")
+    def test_get_tasks_handles_general_exception(self, mock_list: Mock):
+        mock_list.side_effect = Exception("Test general error")
 
         response = TaskService.get_tasks(page=1, limit=10)
 

@@ -28,7 +28,7 @@ class TaskPaginationIntegrationTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
         default_limit = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"]
-        mock_get_tasks.assert_called_with(page=1, limit=default_limit)
+        mock_get_tasks.assert_called_with(page=1, limit=default_limit, sort_by="createdAt", order=None)
 
         mock_get_tasks.reset_mock()
 
@@ -36,7 +36,7 @@ class TaskPaginationIntegrationTest(TestCase):
         response = self.view(request)
 
         self.assertEqual(response.status_code, 200)
-        mock_get_tasks.assert_called_with(page=1, limit=10)
+        mock_get_tasks.assert_called_with(page=1, limit=10, sort_by="createdAt", order=None)
 
         # Verify API rejects values above max limit
         max_limit = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["MAX_PAGE_LIMIT"]

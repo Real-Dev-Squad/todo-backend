@@ -53,28 +53,34 @@ class TaskRepositoryTests(TestCase):
         self.patcher_get_collection.stop()
 
     def test_list_applies_pagination_correctly(self):
-        self.mock_collection.find.return_value.skip.return_value.limit.return_value = self.task_data
+        mock_cursor = MagicMock()
+        mock_cursor.__iter__ = MagicMock(return_value=iter(self.task_data))
+        self.mock_collection.find.return_value.sort.return_value.skip.return_value.limit.return_value = mock_cursor
 
         page = 1
         limit = 10
-        result = TaskRepository.list(page, limit)
+        result = TaskRepository.list(page, limit, sort_by="createdAt", order="desc")
 
         self.assertEqual(len(result), len(self.task_data))
         self.assertTrue(all(isinstance(task, TaskModel) for task in result))
 
         self.mock_collection.find.assert_called_once()
-        self.mock_collection.find.return_value.skip.assert_called_once_with(0)
-        self.mock_collection.find.return_value.skip.return_value.limit.assert_called_once_with(limit)
+        self.mock_collection.find.return_value.sort.assert_called_once_with([("createdAt", -1)])
+        self.mock_collection.find.return_value.sort.return_value.skip.assert_called_once_with(0)
+        self.mock_collection.find.return_value.sort.return_value.skip.return_value.limit.assert_called_once_with(limit)
 
     def test_list_returns_empty_list_for_no_tasks(self):
-        self.mock_collection.find.return_value.skip.return_value.limit.return_value = []
+        mock_cursor = MagicMock()
+        mock_cursor.__iter__ = MagicMock(return_value=iter([]))
+        self.mock_collection.find.return_value.sort.return_value.skip.return_value.limit.return_value = mock_cursor
 
-        result = TaskRepository.list(2, 10)
+        result = TaskRepository.list(2, 10, sort_by="createdAt", order="desc")
 
         self.assertEqual(result, [])
         self.mock_collection.find.assert_called_once()
-        self.mock_collection.find.return_value.skip.assert_called_once_with(10)
-        self.mock_collection.find.return_value.skip.return_value.limit.assert_called_once_with(10)
+        self.mock_collection.find.return_value.sort.assert_called_once_with([("createdAt", -1)])
+        self.mock_collection.find.return_value.sort.return_value.skip.assert_called_once_with(10)
+        self.mock_collection.find.return_value.sort.return_value.skip.return_value.limit.assert_called_once_with(10)
 
     def test_count_returns_total_task_count(self):
         self.mock_collection.count_documents.return_value = 42

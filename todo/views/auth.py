@@ -11,6 +11,7 @@ from todo.services.user_service import UserService
 from todo.utils.google_jwt_utils import generate_google_token_pair
 from todo.constants.messages import AppMessages
 
+
 class GoogleLoginView(APIView):
     @extend_schema(
         operation_id="google_login",
@@ -94,7 +95,7 @@ class GoogleCallbackView(APIView):
         code = request.query_params.get("code")
         state = request.query_params.get("state")
         error = request.query_params.get("error")
-        
+
         if error:
             frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error={error}")
@@ -137,7 +138,6 @@ class GoogleCallbackView(APIView):
             frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error=auth_failed")
 
-
     def _get_cookie_config(self):
         return {
             "path": "/",
@@ -153,6 +153,7 @@ class GoogleCallbackView(APIView):
         response.set_cookie(
             "ext-refresh", tokens["refresh_token"], max_age=settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"], **config
         )
+
 
 class GoogleLogoutView(APIView):
     @extend_schema(
@@ -198,13 +199,15 @@ class GoogleLogoutView(APIView):
 
     def _handle_logout(self, request: Request):
         request.session.flush()
-        
-        response = Response({
-            "statusCode": status.HTTP_200_OK,
-            "message": AppMessages.GOOGLE_LOGOUT_SUCCESS,
-            "data": {"success": True},
-        })
-    
+
+        response = Response(
+            {
+                "statusCode": status.HTTP_200_OK,
+                "message": AppMessages.GOOGLE_LOGOUT_SUCCESS,
+                "data": {"success": True},
+            }
+        )
+
         self._clear_auth_cookies(response)
         return response
 
@@ -226,7 +229,7 @@ class GoogleLogoutView(APIView):
         response.delete_cookie("ext-refresh", **delete_config)
 
         session_delete_config = {
-            "path": getattr(settings, 'SESSION_COOKIE_PATH', '/'),
-            "domain": getattr(settings, 'SESSION_COOKIE_DOMAIN', None),
+            "path": getattr(settings, "SESSION_COOKIE_PATH", "/"),
+            "domain": getattr(settings, "SESSION_COOKIE_DOMAIN", None),
         }
         response.delete_cookie("sessionid", **session_delete_config)

@@ -28,7 +28,9 @@ def generate_google_access_token(user_data: dict) -> str:
             "token_type": "access",
         }
 
-        token = jwt.encode(payload=payload, key=settings.GOOGLE_JWT["PRIVATE_KEY"], algorithm=settings.GOOGLE_JWT["ALGORITHM"])
+        token = jwt.encode(
+            payload=payload, key=settings.GOOGLE_JWT["PRIVATE_KEY"], algorithm=settings.GOOGLE_JWT["ALGORITHM"]
+        )
         return token
 
     except Exception as e:
@@ -50,7 +52,9 @@ def generate_google_refresh_token(user_data: dict) -> str:
             "email": user_data["email"],
             "token_type": "refresh",
         }
-        token = jwt.encode(payload=payload, key=settings.GOOGLE_JWT["PRIVATE_KEY"], algorithm=settings.GOOGLE_JWT["ALGORITHM"])
+        token = jwt.encode(
+            payload=payload, key=settings.GOOGLE_JWT["PRIVATE_KEY"], algorithm=settings.GOOGLE_JWT["ALGORITHM"]
+        )
 
         return token
 
@@ -60,7 +64,9 @@ def generate_google_refresh_token(user_data: dict) -> str:
 
 def validate_google_access_token(token: str) -> dict:
     try:
-        payload = jwt.decode(jwt=token, key=settings.GOOGLE_JWT["PUBLIC_KEY"], algorithms=[settings.GOOGLE_JWT["ALGORITHM"]])
+        payload = jwt.decode(
+            jwt=token, key=settings.GOOGLE_JWT["PUBLIC_KEY"], algorithms=[settings.GOOGLE_JWT["ALGORITHM"]]
+        )
 
         if payload.get("token_type") != "access":
             raise GoogleTokenInvalidError(AuthErrorMessages.GOOGLE_TOKEN_INVALID)
@@ -77,7 +83,9 @@ def validate_google_access_token(token: str) -> dict:
 
 def validate_google_refresh_token(token: str) -> dict:
     try:
-        payload = jwt.decode(jwt=token, key=settings.GOOGLE_JWT["PUBLIC_KEY"], algorithms=[settings.GOOGLE_JWT["ALGORITHM"]])
+        payload = jwt.decode(
+            jwt=token, key=settings.GOOGLE_JWT["PUBLIC_KEY"], algorithms=[settings.GOOGLE_JWT["ALGORITHM"]]
+        )
         if payload.get("token_type") != "refresh":
             raise GoogleTokenInvalidError(AuthErrorMessages.GOOGLE_TOKEN_INVALID)
 

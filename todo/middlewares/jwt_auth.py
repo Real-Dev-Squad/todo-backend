@@ -47,8 +47,7 @@ class JWTAuthenticationMiddleware:
                     ],
                 )
                 return JsonResponse(
-                    data=error_response.model_dump(mode="json", exclude_none=True), 
-                    status=status.HTTP_401_UNAUTHORIZED
+                    data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED
                 )
 
         except (TokenMissingError, TokenExpiredError, TokenInvalidError) as e:
@@ -67,8 +66,7 @@ class JWTAuthenticationMiddleware:
                 ],
             )
             return JsonResponse(
-                data=error_response.model_dump(mode="json", exclude_none=True), 
-                status=status.HTTP_401_UNAUTHORIZED
+                data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED
             )
 
     def _try_authentication(self, request) -> bool:
@@ -103,28 +101,28 @@ class JWTAuthenticationMiddleware:
         """Try to refresh Google access token"""
         try:
             refresh_token = request.COOKIES.get("ext-refresh")
-            
+
             if not refresh_token:
                 return False
-                
+
             payload = validate_google_refresh_token(refresh_token)
-            
+
             user_data = {
                 "user_id": payload["user_id"],
                 "google_id": payload["google_id"],
                 "email": payload["email"],
                 "name": payload.get("name", ""),
             }
-            
+
             new_access_token = generate_google_access_token(user_data)
-            
+
             self._set_google_user_data(request, payload)
 
             request._new_access_token = new_access_token
             request._access_token_expires = settings.GOOGLE_JWT["ACCESS_TOKEN_LIFETIME"]
-            
+
             return True
-            
+
         except (GoogleRefreshTokenExpiredError, GoogleTokenInvalidError):
             return False
         except Exception:
@@ -161,13 +159,10 @@ class JWTAuthenticationMiddleware:
 
     def _process_response(self, request, response):
         """Process response and set new cookies if Google token was refreshed"""
-        if hasattr(request, '_new_access_token'):
+        if hasattr(request, "_new_access_token"):
             config = self._get_cookie_config()
             response.set_cookie(
-                "ext-access",
-                request._new_access_token,
-                max_age=request._access_token_expires,
-                **config
+                "ext-access", request._new_access_token, max_age=request._access_token_expires, **config
             )
         return response
 
@@ -191,8 +186,7 @@ class JWTAuthenticationMiddleware:
             errors=[ApiErrorDetail(title=ApiErrors.AUTHENTICATION_FAILED, detail=str(exception))],
         )
         return JsonResponse(
-            data=error_response.model_dump(mode="json", exclude_none=True), 
-            status=status.HTTP_401_UNAUTHORIZED
+            data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED
         )
 
     def _handle_google_auth_error(self, exception):
@@ -202,8 +196,7 @@ class JWTAuthenticationMiddleware:
             errors=[ApiErrorDetail(title=ApiErrors.AUTHENTICATION_FAILED, detail=str(exception))],
         )
         return JsonResponse(
-            data=error_response.model_dump(mode="json", exclude_none=True), 
-            status=status.HTTP_401_UNAUTHORIZED
+            data=error_response.model_dump(mode="json", exclude_none=True), status=status.HTTP_401_UNAUTHORIZED
         )
 
 

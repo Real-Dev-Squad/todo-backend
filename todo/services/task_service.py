@@ -18,7 +18,14 @@ from todo.models.task import TaskModel, DeferredDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.label_repository import LabelRepository
-from todo.constants.task import TaskStatus, TaskPriority, MINIMUM_DEFERRAL_NOTICE_DAYS
+from todo.constants.task import (
+    TaskStatus,
+    TaskPriority,
+    MINIMUM_DEFERRAL_NOTICE_DAYS,
+    SORT_FIELD_CREATED_AT,
+    SORT_ORDER_DESC,
+    SORT_FIELD_DEFAULT_ORDERS,
+)
 from todo.constants.messages import ApiErrors, ValidationErrors
 from django.conf import settings
 from todo.exceptions.task_exceptions import (
@@ -29,6 +36,7 @@ from todo.exceptions.task_exceptions import (
 from bson.errors import InvalidId as BsonInvalidId
 
 from todo.repositories.user_repository import UserRepository
+import math
 
 
 @dataclass
@@ -46,11 +54,14 @@ class TaskService:
         cls,
         page: int = PaginationConfig.DEFAULT_PAGE,
         limit: int = PaginationConfig.DEFAULT_LIMIT,
-        sort_by: str = "createdAt",
-        order: str = "desc",
+        sort_by: str = SORT_FIELD_CREATED_AT,
+        order: str = None,
     ) -> GetTasksResponse:
         try:
             cls._validate_pagination_params(page, limit)
+
+            if order is None:
+                order = SORT_FIELD_DEFAULT_ORDERS.get(sort_by, SORT_ORDER_DESC)
 
             tasks = TaskRepository.list(page, limit, sort_by, order)
 
@@ -87,7 +98,6 @@ class TaskService:
     @classmethod
     def _build_pagination_links(cls, page: int, limit: int, total_count: int, sort_by: str, order: str) -> LinksData:
         """Build pagination links with sort parameters"""
-        import math
 
         total_pages = math.ceil(total_count / limit)
         next_link = None
@@ -102,7 +112,10 @@ class TaskService:
         return LinksData(next=next_link, prev=prev_link)
 
     @classmethod
-    def build_page_url(cls, page: int, limit: int, sort_by: str = "createdAt", order: str = "desc") -> str:
+    def build_page_url(cls, page: int, limit: int, sort_by: str = SORT_FIELD_CREATED_AT, order: str = None) -> str:
+        if order is None:
+            order = SORT_FIELD_DEFAULT_ORDERS.get(sort_by, SORT_ORDER_DESC)
+
         base_url = reverse_lazy("tasks")
         query_params = urlencode({"page": page, "limit": limit, "sort_by": sort_by, "order": order})
         return f"{base_url}?{query_params}"

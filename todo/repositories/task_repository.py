@@ -7,22 +7,25 @@ from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.task import TaskModel
 from todo.repositories.common.mongo_repository import MongoRepository
 from todo.constants.messages import ApiErrors, RepositoryErrors
+from todo.constants.task import SORT_FIELD_PRIORITY, SORT_FIELD_ASSIGNEE, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC
 
 
 class TaskRepository(MongoRepository):
     collection_name = TaskModel.collection_name
 
     @classmethod
-    def list(cls, page: int, limit: int, sort_by: str = "createdAt", order: str = "desc") -> List[TaskModel]:
+    def list(
+        cls, page: int, limit: int, sort_by: str = SORT_FIELD_CREATED_AT, order: str = SORT_ORDER_DESC
+    ) -> List[TaskModel]:
         tasks_collection = cls.get_collection()
 
-        sort_direction = -1 if order == "desc" else 1
-
-        if sort_by == "priority":
+        if sort_by == SORT_FIELD_PRIORITY:
+            sort_direction = 1 if order == SORT_ORDER_DESC else -1
             sort_criteria = [(sort_by, sort_direction)]
-        elif sort_by == "assignee":
+        elif sort_by == SORT_FIELD_ASSIGNEE:
             return cls._list_sorted_by_assignee(page, limit, order)
         else:
+            sort_direction = -1 if order == SORT_ORDER_DESC else 1
             sort_criteria = [(sort_by, sort_direction)]
 
         tasks_cursor = tasks_collection.find().sort(sort_criteria).skip((page - 1) * limit).limit(limit)
@@ -33,7 +36,7 @@ class TaskRepository(MongoRepository):
         """Handle assignee sorting using aggregation pipeline to sort by user names"""
         tasks_collection = cls.get_collection()
 
-        sort_direction = -1 if order == "desc" else 1
+        sort_direction = -1 if order == SORT_ORDER_DESC else 1
 
         pipeline = [
             {

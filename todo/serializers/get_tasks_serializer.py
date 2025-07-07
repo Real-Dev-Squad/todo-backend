@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from django.conf import settings
 
+from todo.constants.task import SORT_FIELDS, SORT_ORDERS, SORT_FIELD_CREATED_AT
+
 
 class GetTaskQueryParamsSerializer(serializers.Serializer):
     page = serializers.IntegerField(
@@ -21,12 +23,11 @@ class GetTaskQueryParamsSerializer(serializers.Serializer):
         },
     )
     sort_by = serializers.ChoiceField(
-        choices=["priority", "dueAt", "createdAt", "assignee"],
+        choices=SORT_FIELDS,
         required=False,
-        default="createdAt",
+        default=SORT_FIELD_CREATED_AT,
     )
     order = serializers.ChoiceField(
-        choices=["asc", "desc"],
+        choices=SORT_ORDERS,
         required=False,
-        default="desc",
     )

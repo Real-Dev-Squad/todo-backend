@@ -57,10 +57,18 @@ class TaskSortingIntegrationTest(unittest.TestCase):
         mock_assignee_sort.assert_called_once_with(1, 20, SORT_ORDER_ASC)
 
     @patch("todo.repositories.task_repository.TaskRepository.count")
+    @patch("todo.repositories.task_repository.TaskRepository._list_sorted_by_assignee")
     @patch("todo.repositories.task_repository.TaskRepository.list")
-    def test_field_specific_defaults_integration(self, mock_list, mock_count):
-        mock_list.return_value = []
+    def test_field_specific_defaults_integration(self, mock_list, mock_assignee_sort, mock_count):
+        mock_assignee_sort.return_value = []
         mock_count.return_value = 0
+
+        def list_side_effect(page, limit, sort_by, order):
+            if sort_by == SORT_FIELD_ASSIGNEE:
+                return mock_assignee_sort(page, limit, order)
+            return []
+
+        mock_list.side_effect = list_side_effect
 
         test_cases = [
             (SORT_FIELD_CREATED_AT, SORT_ORDER_DESC),
@@ -72,7 +80,9 @@ class TaskSortingIntegrationTest(unittest.TestCase):
         for sort_field, expected_order in test_cases:
             with self.subTest(sort_field=sort_field, expected_order=expected_order):
                 mock_list.reset_mock()
+                mock_assignee_sort.reset_mock()
                 mock_count.reset_mock()
+                mock_list.side_effect = list_side_effect
 
                 request = self.factory.get("/tasks", {"sort_by": sort_field})
                 response = self.view(request)
@@ -80,7 +90,7 @@ class TaskSortingIntegrationTest(unittest.TestCase):
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
 
                 if sort_field == SORT_FIELD_ASSIGNEE:
-                    continue
+                    mock_assignee_sort.assert_called_with(1, 20, expected_order)
                 else:
                     mock_list.assert_called_with(1, 20, sort_field, expected_order)
 
@@ -98,8 +108,6 @@ class TaskSortingIntegrationTest(unittest.TestCase):
         mock_list.assert_called_with(3, 5, SORT_FIELD_CREATED_AT, SORT_ORDER_ASC)
 
     def test_invalid_sort_parameters_integration(self):
-        """Test that invalid sort parameters are rejected at the view layer"""
-
         request = self.factory.get("/tasks", {"sort_by": "invalid_field"})
         response = self.view(request)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

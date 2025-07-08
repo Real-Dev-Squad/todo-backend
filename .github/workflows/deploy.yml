@@ -62,4 +62,5 @@ jobs:
               -e GOOGLE_OAUTH_REDIRECT_URI="${{ vars.GOOGLE_OAUTH_REDIRECT_URI }}" \
               -e PUBLIC_KEY="${{ secrets.PUBLIC_KEY }}" \
               -e PRIVATE_KEY="${{ secrets.PRIVATE_KEY }}" \
+              -e FRONTEND_URL="${{ vars.FRONTEND_URL }}" \
               ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}

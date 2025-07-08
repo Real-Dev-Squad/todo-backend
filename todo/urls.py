@@ -1,7 +1,8 @@
 from django.urls import path
 from todo.views.task import TaskListView, TaskDetailView
-from todo.views.label import LabelListView
 from todo.views.health import HealthView
+from todo.views.role import RoleListView, RoleDetailView
+from todo.views.label import LabelListView
 from todo.views.auth import (
     GoogleLoginView,
     GoogleCallbackView,
@@ -12,6 +13,8 @@ from todo.views.auth import (
 urlpatterns = [
     path("tasks", TaskListView.as_view(), name="tasks"),
     path("tasks/<str:task_id>", TaskDetailView.as_view(), name="task_detail"),
+    path("roles", RoleListView.as_view(), name="roles"),
+    path("roles/<str:role_id>", RoleDetailView.as_view(), name="role_detail"),
     path("health", HealthView.as_view(), name="health"),
     path("labels", LabelListView.as_view(), name="labels"),
     path("auth/google/login/", GoogleLoginView.as_view(), name="google_login"),

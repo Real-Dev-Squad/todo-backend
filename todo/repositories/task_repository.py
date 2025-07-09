@@ -7,16 +7,14 @@ from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.task import TaskModel
 from todo.repositories.common.mongo_repository import MongoRepository
 from todo.constants.messages import ApiErrors, RepositoryErrors
-from todo.constants.task import SORT_FIELD_PRIORITY, SORT_FIELD_ASSIGNEE, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC
+from todo.constants.task import SORT_FIELD_PRIORITY, SORT_FIELD_ASSIGNEE, SORT_ORDER_DESC
 
 
 class TaskRepository(MongoRepository):
     collection_name = TaskModel.collection_name
 
     @classmethod
-    def list(
-        cls, page: int, limit: int, sort_by: str = SORT_FIELD_CREATED_AT, order: str = SORT_ORDER_DESC
-    ) -> List[TaskModel]:
+    def list(cls, page: int, limit: int, sort_by: str, order: str) -> List[TaskModel]:
         tasks_collection = cls.get_collection()
 
         if sort_by == SORT_FIELD_PRIORITY:

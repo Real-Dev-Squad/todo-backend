@@ -134,15 +134,15 @@ if TESTING:
 else:
     GOOGLE_JWT = {
         "ALGORITHM": "RS256",
-        "PRIVATE_KEY": os.getenv("GOOGLE_JWT_PRIVATE_KEY"),
-        "PUBLIC_KEY": os.getenv("GOOGLE_JWT_PUBLIC_KEY"),
-        "ACCESS_TOKEN_LIFETIME": int(os.getenv("GOOGLE_JWT_ACCESS_LIFETIME", "3600")),
-        "REFRESH_TOKEN_LIFETIME": int(os.getenv("GOOGLE_JWT_REFRESH_LIFETIME", "604800")),
+        "PRIVATE_KEY": os.getenv("PRIVATE_KEY"),
+        "PUBLIC_KEY": os.getenv("PUBLIC_KEY"),
+        "ACCESS_TOKEN_LIFETIME": int(os.getenv("ACCESS_LIFETIME", "3600")),
+        "REFRESH_TOKEN_LIFETIME": int(os.getenv("REFRESH_LIFETIME", "604800")),
     }
 
 GOOGLE_COOKIE_SETTINGS = {
-    "ACCESS_COOKIE_NAME": os.getenv("GOOGLE_ACCESS_COOKIE_NAME", "ext-access"),
-    "REFRESH_COOKIE_NAME": os.getenv("GOOGLE_REFRESH_COOKIE_NAME", "ext-refresh"),
+    "ACCESS_COOKIE_NAME": os.getenv("ACCESS_COOKIE_NAME", "ext-access"),
+    "REFRESH_COOKIE_NAME": os.getenv("REFRESH_COOKIE_NAME", "ext-refresh"),
     "COOKIE_DOMAIN": os.getenv("COOKIE_DOMAIN", None),
     "COOKIE_SECURE": os.getenv("COOKIE_SECURE", "False").lower() == "true",
     "COOKIE_HTTPONLY": True,
@@ -150,11 +150,11 @@ GOOGLE_COOKIE_SETTINGS = {
     "COOKIE_PATH": "/",
 }
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:4000")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 # RDS Backend Integration
 MAIN_APP = {
-    "RDS_BACKEND_BASE_URL": os.getenv("RDS_BACKEND_BASE_URL", "http://localhost:3000"),
+    "RDS_BACKEND_BASE_URL": os.getenv("RDS_BACKEND_BASE_URL", "http://localhost:8087"),
 }
 
 DATABASES = {

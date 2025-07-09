@@ -17,7 +17,7 @@ BASE_URL = "https://"
 
 GOOGLE_OAUTH.update(
     {
-        "REDIRECT_URI": f"{BASE_URL}{SERVICE_DOMAINS['AUTH']}/staging-todo/v1/auth/google/callback",
+        "REDIRECT_URI": f"{BASE_URL}{SERVICE_DOMAINS['AUTH']}/staging-todo/v1/auth/google/callback/",
     }
 )
 

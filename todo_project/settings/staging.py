@@ -3,7 +3,7 @@ from .base import *
 import os
 
 DEBUG = True
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "staging-api.realdevsquad.com,services.realdevsquad.com,localhost").split(",")
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "staging-api.realdevsquad.com,services.realdevsquad.com").split(",")
 
 # Service domains configuration
 SERVICE_DOMAINS = {

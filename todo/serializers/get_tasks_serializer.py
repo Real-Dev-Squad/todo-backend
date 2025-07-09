@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.conf import settings
 
-from todo.constants.task import SORT_FIELDS, SORT_ORDERS, SORT_FIELD_CREATED_AT
+from todo.constants.task import SORT_FIELDS, SORT_ORDERS, SORT_FIELD_CREATED_AT, SORT_FIELD_DEFAULT_ORDERS
 
 
 class GetTaskQueryParamsSerializer(serializers.Serializer):
@@ -31,3 +31,12 @@ class GetTaskQueryParamsSerializer(serializers.Serializer):
         choices=SORT_ORDERS,
         required=False,
     )
+
+    def validate(self, attrs):
+        validated_data = super().validate(attrs)
+
+        if "order" not in validated_data or validated_data["order"] is None:
+            sort_by = validated_data.get("sort_by", SORT_FIELD_CREATED_AT)
+            validated_data["order"] = SORT_FIELD_DEFAULT_ORDERS[sort_by]
+
+        return validated_data

@@ -22,9 +22,6 @@ from todo.constants.task import (
     TaskStatus,
     TaskPriority,
     MINIMUM_DEFERRAL_NOTICE_DAYS,
-    SORT_FIELD_CREATED_AT,
-    SORT_ORDER_DESC,
-    SORT_FIELD_DEFAULT_ORDERS,
 )
 from todo.constants.messages import ApiErrors, ValidationErrors
 from django.conf import settings
@@ -52,16 +49,13 @@ class TaskService:
     @classmethod
     def get_tasks(
         cls,
-        page: int = PaginationConfig.DEFAULT_PAGE,
-        limit: int = PaginationConfig.DEFAULT_LIMIT,
-        sort_by: str = SORT_FIELD_CREATED_AT,
-        order: str = None,
+        page: int,
+        limit: int,
+        sort_by: str,
+        order: str,
     ) -> GetTasksResponse:
         try:
             cls._validate_pagination_params(page, limit)
-
-            if order is None:
-                order = SORT_FIELD_DEFAULT_ORDERS.get(sort_by, SORT_ORDER_DESC)
 
             tasks = TaskRepository.list(page, limit, sort_by, order)
 
@@ -112,10 +106,7 @@ class TaskService:
         return LinksData(next=next_link, prev=prev_link)
 
     @classmethod
-    def build_page_url(cls, page: int, limit: int, sort_by: str = SORT_FIELD_CREATED_AT, order: str = None) -> str:
-        if order is None:
-            order = SORT_FIELD_DEFAULT_ORDERS.get(sort_by, SORT_ORDER_DESC)
-
+    def build_page_url(cls, page: int, limit: int, sort_by: str, order: str) -> str:
         base_url = reverse_lazy("tasks")
         query_params = urlencode({"page": page, "limit": limit, "sort_by": sort_by, "order": order})
         return f"{base_url}?{query_params}"

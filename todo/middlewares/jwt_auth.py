@@ -3,9 +3,17 @@ from rest_framework import status
 from django.http import JsonResponse
 
 from todo.utils.jwt_utils import verify_jwt_token
-from todo.utils.google_jwt_utils import validate_google_access_token
+from todo.utils.google_jwt_utils import (
+    validate_google_access_token,
+    validate_google_refresh_token,
+    generate_google_access_token,
+)
 from todo.exceptions.auth_exceptions import TokenMissingError, TokenExpiredError, TokenInvalidError
-from todo.exceptions.google_auth_exceptions import GoogleTokenExpiredError, GoogleTokenInvalidError
+from todo.exceptions.google_auth_exceptions import (
+    GoogleTokenExpiredError,
+    GoogleTokenInvalidError,
+    GoogleRefreshTokenExpiredError,
+)
 from todo.constants.messages import AuthErrorMessages, ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 
@@ -25,7 +33,8 @@ class JWTAuthenticationMiddleware:
             auth_success = self._try_authentication(request)
 
             if auth_success:
-                return self.get_response(request)
+                response = self.get_response(request)
+                return self._process_response(request, response)
             else:
                 error_response = ApiErrorResponse(
                     statusCode=status.HTTP_401_UNAUTHORIZED,
@@ -73,24 +82,60 @@ class JWTAuthenticationMiddleware:
         try:
             google_token = request.COOKIES.get("ext-access")
 
-            if not google_token:
-                return False
+            if google_token:
+                try:
+                    payload = validate_google_access_token(google_token)
+                    self._set_google_user_data(request, payload)
+                    return True
+                except (GoogleTokenExpiredError, GoogleTokenInvalidError):
+                    pass
 
-            payload = validate_google_access_token(google_token)
-
-            request.auth_type = "google"
-            request.user_id = payload["user_id"]
-            request.google_id = payload["google_id"]
-            request.user_email = payload["email"]
-            request.user_name = payload["name"]
-            request.user_role = "external_user"
-
-            return True
+            return self._try_google_refresh(request)
 
         except (GoogleTokenExpiredError, GoogleTokenInvalidError) as e:
             raise e
         except Exception:
             return False
+
+    def _try_google_refresh(self, request) -> bool:
+        """Try to refresh Google access token"""
+        try:
+            refresh_token = request.COOKIES.get("ext-refresh")
+
+            if not refresh_token:
+                return False
+
+            payload = validate_google_refresh_token(refresh_token)
+
+            user_data = {
+                "user_id": payload["user_id"],
+                "google_id": payload["google_id"],
+                "email": payload["email"],
+                "name": payload.get("name", ""),
+            }
+
+            new_access_token = generate_google_access_token(user_data)
+
+            self._set_google_user_data(request, payload)
+
+            request._new_access_token = new_access_token
+            request._access_token_expires = settings.GOOGLE_JWT["ACCESS_TOKEN_LIFETIME"]
+
+            return True
+
+        except (GoogleRefreshTokenExpiredError, GoogleTokenInvalidError):
+            return False
+        except Exception:
+            return False
+
+    def _set_google_user_data(self, request, payload):
+        """Set Google user data on request"""
+        request.auth_type = "google"
+        request.user_id = payload["user_id"]
+        request.google_id = payload["google_id"]
+        request.user_email = payload["email"]
+        request.user_name = payload.get("name", "")
+        request.user_role = "external_user"
 
     def _try_rds_auth(self, request) -> bool:
         try:
@@ -111,6 +156,25 @@ class JWTAuthenticationMiddleware:
             raise e
         except Exception:
             return False
+
+    def _process_response(self, request, response):
+        """Process response and set new cookies if Google token was refreshed"""
+        if hasattr(request, "_new_access_token"):
+            config = self._get_cookie_config()
+            response.set_cookie(
+                "ext-access", request._new_access_token, max_age=request._access_token_expires, **config
+            )
+        return response
+
+    def _get_cookie_config(self):
+        """Get Google cookie configuration"""
+        return {
+            "path": "/",
+            "domain": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
+            "secure": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SECURE", False),
+            "httponly": True,
+            "samesite": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SAMESITE", "Lax"),
+        }
 
     def _is_public_path(self, path: str) -> bool:
         return any(path.startswith(public_path) for public_path in settings.PUBLIC_PATHS)

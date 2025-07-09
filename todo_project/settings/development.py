@@ -6,9 +6,9 @@ ALLOWED_HOSTS = ["*"]
 
 # Service ports configuration
 SERVICE_PORTS = {
-    "BACKEND": 3000,
+    "BACKEND": 8087,
     "AUTH": 8000,
-    "FRONTEND": 4000,
+    "FRONTEND": 3000,
 }
 
 # Base URL configuration

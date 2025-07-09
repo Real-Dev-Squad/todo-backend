@@ -1,8 +1,9 @@
 # Staging specific settings
 from .base import *
+import os
 
 DEBUG = True
-ALLOWED_HOSTS = ["staging-api.realdevsquad.com", "services.realdevsquad.com"]
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "staging-api.realdevsquad.com,services.realdevsquad.com").split(",")
 
 # Service domains configuration
 SERVICE_DOMAINS = {
@@ -66,7 +67,7 @@ CORS_ALLOWED_HEADERS = [
 ]
 
 # Security settings for staging
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_DOMAIN = ".realdevsquad.com"
 SESSION_COOKIE_SAMESITE = "None"

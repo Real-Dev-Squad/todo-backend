@@ -128,8 +128,8 @@ if TESTING:
         "ALGORITHM": "HS256",
         "PRIVATE_KEY": "test-secret-key-for-jwt-signing-very-long-key-needed-for-security",
         "PUBLIC_KEY": "test-secret-key-for-jwt-signing-very-long-key-needed-for-security",
-        "ACCESS_TOKEN_LIFETIME": int(os.getenv("GOOGLE_JWT_ACCESS_LIFETIME", "3600")),
-        "REFRESH_TOKEN_LIFETIME": int(os.getenv("GOOGLE_JWT_REFRESH_LIFETIME", "604800")),
+        "ACCESS_TOKEN_LIFETIME": int(os.getenv("ACCESS_LIFETIME", "3600")),
+        "REFRESH_TOKEN_LIFETIME": int(os.getenv("REFRESH_LIFETIME", "604800")),
     }
 else:
     GOOGLE_JWT = {

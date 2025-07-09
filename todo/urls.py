@@ -6,6 +6,7 @@ from todo.views.auth import (
     GoogleLoginView,
     GoogleCallbackView,
     GoogleLogoutView,
+    UserView,
 )
 
 urlpatterns = [
@@ -16,4 +17,5 @@ urlpatterns = [
     path("auth/google/login/", GoogleLoginView.as_view(), name="google_login"),
     path("auth/google/callback/", GoogleCallbackView.as_view(), name="google_callback"),
     path("auth/google/logout/", GoogleLogoutView.as_view(), name="google_logout"),
+    path("user", UserView.as_view(), name="current_user"),
 ]

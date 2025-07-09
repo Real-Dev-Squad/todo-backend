@@ -49,8 +49,18 @@ class TaskListView(APIView):
     )
     def get(self, request: Request):
         """
-        Retrieve a paginated list of tasks.
+        Retrieve a paginated list of tasks, or if profile=true, only the current user's tasks.
         """
+        profile = request.query_params.get("profile")
+        if profile == "true":
+            user = get_current_user_info(request)
+            if not user:
+                return Response({"statusCode": 401, "message": "Authentication required", "data": None}, status=401)
+            # Use the same pagination as before
+            page = int(request.query_params.get("page", 1))
+            limit = int(request.query_params.get("limit", 20))
+            response = TaskService.get_tasks_for_user(user_id=user["user_id"], page=page, limit=limit)
+            return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
         query = GetTaskQueryParamsSerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
 

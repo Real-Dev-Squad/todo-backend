@@ -246,3 +246,34 @@ class GoogleLogoutViewTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.cookies.get("sessionid").value, "")
+
+
+class UserViewProfileTrueTests(APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse("current_user")
+        self.user_data = {
+            "user_id": str(ObjectId()),
+            "google_id": "test_google_id",
+            "email": "test@example.com",
+            "name": "Test User",
+        }
+        tokens = generate_google_token_pair(self.user_data)
+        self.client.cookies["ext-access"] = tokens["access_token"]
+        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
+
+    def test_requires_profile_true(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("profile", response.data["message"])
+
+    def test_returns_401_if_not_authenticated(self):
+        client = APIClient()
+        response = client.get(self.url + "?profile=true")
+        self.assertEqual(response.status_code, 401)
+
+    def test_returns_user_info(self):
+        response = self.client.get(self.url + "?profile=true")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["data"]["user_id"], self.user_data["user_id"])
+        self.assertEqual(response.data["data"]["email"], self.user_data["email"])

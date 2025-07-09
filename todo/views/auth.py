@@ -10,6 +10,7 @@ from todo.services.google_oauth_service import GoogleOAuthService
 from todo.services.user_service import UserService
 from todo.utils.google_jwt_utils import generate_google_token_pair
 from todo.constants.messages import AppMessages
+from todo.middlewares.jwt_auth import get_current_user_info
 
 
 class GoogleLoginView(APIView):
@@ -233,3 +234,43 @@ class GoogleLogoutView(APIView):
             "domain": getattr(settings, "SESSION_COOKIE_DOMAIN", None),
         }
         response.delete_cookie("sessionid", **session_delete_config)
+
+
+class UserView(APIView):
+    @extend_schema(
+        operation_id="get_current_user",
+        summary="Get current authenticated user details",
+        description="Returns the details of the currently authenticated user based on the authentication cookie. Requires profile=true query param.",
+        tags=["auth"],
+        parameters=[
+            OpenApiParameter(
+                name="profile",
+                type=OpenApiTypes.BOOL,
+                location=OpenApiParameter.QUERY,
+                description="If true, returns the current user's details.",
+                required=True,
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(description="Current user details returned successfully"),
+            400: OpenApiResponse(description="Missing or invalid profile query param"),
+            401: OpenApiResponse(description="Authentication required or invalid cookie"),
+        },
+    )
+    def get(self, request: Request):
+        profile = request.query_params.get("profile")
+        if profile != "true":
+            return Response(
+                {
+                    "statusCode": 400,
+                    "message": "Missing or invalid profile query param. Use /user?profile=true",
+                    "data": None,
+                },
+                status=400,
+            )
+        user_info = get_current_user_info(request)
+        if not user_info:
+            return Response({"statusCode": 401, "message": "Authentication required", "data": None}, status=401)
+        return Response(
+            {"statusCode": 200, "message": "Current user details fetched successfully", "data": user_info}, status=200
+        )

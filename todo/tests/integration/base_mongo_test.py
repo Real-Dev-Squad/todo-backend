@@ -20,7 +20,7 @@ class BaseMongoTestCase(TransactionTestCase):
         cls.db = cls.mongo_client.get_database("testdb")
 
         cls.override = override_settings(
-            MONGODB_URI=cls.mongo_url, DB_NAME="testdb", FRONTEND_URL="http://localhost:4000"
+            MONGODB_URI=cls.mongo_url, DB_NAME="testdb", FRONTEND_URL="http://localhost:3000"
         )
         cls.override.enable()
         DatabaseManager.reset()

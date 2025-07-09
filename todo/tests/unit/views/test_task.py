@@ -45,7 +45,7 @@ class TaskViewTests(AuthenticatedMongoTestCase):
 
         response: Response = self.client.get(self.url, self.valid_params)
 
-        mock_get_tasks.assert_called_once_with(page=1, limit=10, sort_by="createdAt", order=None)
+        mock_get_tasks.assert_called_once_with(page=1, limit=10, sort_by="createdAt", order="desc")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         expected_response = mock_get_tasks.return_value.model_dump(mode="json", exclude_none=True)
         self.assertDictEqual(response.data, expected_response)
@@ -56,7 +56,7 @@ class TaskViewTests(AuthenticatedMongoTestCase):
 
         response: Response = self.client.get(self.url)
         default_limit = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"]
-        mock_get_tasks.assert_called_once_with(page=1, limit=default_limit, sort_by="createdAt", order=None)
+        mock_get_tasks.assert_called_once_with(page=1, limit=default_limit, sort_by="createdAt", order="desc")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_get_tasks_returns_400_for_invalid_query_params(self):
@@ -161,7 +161,7 @@ class TaskViewTest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         default_limit = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"]
-        mock_get_tasks.assert_called_once_with(page=1, limit=default_limit, sort_by="createdAt", order=None)
+        mock_get_tasks.assert_called_once_with(page=1, limit=default_limit, sort_by="createdAt", order="desc")
 
     @patch("todo.services.task_service.TaskService.get_tasks")
     def test_get_tasks_with_valid_pagination(self, mock_get_tasks):
@@ -172,7 +172,7 @@ class TaskViewTest(TestCase):
         response = self.view(request)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_get_tasks.assert_called_once_with(page=2, limit=15, sort_by="createdAt", order=None)
+        mock_get_tasks.assert_called_once_with(page=2, limit=15, sort_by="createdAt", order="desc")
 
     def test_get_tasks_with_invalid_page(self):
         """Test GET /tasks with invalid page parameter"""
@@ -217,7 +217,7 @@ class TaskViewSortingTests(TestCase):
         response = self.view(request)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_get_tasks.assert_called_once_with(page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order=None)
+        mock_get_tasks.assert_called_once_with(page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order="desc")
 
     @patch("todo.services.task_service.TaskService.get_tasks")
     def test_get_tasks_with_sort_by_and_order(self, mock_get_tasks):
@@ -233,9 +233,14 @@ class TaskViewSortingTests(TestCase):
     def test_get_tasks_with_all_sort_fields(self, mock_get_tasks):
         mock_get_tasks.return_value = GetTasksResponse(tasks=task_dtos)
 
-        sort_fields = [SORT_FIELD_PRIORITY, SORT_FIELD_DUE_AT, SORT_FIELD_CREATED_AT, SORT_FIELD_ASSIGNEE]
+        sort_fields_with_expected_orders = [
+            (SORT_FIELD_PRIORITY, "desc"),
+            (SORT_FIELD_DUE_AT, "asc"),
+            (SORT_FIELD_CREATED_AT, "desc"),
+            (SORT_FIELD_ASSIGNEE, "asc"),
+        ]
 
-        for sort_field in sort_fields:
+        for sort_field, expected_order in sort_fields_with_expected_orders:
             with self.subTest(sort_field=sort_field):
                 mock_get_tasks.reset_mock()
 
@@ -243,7 +248,7 @@ class TaskViewSortingTests(TestCase):
                 response = self.view(request)
 
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
-                mock_get_tasks.assert_called_once_with(page=1, limit=20, sort_by=sort_field, order=None)
+                mock_get_tasks.assert_called_once_with(page=1, limit=20, sort_by=sort_field, order=expected_order)
 
     @patch("todo.services.task_service.TaskService.get_tasks")
     def test_get_tasks_with_all_order_values(self, mock_get_tasks):
@@ -299,7 +304,7 @@ class TaskViewSortingTests(TestCase):
         response = self.view(request)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_get_tasks.assert_called_once_with(page=1, limit=20, sort_by=SORT_FIELD_CREATED_AT, order=None)
+        mock_get_tasks.assert_called_once_with(page=1, limit=20, sort_by=SORT_FIELD_CREATED_AT, order="desc")
 
     def test_get_tasks_edge_case_combinations(self):
         with patch("todo.services.task_service.TaskService.get_tasks") as mock_get_tasks:

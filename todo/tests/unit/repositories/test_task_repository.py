@@ -443,7 +443,7 @@ class TaskRepositorySortingTests(TestCase):
         self.mock_collection.find.return_value.sort.return_value.skip.return_value.limit.assert_called_once_with(limit)
 
     def test_list_default_sort_parameters(self):
-        TaskRepository.list(1, 10)
+        TaskRepository.list(1, 10, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC)
 
         self.mock_collection.find.assert_called_once()
 

@@ -137,15 +137,17 @@ class GetTaskQueryParamsSerializerSortingTests(TestCase):
 
     def test_order_has_no_default(self):
         serializer = GetTaskQueryParamsSerializer(data={})
-        self.assertTrue(serializer.is_valid())
 
-        self.assertNotIn("order", serializer.validated_data)
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(serializer.validated_data["order"], "desc")
 
     def test_sort_by_with_no_order(self):
         serializer = GetTaskQueryParamsSerializer(data={"sort_by": SORT_FIELD_DUE_AT})
+
         self.assertTrue(serializer.is_valid())
         self.assertEqual(serializer.validated_data["sort_by"], SORT_FIELD_DUE_AT)
-        self.assertNotIn("order", serializer.validated_data)
+
+        self.assertEqual(serializer.validated_data["order"], "asc")
 
     def test_order_with_no_sort_by(self):
         serializer = GetTaskQueryParamsSerializer(data={"order": SORT_ORDER_ASC})

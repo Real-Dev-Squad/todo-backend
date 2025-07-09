@@ -55,7 +55,7 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         mock_label_repo.return_value = label_models
         mock_user_repo.return_value = self.get_user_model()
 
-        response: GetTasksResponse = TaskService.get_tasks(page=2, limit=1)
+        response: GetTasksResponse = TaskService.get_tasks(page=2, limit=1, sort_by="createdAt", order="desc")
 
         self.assertIsInstance(response, GetTasksResponse)
         self.assertEqual(len(response.tasks), 1)
@@ -83,7 +83,7 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         mock_label_repo.return_value = label_models
         mock_user_repo.return_value = self.get_user_model()
 
-        response: GetTasksResponse = TaskService.get_tasks(page=1, limit=1)
+        response: GetTasksResponse = TaskService.get_tasks(page=1, limit=1, sort_by="createdAt", order="desc")
 
         self.assertIsNotNone(response.links)
         self.assertIsNone(response.links.prev)
@@ -98,7 +98,7 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        response: GetTasksResponse = TaskService.get_tasks(page=1, limit=10)
+        response: GetTasksResponse = TaskService.get_tasks(page=1, limit=10, sort_by="createdAt", order="desc")
 
         self.assertIsInstance(response, GetTasksResponse)
         self.assertEqual(len(response.tasks), 0)
@@ -113,7 +113,7 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         mock_list.return_value = []
         mock_count.return_value = 50
 
-        response: GetTasksResponse = TaskService.get_tasks(page=999, limit=10)
+        response: GetTasksResponse = TaskService.get_tasks(page=999, limit=10, sort_by="createdAt", order="desc")
 
         self.assertIsInstance(response, GetTasksResponse)
         self.assertEqual(len(response.tasks), 0)
@@ -181,7 +181,7 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         with patch("todo.services.task_service.TaskService._validate_pagination_params") as mock_validate:
             mock_validate.side_effect = ValidationError("Test validation error")
 
-            response = TaskService.get_tasks(page=1, limit=10)
+            response = TaskService.get_tasks(page=1, limit=10, sort_by="createdAt", order="desc")
 
             self.assertIsInstance(response, GetTasksResponse)
             self.assertEqual(len(response.tasks), 0)
@@ -191,7 +191,7 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
     def test_get_tasks_handles_general_exception(self, mock_list: Mock):
         mock_list.side_effect = Exception("Test general error")
 
-        response = TaskService.get_tasks(page=1, limit=10)
+        response = TaskService.get_tasks(page=1, limit=10, sort_by="createdAt", order="desc")
 
         self.assertIsInstance(response, GetTasksResponse)
         self.assertEqual(len(response.tasks), 0)
@@ -282,7 +282,7 @@ class TaskServiceSortingTests(TestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        TaskService.get_tasks()
+        TaskService.get_tasks(page=1, limit=20, sort_by="createdAt", order="desc")
 
         mock_list.assert_called_once_with(1, 20, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC)
 
@@ -292,7 +292,7 @@ class TaskServiceSortingTests(TestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        TaskService.get_tasks(sort_by=SORT_FIELD_PRIORITY, order=SORT_ORDER_DESC)
+        TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order=SORT_ORDER_DESC)
 
         mock_list.assert_called_once_with(1, 20, SORT_FIELD_PRIORITY, SORT_ORDER_DESC)
 
@@ -302,7 +302,7 @@ class TaskServiceSortingTests(TestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        TaskService.get_tasks(sort_by=SORT_FIELD_DUE_AT, order=None)
+        TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_DUE_AT, order="asc")
 
         mock_list.assert_called_once_with(1, 20, SORT_FIELD_DUE_AT, SORT_ORDER_ASC)
 
@@ -312,7 +312,7 @@ class TaskServiceSortingTests(TestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        TaskService.get_tasks(sort_by=SORT_FIELD_PRIORITY, order=None)
+        TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order="desc")
 
         mock_list.assert_called_once_with(1, 20, SORT_FIELD_PRIORITY, SORT_ORDER_DESC)
 
@@ -322,7 +322,7 @@ class TaskServiceSortingTests(TestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        TaskService.get_tasks(sort_by=SORT_FIELD_ASSIGNEE, order=None)
+        TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_ASSIGNEE, order="asc")
 
         mock_list.assert_called_once_with(1, 20, SORT_FIELD_ASSIGNEE, SORT_ORDER_ASC)
 
@@ -332,7 +332,7 @@ class TaskServiceSortingTests(TestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        TaskService.get_tasks(sort_by=SORT_FIELD_CREATED_AT, order=None)
+        TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_CREATED_AT, order="desc")
 
         mock_list.assert_called_once_with(1, 20, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC)
 
@@ -345,7 +345,7 @@ class TaskServiceSortingTests(TestCase):
 
     @patch("todo.services.task_service.reverse_lazy", return_value="/v1/tasks")
     def test_build_page_url_with_default_sort_parameters(self, mock_reverse):
-        url = TaskService.build_page_url(1, 20, SORT_FIELD_DUE_AT, None)
+        url = TaskService.build_page_url(1, 20, SORT_FIELD_DUE_AT, "asc")
 
         expected_url = "/v1/tasks?page=1&limit=20&sort_by=dueAt&order=asc"
         self.assertEqual(url, expected_url)

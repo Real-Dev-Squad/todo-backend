@@ -5,7 +5,6 @@ from rest_framework.test import APIRequestFactory
 
 from todo.views.task import TaskListView
 from todo.dto.responses.get_tasks_response import GetTasksResponse
-from todo.tests.fixtures.task import task_dtos
 
 
 class TaskPaginationIntegrationTest(TestCase):
@@ -15,20 +14,21 @@ class TaskPaginationIntegrationTest(TestCase):
         self.factory = APIRequestFactory()
         self.view = TaskListView.as_view()
 
+    @patch("todo.middlewares.jwt_auth.JWTAuthenticationMiddleware._is_public_path")
     @patch("todo.services.task_service.TaskService.get_tasks")
-    def test_pagination_settings_integration(self, mock_get_tasks):
+    def test_pagination_settings_integration(self, mock_get_tasks, mock_is_public_path):
         """Test that the view and serializer correctly use Django settings for pagination"""
-        mock_get_tasks.return_value = GetTasksResponse(tasks=task_dtos)
-
-        # Test with no query params (should use default limit)
-        request = self.factory.get("/tasks")
-        response = self.view(request)
-
-        # Check serializer validation passed and returned 200 OK
-        self.assertEqual(response.status_code, 200)
+        mock_is_public_path.return_value = True
+        mock_get_tasks.return_value = GetTasksResponse(tasks=[], links=None)
 
         default_limit = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"]
-        mock_get_tasks.assert_called_with(page=1, limit=default_limit, sort_by="createdAt", order=None)
+
+        request = self.factory.get("/tasks")
+        request.user = None
+        response = self.view(request)
+
+        self.assertEqual(response.status_code, 200)
+        mock_get_tasks.assert_called_with(page=1, limit=default_limit, sort_by="createdAt", order="desc")
 
         mock_get_tasks.reset_mock()
 
@@ -36,7 +36,7 @@ class TaskPaginationIntegrationTest(TestCase):
         response = self.view(request)
 
         self.assertEqual(response.status_code, 200)
-        mock_get_tasks.assert_called_with(page=1, limit=10, sort_by="createdAt", order=None)
+        mock_get_tasks.assert_called_with(page=1, limit=10, sort_by="createdAt", order="desc")
 
         # Verify API rejects values above max limit
         max_limit = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["MAX_PAGE_LIMIT"]

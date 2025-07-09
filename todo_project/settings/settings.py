@@ -1,6 +1,10 @@
 import os
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -12,10 +16,15 @@ SECRET_KEY = os.getenv(
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
-ALLOWED_HOSTS = []
+# Environment configuration
+ENV = os.getenv("ENV", "DEVELOPMENT").upper()
 
+# Allowed hosts configuration
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+
+# Database configuration
 MONGODB_URI = os.getenv("MONGODB_URI")
 DB_NAME = os.getenv("DB_NAME")
 
@@ -38,6 +47,9 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# Add CORS middleware for all environments
+MIDDLEWARE.insert(0, "corsheaders.middleware.CorsMiddleware")
+
 ROOT_URLCONF = "todo_project.urls"
 WSGI_APPLICATION = "todo_project.wsgi.application"
 
@@ -58,11 +70,8 @@ TEMPLATES = [
 ]
 
 LANGUAGE_CODE = "en-us"
-
 TIME_ZONE = "UTC"
-
 USE_I18N = True
-
 USE_TZ = True
 
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
@@ -76,7 +85,6 @@ CACHES = {
         "LOCATION": "oauth-sessions",
     }
 }
-
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
@@ -98,21 +106,24 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
+# JWT Configuration
 JWT_AUTH = {
     "ALGORITHM": "RS256",
     "PUBLIC_KEY": os.getenv("RDS_PUBLIC_KEY") or "",
 }
 
+# JWT Cookie Settings
 JWT_COOKIE_SETTINGS = {
     "RDS_SESSION_COOKIE_NAME": os.getenv("RDS_SESSION_COOKIE_NAME", "rds-session-development"),
     "RDS_SESSION_V2_COOKIE_NAME": os.getenv("RDS_SESSION_V2_COOKIE_NAME", "rds-session-v2-development"),
     "COOKIE_DOMAIN": os.getenv("COOKIE_DOMAIN", None),
-    "COOKIE_SECURE": os.getenv("COOKIE_SECURE", "True").lower() == "true",
+    "COOKIE_SECURE": os.getenv("COOKIE_SECURE", "False").lower() == "true",
     "COOKIE_HTTPONLY": True,
-    "COOKIE_SAMESITE": os.getenv("COOKIE_SAMESITE", "None"),
+    "COOKIE_SAMESITE": os.getenv("COOKIE_SAMESITE", "Lax"),
     "COOKIE_PATH": "/",
 }
 
+# Google OAuth Configuration
 GOOGLE_OAUTH = {
     "CLIENT_ID": os.getenv("GOOGLE_OAUTH_CLIENT_ID"),
     "CLIENT_SECRET": os.getenv("GOOGLE_OAUTH_CLIENT_SECRET"),
@@ -120,6 +131,7 @@ GOOGLE_OAUTH = {
     "SCOPES": ["openid", "email", "profile"],
 }
 
+# Testing configuration
 TESTING = "test" in sys.argv or "pytest" in sys.modules or os.getenv("TESTING") == "True"
 
 if TESTING:
@@ -128,21 +140,22 @@ if TESTING:
         "ALGORITHM": "HS256",
         "PRIVATE_KEY": "test-secret-key-for-jwt-signing-very-long-key-needed-for-security",
         "PUBLIC_KEY": "test-secret-key-for-jwt-signing-very-long-key-needed-for-security",
-        "ACCESS_TOKEN_LIFETIME": int(os.getenv("ACCESS_LIFETIME", "3600")),
-        "REFRESH_TOKEN_LIFETIME": int(os.getenv("REFRESH_LIFETIME", "604800")),
+        "ACCESS_TOKEN_LIFETIME": int(os.getenv("GOOGLE_JWT_ACCESS_LIFETIME", "3600")),
+        "REFRESH_TOKEN_LIFETIME": int(os.getenv("GOOGLE_JWT_REFRESH_LIFETIME", "604800")),
     }
 else:
     GOOGLE_JWT = {
         "ALGORITHM": "RS256",
-        "PRIVATE_KEY": os.getenv("PRIVATE_KEY"),
-        "PUBLIC_KEY": os.getenv("PUBLIC_KEY"),
-        "ACCESS_TOKEN_LIFETIME": int(os.getenv("ACCESS_LIFETIME", "3600")),
-        "REFRESH_TOKEN_LIFETIME": int(os.getenv("REFRESH_LIFETIME", "604800")),
+        "PRIVATE_KEY": os.getenv("GOOGLE_JWT_PRIVATE_KEY"),
+        "PUBLIC_KEY": os.getenv("GOOGLE_JWT_PUBLIC_KEY"),
+        "ACCESS_TOKEN_LIFETIME": int(os.getenv("GOOGLE_JWT_ACCESS_LIFETIME", "3600")),
+        "REFRESH_TOKEN_LIFETIME": int(os.getenv("GOOGLE_JWT_REFRESH_LIFETIME", "604800")),
     }
 
+# Google Cookie Settings
 GOOGLE_COOKIE_SETTINGS = {
-    "ACCESS_COOKIE_NAME": os.getenv("ACCESS_COOKIE_NAME", "ext-access"),
-    "REFRESH_COOKIE_NAME": os.getenv("REFRESH_COOKIE_NAME", "ext-refresh"),
+    "ACCESS_COOKIE_NAME": os.getenv("GOOGLE_ACCESS_COOKIE_NAME", "ext-access"),
+    "REFRESH_COOKIE_NAME": os.getenv("GOOGLE_REFRESH_COOKIE_NAME", "ext-refresh"),
     "COOKIE_DOMAIN": os.getenv("COOKIE_DOMAIN", None),
     "COOKIE_SECURE": os.getenv("COOKIE_SECURE", "False").lower() == "true",
     "COOKIE_HTTPONLY": True,
@@ -150,6 +163,7 @@ GOOGLE_COOKIE_SETTINGS = {
     "COOKIE_PATH": "/",
 }
 
+# Frontend and Service URLs
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 # RDS Backend Integration
@@ -181,6 +195,32 @@ PUBLIC_PATHS = [
     "/v1/auth/google/refresh",
 ]
 
+# CORS Configuration
+CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "True").lower() == "true"
+CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "True").lower() == "true"
+
+if not CORS_ALLOW_ALL_ORIGINS:
+    CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+
+CORS_ALLOWED_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
+# Security Settings
+SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "False").lower() == "true"
+SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "False").lower() == "true"
+SESSION_COOKIE_DOMAIN = os.getenv("SESSION_COOKIE_DOMAIN", None)
+SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
+CSRF_COOKIE_SECURE = os.getenv("CSRF_COOKIE_SECURE", "False").lower() == "true"
+
 # Swagger/OpenAPI Configuration
 SPECTACULAR_SETTINGS = {
     "TITLE": "Todo API",
@@ -208,4 +248,18 @@ SPECTACULAR_SETTINGS = {
     },
 }
 
-STATIC_URL = "/static/"
+# Environment-specific Swagger settings
+if ENV == "PRODUCTION":
+    SPECTACULAR_SETTINGS.update({
+        "SWAGGER_UI_SETTINGS": {
+            "url": "/todo/api/schema",
+        },
+    })
+elif ENV == "STAGING":
+    SPECTACULAR_SETTINGS.update({
+        "SWAGGER_UI_SETTINGS": {
+            "url": "/staging-todo/api/schema",
+        },
+    })
+
+STATIC_URL = "/static/" 

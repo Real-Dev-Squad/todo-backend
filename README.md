@@ -36,7 +36,7 @@
     ```
     python -m pip install -r requirements.txt
     ```
-6. Create a `.env` file in the root directory, and copy the content from the `.env.example` file to it
+6. Create a `.env` file in the root directory with your environment variables. See `ENVIRONMENT_VARIABLES.md` for a complete list of available variables and their descriptions.
 7. Install [docker](https://docs.docker.com/get-docker/) and [docker compose](https://docs.docker.com/compose/install/)
 8. Start MongoDB using docker
     ```
@@ -71,6 +71,41 @@
     }
     ```
 4. On making changes to code and saving, live reload will work in this case as well
+
+## Environment Configuration
+
+The application uses environment variables for all configuration. All environment-specific settings have been consolidated into a single approach using environment variables.
+
+### Quick Setup
+
+1. Create a `.env` file in the project root using the migration script:
+   ```bash
+   python migrate_settings.py development  # or staging, production
+   ```
+   Or manually create a `.env` file and add your environment variables (see `ENVIRONMENT_VARIABLES.md` for complete documentation)
+2. The application will automatically load these variables
+
+### Example .env file for development:
+
+```bash
+# Django Settings
+SECRET_KEY=your-secret-key-here
+DEBUG=True
+ENV=DEVELOPMENT
+
+# Database Configuration
+MONGODB_URI=mongodb://localhost:27017
+DB_NAME=todo_db
+
+# Allowed Hosts
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# CORS Settings
+CORS_ALLOW_ALL_ORIGINS=True
+CORS_ALLOW_CREDENTIALS=True
+```
+
+For production deployments, refer to the environment-specific configurations in `ENVIRONMENT_VARIABLES.md`.
 
 ## Command reference
 1. To run the tests, run the following command

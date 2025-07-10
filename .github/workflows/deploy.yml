@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - develop
+      - fix-staging-build
 
 jobs:
   build-and-push:

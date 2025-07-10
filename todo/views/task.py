@@ -1,10 +1,9 @@
-from multiprocessing import AuthenticationError
 from bson import ObjectId
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.request import Request
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import AuthenticationFailed, ValidationError
 from django.conf import settings
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
@@ -58,13 +57,11 @@ class TaskListView(APIView):
         if profile == "true":
             user = get_current_user_info(request)
             if not user:
-                raise AuthenticationError(ApiErrors.AUTHENTICATION_FAILED)
+                raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
             response = TaskService.get_tasks_for_user(
                 user_id=user["user_id"], page=query.validated_data["page"], limit=query.validated_data["limit"]
             )
             return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
-        query = GetTaskQueryParamsSerializer(data=request.query_params)
-        query.is_valid(raise_exception=True)
 
         response = TaskService.get_tasks(page=query.validated_data["page"], limit=query.validated_data["limit"])
         return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)

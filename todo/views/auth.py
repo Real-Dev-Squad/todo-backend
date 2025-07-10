@@ -10,7 +10,7 @@ from drf_spectacular.types import OpenApiTypes
 from todo.services.google_oauth_service import GoogleOAuthService
 from todo.services.user_service import UserService
 from todo.utils.google_jwt_utils import generate_google_token_pair
-from todo.constants.messages import AppMessages
+from todo.constants.messages import ApiErrors, AppMessages
 from todo.middlewares.jwt_auth import get_current_user_info
 
 
@@ -243,7 +243,7 @@ class UsersView(APIView):
         if profile == "true":
             user_info = get_current_user_info(request)
             if not user_info:
-                return AuthenticationFailed()
+                raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
             return Response(
                 {"statusCode": 200, "message": "Current user details fetched successfully", "data": user_info},
                 status=200,

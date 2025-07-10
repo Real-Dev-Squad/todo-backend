@@ -134,7 +134,8 @@ class GoogleCallbackView(APIView):
 
             return response
 
-        except Exception:
+        except Exception as e:
+            print(f"Google OAuth callback error: {str(e)}")
             frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error=auth_failed")
 

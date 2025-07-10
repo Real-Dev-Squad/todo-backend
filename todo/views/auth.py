@@ -134,7 +134,7 @@ class GoogleCallbackView(APIView):
 
             return response
 
-        except Exception as e:
+        except Exception:
             frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error=auth_failed")
 

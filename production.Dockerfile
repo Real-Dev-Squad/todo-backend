@@ -17,8 +17,9 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Set Django settings module
-ENV DJANGO_SETTINGS_MODULE=todo_project.settings.production
-ENV ENV=PRODUCTION
+ARG ENV=production
+ENV ENV=${ENV}
+ENV DJANGO_SETTINGS_MODULE=todo_project.settings.${ENV}
 
 WORKDIR /app
 

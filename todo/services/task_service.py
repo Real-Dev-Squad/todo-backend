@@ -1,6 +1,5 @@
 from typing import List
 from dataclasses import dataclass
-from django.core.paginator import Paginator, EmptyPage
 from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from urllib.parse import urlencode
@@ -19,7 +18,11 @@ from todo.models.task import TaskModel, DeferredDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.label_repository import LabelRepository
-from todo.constants.task import TaskStatus, TaskPriority, MINIMUM_DEFERRAL_NOTICE_DAYS
+from todo.constants.task import (
+    TaskStatus,
+    TaskPriority,
+    MINIMUM_DEFERRAL_NOTICE_DAYS,
+)
 from todo.constants.messages import ApiErrors, ValidationErrors
 from django.conf import settings
 from todo.exceptions.task_exceptions import (
@@ -30,6 +33,7 @@ from todo.exceptions.task_exceptions import (
 from bson.errors import InvalidId as BsonInvalidId
 
 from todo.repositories.user_repository import UserRepository
+import math
 
 
 @dataclass
@@ -44,33 +48,27 @@ class TaskService:
 
     @classmethod
     def get_tasks(
-        cls, page: int = PaginationConfig.DEFAULT_PAGE, limit: int = PaginationConfig.DEFAULT_LIMIT
+        cls,
+        page: int,
+        limit: int,
+        sort_by: str,
+        order: str,
     ) -> GetTasksResponse:
         try:
             cls._validate_pagination_params(page, limit)
 
-            tasks = TaskRepository.get_all()
+            tasks = TaskRepository.list(page, limit, sort_by, order)
+
+            total_count = TaskRepository.count()
 
             if not tasks:
                 return GetTasksResponse(tasks=[], links=None)
 
-            paginator = Paginator(tasks, limit)
+            task_dtos = [cls.prepare_task_dto(task) for task in tasks]
 
-            try:
-                current_page = paginator.page(page)
+            links = cls._build_pagination_links(page, limit, total_count, sort_by, order)
 
-                task_dtos = [cls.prepare_task_dto(task) for task in current_page.object_list]
-
-                links = cls._prepare_pagination_links(current_page=current_page, page=page, limit=limit)
-
-                return GetTasksResponse(tasks=task_dtos, links=links)
-
-            except EmptyPage:
-                return GetTasksResponse(
-                    tasks=[],
-                    links=None,
-                    error={"message": ApiErrors.PAGE_NOT_FOUND, "code": "PAGE_NOT_FOUND"},
-                )
+            return GetTasksResponse(tasks=task_dtos, links=links)
 
         except ValidationError as e:
             return GetTasksResponse(tasks=[], links=None, error={"message": str(e), "code": "VALIDATION_ERROR"})
@@ -92,24 +90,25 @@ class TaskService:
             raise ValidationError(f"Maximum limit of {PaginationConfig.MAX_LIMIT} exceeded")
 
     @classmethod
-    def _prepare_pagination_links(cls, current_page, page: int, limit: int) -> LinksData:
+    def _build_pagination_links(cls, page: int, limit: int, total_count: int, sort_by: str, order: str) -> LinksData:
+        """Build pagination links with sort parameters"""
+
+        total_pages = math.ceil(total_count / limit)
         next_link = None
         prev_link = None
 
-        if current_page.has_next():
-            next_page = current_page.next_page_number()
-            next_link = cls.build_page_url(next_page, limit)
+        if page < total_pages:
+            next_link = cls.build_page_url(page + 1, limit, sort_by, order)
 
-        if current_page.has_previous():
-            prev_page = current_page.previous_page_number()
-            prev_link = cls.build_page_url(prev_page, limit)
+        if page > 1:
+            prev_link = cls.build_page_url(page - 1, limit, sort_by, order)
 
         return LinksData(next=next_link, prev=prev_link)
 
     @classmethod
-    def build_page_url(cls, page: int, limit: int) -> str:
+    def build_page_url(cls, page: int, limit: int, sort_by: str, order: str) -> str:
         base_url = reverse_lazy("tasks")
-        query_params = urlencode({"page": page, "limit": limit})
+        query_params = urlencode({"page": page, "limit": limit, "sort_by": sort_by, "order": order})
         return f"{base_url}?{query_params}"
 
     @classmethod

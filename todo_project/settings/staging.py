@@ -1,8 +1,9 @@
 # Staging specific settings
 from .base import *
+import os
 
 DEBUG = True
-ALLOWED_HOSTS = ["staging-api.realdevsquad.com", "services.realdevsquad.com"]
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "staging-api.realdevsquad.com,services.realdevsquad.com").split(",")
 
 # Service domains configuration
 SERVICE_DOMAINS = {
@@ -16,7 +17,7 @@ BASE_URL = "https://"
 
 GOOGLE_OAUTH.update(
     {
-        "REDIRECT_URI": f"{BASE_URL}{SERVICE_DOMAINS['AUTH']}/staging-todo/v1/auth/google/callback",
+        "REDIRECT_URI": f"{BASE_URL}{SERVICE_DOMAINS['AUTH']}/staging-todo/v1/auth/google/callback/",
     }
 )
 
@@ -33,7 +34,7 @@ JWT_COOKIE_SETTINGS.update(
 
 GOOGLE_COOKIE_SETTINGS.update(
     {
-        "COOKIE_DOMAIN": ".realdevsquad.com",
+        "COOKIE_DOMAIN": "staging-todo.realdevsquad.com",
         "COOKIE_SECURE": True,
         "COOKIE_SAMESITE": "None",
     }
@@ -66,9 +67,9 @@ CORS_ALLOWED_HEADERS = [
 ]
 
 # Security settings for staging
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = True
-SESSION_COOKIE_DOMAIN = ".realdevsquad.com"
+SESSION_COOKIE_DOMAIN = "staging-todo.realdevsquad.com"
 SESSION_COOKIE_SAMESITE = "None"
 CSRF_COOKIE_SECURE = True
 

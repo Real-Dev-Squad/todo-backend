@@ -7,16 +7,57 @@ from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.task import TaskModel
 from todo.repositories.common.mongo_repository import MongoRepository
 from todo.constants.messages import ApiErrors, RepositoryErrors
+from todo.constants.task import SORT_FIELD_PRIORITY, SORT_FIELD_ASSIGNEE, SORT_ORDER_DESC
 
 
 class TaskRepository(MongoRepository):
     collection_name = TaskModel.collection_name
 
     @classmethod
-    def list(cls, page: int, limit: int) -> List[TaskModel]:
+    def list(cls, page: int, limit: int, sort_by: str, order: str) -> List[TaskModel]:
         tasks_collection = cls.get_collection()
-        tasks_cursor = tasks_collection.find().skip((page - 1) * limit).limit(limit)
+
+        if sort_by == SORT_FIELD_PRIORITY:
+            sort_direction = 1 if order == SORT_ORDER_DESC else -1
+            sort_criteria = [(sort_by, sort_direction)]
+        elif sort_by == SORT_FIELD_ASSIGNEE:
+            return cls._list_sorted_by_assignee(page, limit, order)
+        else:
+            sort_direction = -1 if order == SORT_ORDER_DESC else 1
+            sort_criteria = [(sort_by, sort_direction)]
+
+        tasks_cursor = tasks_collection.find().sort(sort_criteria).skip((page - 1) * limit).limit(limit)
         return [TaskModel(**task) for task in tasks_cursor]
+
+    @classmethod
+    def _list_sorted_by_assignee(cls, page: int, limit: int, order: str) -> List[TaskModel]:
+        """Handle assignee sorting using aggregation pipeline to sort by user names"""
+        tasks_collection = cls.get_collection()
+
+        sort_direction = -1 if order == SORT_ORDER_DESC else 1
+
+        pipeline = [
+            {
+                "$addFields": {
+                    "assignee_oid": {
+                        "$cond": {
+                            "if": {"$ne": ["$assignee", None]},
+                            "then": {"$toObjectId": "$assignee"},
+                            "else": None,
+                        }
+                    }
+                }
+            },
+            {"$lookup": {"from": "users", "localField": "assignee_oid", "foreignField": "_id", "as": "assignee_user"}},
+            {"$addFields": {"assignee_name": {"$ifNull": [{"$arrayElemAt": ["$assignee_user.name", 0]}, ""]}}},
+            {"$sort": {"assignee_name": sort_direction}},
+            {"$skip": (page - 1) * limit},
+            {"$limit": limit},
+            {"$project": {"assignee_user": 0, "assignee_name": 0, "assignee_oid": 0}},
+        ]
+
+        result = list(tasks_collection.aggregate(pipeline))
+        return [TaskModel(**task) for task in result]
 
     @classmethod
     def count(cls) -> int:

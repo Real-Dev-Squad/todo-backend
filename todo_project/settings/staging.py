@@ -73,8 +73,10 @@ SESSION_COOKIE_DOMAIN = "staging-todo.realdevsquad.com"
 SESSION_COOKIE_SAMESITE = "None"
 CSRF_COOKIE_SECURE = True
 
-SPECTACULAR_SETTINGS.update({
-    "SWAGGER_UI_SETTINGS": {
-        "url": "/staging-todo/api/schema",
-    },
-})
+SPECTACULAR_SETTINGS.update(
+    {
+        "SWAGGER_UI_SETTINGS": {
+            "url": "/staging-todo/api/schema",
+        },
+    }
+)

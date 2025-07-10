@@ -36,7 +36,7 @@ GOOGLE_COOKIE_SETTINGS.update(
     {
         "COOKIE_DOMAIN": "realdevsquad.com",
         "COOKIE_SECURE": True,
-        "COOKIE_SAMESITE": "Strict",
+        "COOKIE_SAMESITE": "NONE",
     }
 )
 

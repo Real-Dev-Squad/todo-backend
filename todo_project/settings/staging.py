@@ -36,7 +36,7 @@ GOOGLE_COOKIE_SETTINGS.update(
     {
         "COOKIE_DOMAIN": "realdevsquad.com",
         "COOKIE_SECURE": True,
-        "COOKIE_SAMESITE": "None",
+        "COOKIE_SAMESITE": "Strict",
     }
 )
 
@@ -70,7 +70,7 @@ CORS_ALLOWED_HEADERS = [
 SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_DOMAIN = "realdevsquad.com"
-SESSION_COOKIE_SAMESITE = "None"
+SESSION_COOKIE_SAMESITE = "Strict"
 CSRF_COOKIE_SECURE = True
 
 SPECTACULAR_SETTINGS.update(

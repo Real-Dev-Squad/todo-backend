@@ -396,30 +396,10 @@ class TaskService:
     def get_tasks_for_user(
         cls, user_id: str, page: int = PaginationConfig.DEFAULT_PAGE, limit: int = PaginationConfig.DEFAULT_LIMIT
     ) -> GetTasksResponse:
-        try:
-            cls._validate_pagination_params(page, limit)
+        cls._validate_pagination_params(page, limit)
+        tasks = TaskRepository.get_tasks_for_user(user_id, page, limit)
+        if not tasks:
+            return GetTasksResponse(tasks=[], links=None)
 
-            tasks = TaskRepository.get_tasks_for_user(user_id, page, limit)
-
-            if not tasks:
-                return GetTasksResponse(tasks=[], links=None)
-
-            paginator = Paginator(tasks, limit)
-
-            try:
-                current_page = paginator.page(1)
-                task_dtos = [cls.prepare_task_dto(task) for task in current_page.object_list]
-                links = cls._prepare_pagination_links(current_page=current_page, page=page, limit=limit)
-                return GetTasksResponse(tasks=task_dtos, links=links)
-            except EmptyPage:
-                return GetTasksResponse(
-                    tasks=[],
-                    links=None,
-                    error={"message": ApiErrors.PAGE_NOT_FOUND, "code": "PAGE_NOT_FOUND"},
-                )
-        except ValidationError as e:
-            return GetTasksResponse(tasks=[], links=None, error={"message": str(e), "code": "VALIDATION_ERROR"})
-        except Exception:
-            return GetTasksResponse(
-                tasks=[], links=None, error={"message": ApiErrors.UNEXPECTED_ERROR_OCCURRED, "code": "INTERNAL_ERROR"}
-            )
+        task_dtos = [cls.prepare_task_dto(task) for task in tasks]
+        return GetTasksResponse(tasks=task_dtos, links=None)

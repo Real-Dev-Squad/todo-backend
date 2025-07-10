@@ -1,3 +1,4 @@
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.request import Request
@@ -236,41 +237,15 @@ class GoogleLogoutView(APIView):
         response.delete_cookie("sessionid", **session_delete_config)
 
 
-class UserView(APIView):
-    @extend_schema(
-        operation_id="get_current_user",
-        summary="Get current authenticated user details",
-        description="Returns the details of the currently authenticated user based on the authentication cookie. Requires profile=true query param.",
-        tags=["auth"],
-        parameters=[
-            OpenApiParameter(
-                name="profile",
-                type=OpenApiTypes.BOOL,
-                location=OpenApiParameter.QUERY,
-                description="If true, returns the current user's details.",
-                required=True,
-            ),
-        ],
-        responses={
-            200: OpenApiResponse(description="Current user details returned successfully"),
-            400: OpenApiResponse(description="Missing or invalid profile query param"),
-            401: OpenApiResponse(description="Authentication required or invalid cookie"),
-        },
-    )
+class UsersView(APIView):
     def get(self, request: Request):
         profile = request.query_params.get("profile")
-        if profile != "true":
+        if profile == "true":
+            user_info = get_current_user_info(request)
+            if not user_info:
+                return AuthenticationFailed()
             return Response(
-                {
-                    "statusCode": 400,
-                    "message": "Missing or invalid profile query param. Use /user?profile=true",
-                    "data": None,
-                },
-                status=400,
+                {"statusCode": 200, "message": "Current user details fetched successfully", "data": user_info},
+                status=200,
             )
-        user_info = get_current_user_info(request)
-        if not user_info:
-            return Response({"statusCode": 401, "message": "Authentication required", "data": None}, status=401)
-        return Response(
-            {"statusCode": 200, "message": "Current user details fetched successfully", "data": user_info}, status=200
-        )
+        return Response({"statusCode": 404, "message": "Route does not exist.", "data": None}, status=404)

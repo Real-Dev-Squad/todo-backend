@@ -251,7 +251,7 @@ class GoogleLogoutViewTests(APITestCase):
 class UserViewProfileTrueTests(APITestCase):
     def setUp(self):
         self.client = APIClient()
-        self.url = reverse("current_user")
+        self.url = reverse("users")
         self.user_data = {
             "user_id": str(ObjectId()),
             "google_id": "test_google_id",
@@ -264,8 +264,7 @@ class UserViewProfileTrueTests(APITestCase):
 
     def test_requires_profile_true(self):
         response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 400)
-        self.assertIn("profile", response.data["message"])
+        self.assertEqual(response.status_code, 404)
 
     def test_returns_401_if_not_authenticated(self):
         client = APIClient()

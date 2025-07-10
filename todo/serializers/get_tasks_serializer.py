@@ -23,7 +23,6 @@ class GetTaskQueryParamsSerializer(serializers.Serializer):
         },
     )
 
-
     profile = serializers.BooleanField(required=False, error_messages={"invalid": "profile must be a boolean value."})
 
     sort_by = serializers.ChoiceField(
@@ -44,4 +43,3 @@ class GetTaskQueryParamsSerializer(serializers.Serializer):
             validated_data["order"] = SORT_FIELD_DEFAULT_ORDERS[sort_by]
 
         return validated_data
-

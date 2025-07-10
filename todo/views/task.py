@@ -51,10 +51,9 @@ class TaskListView(APIView):
         """
         Retrieve a paginated list of tasks, or if profile=true, only the current user's tasks.
         """
-        profile = request.query_params.get("profile")
         query = GetTaskQueryParamsSerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
-        if profile == "true":
+        if query.validated_data["profile"]:
             user = get_current_user_info(request)
             if not user:
                 raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)

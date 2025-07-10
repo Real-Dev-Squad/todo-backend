@@ -54,7 +54,12 @@ class TaskListView(APIView):
         query = GetTaskQueryParamsSerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
 
-        response = TaskService.get_tasks(page=query.validated_data["page"], limit=query.validated_data["limit"])
+        response = TaskService.get_tasks(
+            page=query.validated_data["page"],
+            limit=query.validated_data["limit"],
+            sort_by=query.validated_data["sort_by"],
+            order=query.validated_data.get("order"),
+        )
         return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
 
     @extend_schema(

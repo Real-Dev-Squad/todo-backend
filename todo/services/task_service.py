@@ -390,3 +390,15 @@ class TaskService:
         if deleted_task_model is None:
             raise TaskNotFoundException(task_id)
         return None
+
+    @classmethod
+    def get_tasks_for_user(
+        cls, user_id: str, page: int = PaginationConfig.DEFAULT_PAGE, limit: int = PaginationConfig.DEFAULT_LIMIT
+    ) -> GetTasksResponse:
+        cls._validate_pagination_params(page, limit)
+        tasks = TaskRepository.get_tasks_for_user(user_id, page, limit)
+        if not tasks:
+            return GetTasksResponse(tasks=[], links=None)
+
+        task_dtos = [cls.prepare_task_dto(task) for task in tasks]
+        return GetTasksResponse(tasks=task_dtos, links=None)

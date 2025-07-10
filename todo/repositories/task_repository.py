@@ -186,3 +186,10 @@ class TaskRepository(MongoRepository):
         if updated_task_doc:
             return TaskModel(**updated_task_doc)
         return None
+
+    @classmethod
+    def get_tasks_for_user(cls, user_id: str, page: int, limit: int) -> List[TaskModel]:
+        tasks_collection = cls.get_collection()
+        query = {"$or": [{"createdBy": user_id}, {"assignee": user_id}]}
+        tasks_cursor = tasks_collection.find(query).skip((page - 1) * limit).limit(limit)
+        return [TaskModel(**task) for task in tasks_cursor]

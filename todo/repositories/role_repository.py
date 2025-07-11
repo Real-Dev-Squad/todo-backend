@@ -11,6 +11,7 @@ from todo.constants.role import RoleType, RoleScope
 
 logger = logging.getLogger(__name__)
 
+
 class RoleRepository(MongoRepository):
     collection_name = RoleModel.collection_name
 
@@ -29,7 +30,7 @@ class RoleRepository(MongoRepository):
 
         roles_cursor = roles_collection.find(query)
         roles = []
-        
+
         for role_doc in roles_cursor:
             try:
                 role_model = cls._document_to_model(role_doc)
@@ -38,17 +39,17 @@ class RoleRepository(MongoRepository):
                 logger.error(f"Error converting role document to model: {e}")
                 logger.error(f"Document: {role_doc}")
                 continue
-        
+
         return roles
 
     @classmethod
     def _document_to_model(cls, role_doc: dict) -> RoleModel:
         if "type" in role_doc and isinstance(role_doc["type"], str):
             role_doc["type"] = RoleType(role_doc["type"])
-        
+
         if "scope" in role_doc and isinstance(role_doc["scope"], str):
             role_doc["scope"] = RoleScope(role_doc["scope"])
-        
+
         return RoleModel(**role_doc)
 
     @classmethod

@@ -87,12 +87,9 @@ class RoleListView(APIView):
             serializer = CreateRoleSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
 
-            user_id = getattr(request, 'user_id', None)
+            user_id = getattr(request, "user_id", None)
             if not user_id:
-                return Response(
-                    {"error": "User authentication required"}, 
-                    status=status.HTTP_401_UNAUTHORIZED
-                )
+                return Response({"error": "User authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
 
             role_dto = RoleService.create_role(
                 name=serializer.validated_data["name"],
@@ -178,12 +175,9 @@ class RoleDetailView(APIView):
             serializer = UpdateRoleSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
 
-            user_id = getattr(request, 'user_id', None)
+            user_id = getattr(request, "user_id", None)
             if not user_id:
-                return Response(
-                    {"error": "User authentication required"}, 
-                    status=status.HTTP_401_UNAUTHORIZED
-                )
+                return Response({"error": "User authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
 
             role_dto = RoleService.update_role(
                 role_id=role_id,

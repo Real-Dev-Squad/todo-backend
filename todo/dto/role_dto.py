@@ -27,13 +27,13 @@ class RoleDTO(BaseModel):
     def from_model(cls, role_model: RoleModel) -> "RoleDTO":
         """
         Convert RoleModel to RoleDTO
-        
+
         Args:
             role_model: The RoleModel instance to convert
-            
+
         Returns:
             RoleDTO: The converted data transfer object
-            
+
         Raises:
             ValueError: If role_model is None or invalid
         """
@@ -44,8 +44,12 @@ class RoleDTO(BaseModel):
             id=str(role_model.id),
             name=role_model.name,
             description=role_model.description,
-            type=role_model.type.value if hasattr(role_model.type, "value") and role_model.type is not None else role_model.type,
-            scope=role_model.scope.value if hasattr(role_model.scope, "value") and role_model.scope is not None else role_model.scope,
+            type=role_model.type.value
+            if hasattr(role_model.type, "value") and role_model.type is not None
+            else role_model.type,
+            scope=role_model.scope.value
+            if hasattr(role_model.scope, "value") and role_model.scope is not None
+            else role_model.scope,
             is_active=role_model.is_active,
             created_by=role_model.created_by,
             created_at=role_model.created_at,

@@ -21,9 +21,4 @@ class RoleModel(Document):
     updated_by: str | None = None
     updated_at: datetime | None = None
 
-    model_config = ConfigDict(
-        ser_enum="value", 
-        from_attributes=True, 
-        populate_by_name=True,
-        use_enum_values=True
-    )
+    model_config = ConfigDict(ser_enum="value", from_attributes=True, populate_by_name=True, use_enum_values=True)

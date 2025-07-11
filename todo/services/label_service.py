@@ -84,8 +84,28 @@ class LabelService:
 
     @classmethod
     def prepare_label_dto(cls, label_model: LabelModel) -> LabelDTO:
+        from todo.dto.user_dto import UserDTO
+
+        created_by_dto = None
+        if label_model.createdBy:
+            if label_model.createdBy == "system":
+                created_by_dto = UserDTO(id="system", name="System")
+            else:
+                created_by_dto = UserDTO(id=label_model.createdBy, name="User")
+
+        updated_by_dto = None
+        if label_model.updatedBy:
+            if label_model.updatedBy == "system":
+                updated_by_dto = UserDTO(id="system", name="System")
+            else:
+                updated_by_dto = UserDTO(id=label_model.updatedBy, name="User")
+
         return LabelDTO(
             id=str(label_model.id),
             name=label_model.name,
             color=label_model.color,
+            createdAt=label_model.createdAt,
+            updatedAt=label_model.updatedAt,
+            createdBy=created_by_dto,
+            updatedBy=updated_by_dto,
         )

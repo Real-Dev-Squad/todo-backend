@@ -1,6 +1,7 @@
 import logging
 import time
 from todo_project.db.config import DatabaseManager
+from todo_project.db.migrations import run_all_migrations
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,11 @@ def initialize_database(max_retries=5, retry_delay=2):
             counters_collection.insert_one({"_id": "taskDisplayId", "seq": 0})
         else:
             logger.info(f"taskDisplayId counter already exists with value {task_counter['seq']}")
+
+        # Run database migrations
+        migrations_success = run_all_migrations()
+        if not migrations_success:
+            logger.warning("Some database migrations failed, but continuing with initialization")
 
         logger.info("Database initialization completed successfully")
         return True

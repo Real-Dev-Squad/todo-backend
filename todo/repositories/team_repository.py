@@ -77,3 +77,19 @@ class UserTeamDetailsRepository(MongoRepository):
             user_team.id = insert_result.inserted_ids[i]
 
         return user_teams
+
+    @classmethod
+    def get_by_user_id(cls, user_id: str) -> list[UserTeamDetailsModel]:
+        """
+        Get all team relationships for a specific user.
+        """
+        collection = cls.get_collection()
+        try:
+            user_teams_data = collection.find({
+                "user_id": ObjectId(user_id), 
+                "is_active": True
+            })
+            print
+            return [UserTeamDetailsModel(**data) for data in user_teams_data]
+        except Exception:
+            return []

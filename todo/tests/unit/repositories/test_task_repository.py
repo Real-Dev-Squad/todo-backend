@@ -153,7 +153,6 @@ class TaskRepositoryCreateTests(TestCase):
             description="Sample",
             priority=TaskPriority.LOW,
             status=TaskStatus.TODO,
-            assignee="user123",
             labels=[],
             createdAt=datetime.now(timezone.utc),
             createdBy="system",
@@ -455,7 +454,7 @@ class TestRepositoryDeleteTaskById(TestCase):
         self.task_id = tasks_db_data[0]["id"]
         self.mock_task_data = tasks_db_data[0]
         self.user_id = str(ObjectId())
-        self.mock_task_data["assignee"] = self.user_id
+        # Remove assignee from task data since it's now in separate collection
         self.updated_task_data = self.mock_task_data.copy()
         self.updated_task_data.update(
             {
@@ -472,7 +471,6 @@ class TestRepositoryDeleteTaskById(TestCase):
 
         mock_collection.find_one.return_value = {
             "_id": ObjectId(self.task_id),
-            "assignee": self.user_id,
             "isDeleted": False,
         }
         mock_collection.find_one_and_update.return_value = {

@@ -213,7 +213,7 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
             description="This is a test",
             priority=TaskPriority.HIGH,
             status=TaskStatus.TODO,
-            assignee=str(self.user_id),
+            assignee={"assignee_id": str(self.user_id), "relation_type": "user"},
             createdBy=str(self.user_id),
             labels=[],
             dueAt=datetime.now(timezone.utc) + timedelta(days=1),
@@ -444,7 +444,7 @@ def test_update_task_success_full_payload(
     updated_task_model_from_repo.status = TaskStatus.IN_PROGRESS
     updated_task_model_from_repo.priority = TaskPriority.HIGH
     updated_task_model_from_repo.description = "New Description"
-    updated_task_model_from_repo.assignee = user_id_str
+    # Remove assignee from task model since it's now in separate collection
     updated_task_model_from_repo.dueAt = datetime.now(timezone.utc) + timedelta(days=5)
     updated_task_model_from_repo.startedAt = datetime.now(timezone.utc) - timedelta(hours=2)
     updated_task_model_from_repo.isAcknowledged = True
@@ -465,7 +465,7 @@ def test_update_task_success_full_payload(
         "description": "New Description",
         "priority": TaskPriority.HIGH.name,
         "status": TaskStatus.IN_PROGRESS.name,
-        "assignee": user_id_str,
+        "assignee": {"assignee_id": user_id_str, "relation_type": "user"},
         "labels": [label_id_1_str],
         "dueAt": updated_task_model_from_repo.dueAt,
         "startedAt": updated_task_model_from_repo.startedAt,
@@ -483,7 +483,7 @@ def test_update_task_success_full_payload(
     assert update_payload["status"] == TaskStatus.IN_PROGRESS.value
     assert update_payload["priority"] == TaskPriority.HIGH.value
     assert update_payload["description"] == validated_data_from_serializer["description"]
-    assert update_payload["assignee"] == validated_data_from_serializer["assignee"]
+    # Remove assignee from payload since it's handled separately
     assert update_payload["dueAt"] == validated_data_from_serializer["dueAt"]
     assert update_payload["startedAt"] == validated_data_from_serializer["startedAt"]
     assert update_payload["isAcknowledged"] == validated_data_from_serializer["isAcknowledged"]

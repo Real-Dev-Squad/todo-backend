@@ -27,7 +27,7 @@ class TeamModel(Document, ObjectIdValidatorMixin):
     name: str = Field(..., min_length=1, max_length=100)
     description: str | None = None
     poc_id: PyObjectId | None = None
-    invite_code: str
+    invite_code: str | None = None
     created_by: PyObjectId
     updated_by: PyObjectId
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

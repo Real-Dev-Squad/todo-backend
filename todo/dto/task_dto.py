@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from bson import ObjectId
 from pydantic import BaseModel, field_validator
 
@@ -8,6 +8,7 @@ from todo.constants.task import TaskPriority, TaskStatus
 from todo.dto.deferred_details_dto import DeferredDetailsDTO
 from todo.dto.label_dto import LabelDTO
 from todo.dto.user_dto import UserDTO
+from todo.dto.assignee_task_details_dto import AssigneeInfoDTO
 
 
 class TaskDTO(BaseModel):
@@ -17,7 +18,7 @@ class TaskDTO(BaseModel):
     description: str | None = None
     priority: TaskPriority | None = None
     status: TaskStatus | None = None
-    assignee: UserDTO | None = None
+    assignee: AssigneeInfoDTO | None = None
     isAcknowledged: bool | None = None
     labels: List[LabelDTO] = []
     startedAt: datetime | None = None
@@ -37,7 +38,7 @@ class CreateTaskDTO(BaseModel):
     description: str | None = None
     priority: TaskPriority = TaskPriority.LOW
     status: TaskStatus = TaskStatus.TODO
-    assignee: str | None = None
+    assignee: dict | None = None  # {"assignee_id": str, "relation_type": "team"|"user"}
     labels: List[str] = []
     dueAt: datetime | None = None
     createdBy: str

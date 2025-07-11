@@ -19,7 +19,7 @@ class UpdateTaskSerializer(serializers.Serializer):
         choices=[status.name for status in TaskStatus],
         allow_null=True,
     )
-    assignee = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    assignee = serializers.DictField(required=False, allow_null=True)
     labels = serializers.ListField(
         child=serializers.CharField(),
         required=False,
@@ -66,8 +66,22 @@ class UpdateTaskSerializer(serializers.Serializer):
         return value
 
     def validate_assignee(self, value):
-        if not value or not value.strip():
+        if not value:
             return None
-        if not ObjectId.is_valid(value):
-            raise serializers.ValidationError(ValidationErrors.INVALID_OBJECT_ID.format(value))
+        
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Assignee must be a dictionary")
+        
+        assignee_id = value.get("assignee_id")
+        relation_type = value.get("relation_type")
+        
+        if not assignee_id:
+            raise serializers.ValidationError("assignee_id is required")
+        
+        if not relation_type or relation_type not in ["team", "user"]:
+            raise serializers.ValidationError("relation_type must be either 'team' or 'user'")
+        
+        if not ObjectId.is_valid(assignee_id):
+            raise serializers.ValidationError(ValidationErrors.INVALID_OBJECT_ID.format(assignee_id))
+        
         return value

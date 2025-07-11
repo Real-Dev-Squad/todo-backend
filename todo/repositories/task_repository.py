@@ -6,6 +6,7 @@ from pymongo import ReturnDocument
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.task import TaskModel
 from todo.repositories.common.mongo_repository import MongoRepository
+from todo.repositories.assignee_task_details_repository import AssigneeTaskDetailsRepository
 from todo.constants.messages import ApiErrors, RepositoryErrors
 from todo.constants.task import SORT_FIELD_PRIORITY, SORT_FIELD_ASSIGNEE, SORT_ORDER_DESC
 
@@ -17,13 +18,19 @@ class TaskRepository(MongoRepository):
     def list(cls, page: int, limit: int, sort_by: str, order: str, user_id: str = None) -> List[TaskModel]:
         tasks_collection = cls.get_collection()
 
-        query_filter = {"$or": [{"createdBy": user_id}, {"assignee": user_id}]} if user_id else {}
+        if user_id:
+            assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
+            query_filter = {"$or": [{"createdBy": user_id}, {"_id": {"$in": assigned_task_ids}}]}
+        else:
+            query_filter = {}
 
         if sort_by == SORT_FIELD_PRIORITY:
             sort_direction = 1 if order == SORT_ORDER_DESC else -1
             sort_criteria = [(sort_by, sort_direction)]
         elif sort_by == SORT_FIELD_ASSIGNEE:
-            return cls._list_sorted_by_assignee(page, limit, order, user_id)
+            # Assignee sorting is no longer supported since assignee is in separate collection
+            sort_direction = -1 if order == SORT_ORDER_DESC else 1
+            sort_criteria = [("createdAt", sort_direction)]
         else:
             sort_direction = -1 if order == SORT_ORDER_DESC else 1
             sort_criteria = [(sort_by, sort_direction)]
@@ -32,53 +39,34 @@ class TaskRepository(MongoRepository):
         return [TaskModel(**task) for task in tasks_cursor]
 
     @classmethod
-    def _list_sorted_by_assignee(cls, page: int, limit: int, order: str, user_id: str = None) -> List[TaskModel]:
-        """Handle assignee sorting using aggregation pipeline to sort by user names"""
-        tasks_collection = cls.get_collection()
+    def _get_assigned_task_ids_for_user(cls, user_id: str) -> List[ObjectId]:
+        """Get task IDs where user is assigned (either directly or as team member)."""
+        direct_assignments = AssigneeTaskDetailsRepository.get_by_assignee_id(user_id, "user")
+        direct_task_ids = [assignment.task_id for assignment in direct_assignments]
+        
+        # Get teams where user is a member
+        from todo.repositories.team_repository import UserTeamDetailsRepository
+        user_teams = UserTeamDetailsRepository.get_by_user_id(user_id)
+        team_ids = [str(team.team_id) for team in user_teams]
+        
+        # Get tasks assigned to those teams
+        team_task_ids = []
+        for team_id in team_ids:
+            team_assignments = AssigneeTaskDetailsRepository.get_by_assignee_id(team_id, "team")
+            team_task_ids.extend([assignment.task_id for assignment in team_assignments])
+        
+        return direct_task_ids + team_task_ids
 
-        sort_direction = -1 if order == SORT_ORDER_DESC else 1
 
-        pipeline = []
-
-        if user_id:
-            pipeline.append({"$match": {"$or": [{"createdBy": user_id}, {"assignee": user_id}]}})
-
-        pipeline.extend(
-            [
-                {
-                    "$addFields": {
-                        "assignee_oid": {
-                            "$cond": {
-                                "if": {"$ne": ["$assignee", None]},
-                                "then": {"$toObjectId": "$assignee"},
-                                "else": None,
-                            }
-                        }
-                    }
-                },
-                {
-                    "$lookup": {
-                        "from": "users",
-                        "localField": "assignee_oid",
-                        "foreignField": "_id",
-                        "as": "assignee_user",
-                    }
-                },
-                {"$addFields": {"assignee_name": {"$ifNull": [{"$arrayElemAt": ["$assignee_user.name", 0]}, ""]}}},
-                {"$sort": {"assignee_name": sort_direction}},
-                {"$skip": (page - 1) * limit},
-                {"$limit": limit},
-                {"$project": {"assignee_user": 0, "assignee_name": 0, "assignee_oid": 0}},
-            ]
-        )
-
-        result = list(tasks_collection.aggregate(pipeline))
-        return [TaskModel(**task) for task in result]
 
     @classmethod
     def count(cls, user_id: str = None) -> int:
         tasks_collection = cls.get_collection()
-        query_filter = {"$or": [{"createdBy": user_id}, {"assignee": user_id}]} if user_id else {}
+        if user_id:
+            assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
+            query_filter = {"$or": [{"createdBy": user_id}, {"_id": {"$in": assigned_task_ids}}]}
+        else:
+            query_filter = {}
         return tasks_collection.count_documents(query_filter)
 
     @classmethod
@@ -152,14 +140,15 @@ class TaskRepository(MongoRepository):
         if not task:
             raise TaskNotFoundException(task_id)
 
-        assignee_id = task.get("assignee")
+        # Check if user is the creator
+        if user_id != task.get("createdBy"):
+            # Check if user is assigned to this task
+            assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
+            if task_id not in assigned_task_ids:
+                raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
 
-        if assignee_id:
-            if assignee_id != user_id:
-                raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
-        else:
-            if user_id != task.get("createdBy"):
-                raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+        # Deactivate assignee relationship for this task
+        AssigneeTaskDetailsRepository.deactivate_by_task_id(str(task_id), user_id)
 
         deleted_task_data = tasks_collection.find_one_and_update(
             {"_id": task_id},
@@ -207,6 +196,7 @@ class TaskRepository(MongoRepository):
     @classmethod
     def get_tasks_for_user(cls, user_id: str, page: int, limit: int) -> List[TaskModel]:
         tasks_collection = cls.get_collection()
-        query = {"$or": [{"createdBy": user_id}, {"assignee": user_id}]}
+        assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
+        query = {"$or": [{"createdBy": user_id}, {"_id": {"$in": assigned_task_ids}}]}
         tasks_cursor = tasks_collection.find(query).skip((page - 1) * limit).limit(limit)
         return [TaskModel(**task) for task in tasks_cursor]

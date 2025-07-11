@@ -12,6 +12,7 @@ class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.db.tasks.delete_many({})
+        self.db.assignee_task_details.delete_many({})
 
     def _insert_task(self, *, status: str = TaskStatus.TODO.value, due_at: datetime | None = None) -> str:
         task_fixture = tasks_db_data[0].copy()
@@ -20,7 +21,8 @@ class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
         task_fixture.pop("id", None)
         task_fixture["displayId"] = "#IT-DEF"
         task_fixture["status"] = status
-        task_fixture["assignee"] = str(self.user_id)
+        # Remove assignee from task document since it's now in separate collection
+        task_fixture.pop("assignee", None)
         task_fixture["createdBy"] = str(self.user_id)
         task_fixture["priority"] = TaskPriority.MEDIUM.value
         task_fixture["createdAt"] = datetime.now(timezone.utc)
@@ -30,6 +32,22 @@ class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
             task_fixture.pop("dueAt", None)
 
         self.db.tasks.insert_one(task_fixture)
+        
+        # Create assignee task details in separate collection
+        assignee_details = {
+            "_id": ObjectId(),
+            "assignee_id": ObjectId(self.user_id),
+            "task_id": new_id,
+            "relation_type": "user",
+            "is_action_taken": False,
+            "is_active": True,
+            "created_by": ObjectId(self.user_id),
+            "updated_by": None,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": None,
+        }
+        self.db.assignee_task_details.insert_one(assignee_details)
+        
         return str(new_id)
 
     def test_defer_task_success(self):

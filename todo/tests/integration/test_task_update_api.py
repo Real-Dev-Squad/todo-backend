@@ -12,16 +12,33 @@ class TaskUpdateAPIIntegrationTest(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.db.tasks.delete_many({})
+        self.db.assignee_task_details.delete_many({})
 
         doc = tasks_db_data[0].copy()
         self.task_id = ObjectId()
         doc["_id"] = self.task_id
         doc.pop("id", None)
-        doc["assignee"] = str(self.user_id)
+        # Remove assignee from task document since it's now in separate collection
+        doc.pop("assignee", None)
         doc["createdBy"] = str(self.user_id)
 
         doc["createdAt"] = datetime.now(timezone.utc) - timedelta(days=1)
         self.db.tasks.insert_one(doc)
+
+        # Create assignee task details in separate collection
+        assignee_details = {
+            "_id": ObjectId(),
+            "assignee_id": ObjectId(self.user_id),
+            "task_id": self.task_id,
+            "relation_type": "user",
+            "is_action_taken": False,
+            "is_active": True,
+            "created_by": ObjectId(self.user_id),
+            "updated_by": None,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": None,
+        }
+        self.db.assignee_task_details.insert_one(assignee_details)
 
         self.valid_id = str(self.task_id)
         self.missing_id = str(ObjectId())

@@ -53,7 +53,8 @@ class RoleService:
             return RoleDTO.from_model(created_role)
 
         except ValueError as e:
-            raise RoleAlreadyExistsException(str(e))
+            role_name = str(e).split("'")[1] if "'" in str(e) else "unknown role"
+            raise RoleAlreadyExistsException(role_name)
         except Exception as e:
             raise RoleOperationException(f"Failed to create role: {str(e)}")
 

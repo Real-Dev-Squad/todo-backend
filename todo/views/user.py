@@ -5,7 +5,7 @@ from rest_framework import status
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 from todo.services.user_service import UserService
-from todo.dto.user_dto import UserSearchDTO, UserSearchResponseDTO, UserDTO
+from todo.dto.user_dto import UserSearchDTO, UserSearchResponseDTO
 from todo.dto.responses.error_response import ApiErrorResponse
 from todo.middlewares.jwt_auth import get_current_user_info
 from rest_framework.exceptions import AuthenticationFailed
@@ -50,8 +50,8 @@ class UsersView(APIView):
             ),
         ],
         responses={
-            200: UserDTO,
             200: UserSearchResponseDTO,
+            204: OpenApiResponse(description="No users found"),
             401: ApiErrorResponse,
             400: OpenApiResponse(description="Bad request - invalid parameters"),
             404: OpenApiResponse(description="Route does not exist"),

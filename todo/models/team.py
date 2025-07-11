@@ -33,8 +33,8 @@ class TeamModel(Document, ObjectIdValidatorMixin):
     is_deleted: bool = False
 
     @validator("created_by", "updated_by", "poc_id")
-    def validate_object_id(cls, v, field):
-        return cls.validate_object_id(v, field.name)
+    def validate_object_id(cls, v, info):
+        return cls.validate_object_id(v, info.field_name)
 
 
 class UserTeamDetailsModel(Document, ObjectIdValidatorMixin):
@@ -54,5 +54,5 @@ class UserTeamDetailsModel(Document, ObjectIdValidatorMixin):
     updated_by: PyObjectId
 
     @validator("user_id", "team_id", "created_by", "updated_by")
-    def validate_object_ids(cls, v, field):
-        return cls.validate_object_id(v, field.name)
+    def validate_object_ids(cls, v, info):
+        return cls.validate_object_id(v, info.field_name)

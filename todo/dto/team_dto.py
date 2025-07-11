@@ -8,7 +8,7 @@ class CreateTeamDTO(BaseModel):
     name: str
     description: Optional[str] = None
     member_ids: Optional[List[str]] = None
-    poc_id: str
+    poc_id: Optional[str] = None
 
     @validator("member_ids")
     def validate_member_ids(cls, value):
@@ -42,7 +42,7 @@ class TeamDTO(BaseModel):
     id: str
     name: str
     description: Optional[str] = None
-    poc_id: str
+    poc_id: Optional[str] = None
     created_by: str
     updated_by: str
     created_at: datetime

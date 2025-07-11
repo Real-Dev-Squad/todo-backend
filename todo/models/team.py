@@ -25,7 +25,7 @@ class TeamModel(Document, ObjectIdValidatorMixin):
 
     name: str = Field(..., min_length=1, max_length=100)
     description: str | None = None
-    poc_id: PyObjectId
+    poc_id: PyObjectId | None = None
     created_by: PyObjectId
     updated_by: PyObjectId
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -34,6 +34,8 @@ class TeamModel(Document, ObjectIdValidatorMixin):
 
     @validator("created_by", "updated_by", "poc_id")
     def validate_object_id(cls, v):
+        if v is None:
+            return v
         return cls.validate_object_id(v)
 
 

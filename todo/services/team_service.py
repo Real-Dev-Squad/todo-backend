@@ -54,8 +54,8 @@ class TeamService:
                     )
                     user_teams.append(user_team)
 
-            # Add POC if not already in member_ids
-            if dto.poc_id and dto.poc_id not in member_ids:
+            # Add POC if provided and not already in member_ids
+            if dto.poc_id and (not member_ids or dto.poc_id not in member_ids):
                 poc_user_team = UserTeamDetailsModel(
                     user_id=PyObjectId(dto.poc_id),
                     team_id=created_team.id,

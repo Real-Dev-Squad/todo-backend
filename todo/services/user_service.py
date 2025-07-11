@@ -38,45 +38,6 @@ class UserService:
             raise GoogleAPIException(f"User search failed: {str(e)}") from e
 
     @classmethod
-    def search_users_by_name(cls, name: str, page: int = 1, limit: int = 10) -> Tuple[List[UserModel], int]:
-        """
-        Search users by name only
-        """
-        try:
-            cls._validate_search_params(name, page, limit)
-            return UserRepository.search_users_by_name(name, page, limit)
-        except (GoogleUserNotFoundException, GoogleAPIException, DRFValidationError):
-            raise
-        except Exception as e:
-            raise GoogleAPIException(f"User search by name failed: {str(e)}") from e
-
-    @classmethod
-    def search_users_by_email(cls, email: str, page: int = 1, limit: int = 10) -> Tuple[List[UserModel], int]:
-        """
-        Search users by email only
-        """
-        try:
-            cls._validate_search_params(email, page, limit)
-            return UserRepository.search_users_by_email(email, page, limit)
-        except (GoogleUserNotFoundException, GoogleAPIException, DRFValidationError):
-            raise
-        except Exception as e:
-            raise GoogleAPIException(f"User search by email failed: {str(e)}") from e
-
-    @classmethod
-    def get_all_users(cls, page: int = 1, limit: int = 10) -> Tuple[List[UserModel], int]:
-        """
-        Get all users with pagination
-        """
-        try:
-            cls._validate_pagination_params(page, limit)
-            return UserRepository.get_all_users(page, limit)
-        except (GoogleUserNotFoundException, GoogleAPIException, DRFValidationError):
-            raise
-        except Exception as e:
-            raise GoogleAPIException(f"Failed to get users: {str(e)}") from e
-
-    @classmethod
     def _validate_google_user_data(cls, google_user_data: dict) -> None:
         validation_errors = {}
 
@@ -98,22 +59,6 @@ class UserService:
 
         if not query or not query.strip():
             validation_errors["query"] = "Search query cannot be empty"
-
-        if page < 1:
-            validation_errors["page"] = ValidationErrors.PAGE_POSITIVE
-
-        if limit < 1:
-            validation_errors["limit"] = ValidationErrors.LIMIT_POSITIVE
-
-        if limit > 100:
-            validation_errors["limit"] = ValidationErrors.MAX_LIMIT_EXCEEDED.format(100)
-
-        if validation_errors:
-            raise DRFValidationError(validation_errors)
-
-    @classmethod
-    def _validate_pagination_params(cls, page: int, limit: int) -> None:
-        validation_errors = {}
 
         if page < 1:
             validation_errors["page"] = ValidationErrors.PAGE_POSITIVE

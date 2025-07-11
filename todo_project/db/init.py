@@ -17,7 +17,7 @@ def initialize_database(max_retries=5, retry_delay=2):
             if not db_manager.check_database_health():
                 if attempt < max_retries - 1:
                     logger.warning(
-                        f"Database health check failed, attempt {attempt+1}. Retrying in {retry_delay} seconds..."
+                        f"Database health check failed, attempt {attempt + 1}. Retrying in {retry_delay} seconds..."
                     )
                     time.sleep(retry_delay)
                     continue

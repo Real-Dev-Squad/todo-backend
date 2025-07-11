@@ -24,7 +24,7 @@ class MongoReplicaSetContainer(DockerContainer):
         exit_code, output = self.exec(cmd)
         if exit_code != 0:
             raise RuntimeError(
-                f"rs.initiate() failed (exit code {exit_code}):\n" f"{output.decode('utf-8', errors='ignore')}"
+                f"rs.initiate() failed (exit code {exit_code}):\n{output.decode('utf-8', errors='ignore')}"
             )
         self._mongo_url = f"mongodb://localhost:{mapped_port}/testdb?directConnection=true"
         self._wait_for_primary()

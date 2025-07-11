@@ -1,6 +1,7 @@
 # Application Messages
 class AppMessages:
     TASK_CREATED = "Task created successfully"
+    TEAM_CREATED = "Team created successfully"
     GOOGLE_LOGIN_SUCCESS = "Successfully logged in with Google"
     GOOGLE_LOGOUT_SUCCESS = "Successfully logged out"
     TOKEN_REFRESHED = "Access token refreshed successfully"
@@ -9,6 +10,7 @@ class AppMessages:
 # Repository error messages
 class RepositoryErrors:
     TASK_CREATION_FAILED = "Failed to create task: {0}"
+    TEAM_CREATION_FAILED = "Failed to create team: {0}"
     DB_INIT_FAILED = "Failed to initialize database: {0}"
     USER_NOT_FOUND = "User not found: {0}"
     USER_OPERATION_FAILED = "User operation failed"

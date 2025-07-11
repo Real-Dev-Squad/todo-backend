@@ -3,10 +3,13 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from bson import ObjectId
 from pymongo import ReturnDocument
+import logging
 
 from todo.models.role import RoleModel
 from todo.repositories.common.mongo_repository import MongoRepository
 from todo.constants.role import RoleType, RoleScope
+
+logger = logging.getLogger(__name__)
 
 class RoleRepository(MongoRepository):
     collection_name = RoleModel.collection_name
@@ -32,9 +35,8 @@ class RoleRepository(MongoRepository):
                 role_model = cls._document_to_model(role_doc)
                 roles.append(role_model)
             except Exception as e:
-                # Log the error and skip this document
-                print(f"Error converting role document to model: {e}")
-                print(f"Document: {role_doc}")
+                logger.error(f"Error converting role document to model: {e}")
+                logger.error(f"Document: {role_doc}")
                 continue
         
         return roles

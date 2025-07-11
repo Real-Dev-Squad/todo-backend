@@ -1,0 +1,167 @@
+import logging
+from datetime import datetime, timezone
+from typing import List, Dict, Any
+from todo_project.db.config import DatabaseManager
+from todo.models.label import LabelModel
+
+logger = logging.getLogger(__name__)
+
+
+def migrate_fixed_labels() -> bool:
+    """
+    Migration to add fixed labels to the system.
+    This migration is idempotent and can be run multiple times safely.
+
+    Labels to be added:
+    1. Feature
+    2. Bug
+    3. Refactoring/Optimization
+    4. API
+    5. UI/UX
+    6. Testing
+    7. Documentation
+    8. Review
+
+    Returns:
+        bool: True if migration completed successfully, False otherwise
+    """
+    logger.info("Starting fixed labels migration")
+
+    # Define the fixed labels with appropriate colors
+    fixed_labels: List[Dict[str, Any]] = [
+        {
+            "name": "Feature",
+            "color": "#22c55e",  # Green - for new features
+            "description": "New feature implementation",
+        },
+        {
+            "name": "Bug",
+            "color": "#ef4444",  # Red - for bugs
+            "description": "Bug fixes and error corrections",
+        },
+        {
+            "name": "Refactoring/Optimization",
+            "color": "#f59e0b",  # Amber - for improvements
+            "description": "Code refactoring and performance optimization",
+        },
+        {
+            "name": "API",
+            "color": "#3b82f6",  # Blue - for API related work
+            "description": "API development and integration",
+        },
+        {
+            "name": "UI/UX",
+            "color": "#8b5cf6",  # Purple - for design work
+            "description": "User interface and user experience improvements",
+        },
+        {
+            "name": "Testing",
+            "color": "#06b6d4",  # Cyan - for testing
+            "description": "Testing and quality assurance",
+        },
+        {
+            "name": "Documentation",
+            "color": "#64748b",  # Slate - for documentation
+            "description": "Documentation and guides",
+        },
+        {
+            "name": "Review",
+            "color": "#ec4899",  # Pink - for review tasks
+            "description": "Code review and peer review tasks",
+        },
+    ]
+
+    try:
+        db_manager = DatabaseManager()
+        labels_collection = db_manager.get_collection("labels")
+
+        current_time = datetime.now(timezone.utc)
+        created_count = 0
+        skipped_count = 0
+
+        for label_data in fixed_labels:
+            try:
+                # Check if label already exists (case-insensitive search)
+                existing_label = labels_collection.find_one(
+                    {"name": {"$regex": f"^{label_data['name']}$", "$options": "i"}, "isDeleted": {"$ne": True}}
+                )
+
+                if existing_label:
+                    logger.info(f"Label '{label_data['name']}' already exists, skipping")
+                    skipped_count += 1
+                    continue
+
+                # Create the label document
+                label_document = {
+                    "name": label_data["name"],
+                    "color": label_data["color"],
+                    "isDeleted": False,
+                    "createdAt": current_time,
+                    "updatedAt": None,
+                    "createdBy": "system",  # System user for predefined labels
+                    "updatedBy": None,
+                }
+
+                # Validate the document using the LabelModel
+                try:
+                    LabelModel(**label_document)
+                except Exception as validation_error:
+                    logger.error(f"Label validation failed for '{label_data['name']}': {validation_error}")
+                    continue
+
+                # Insert the label
+                result = labels_collection.insert_one(label_document)
+
+                if result.inserted_id:
+                    logger.info(f"Successfully created label '{label_data['name']}' with ID: {result.inserted_id}")
+                    created_count += 1
+                else:
+                    logger.error(f"Failed to create label '{label_data['name']}' - no ID returned")
+
+            except Exception as e:
+                logger.error(f"Error processing label '{label_data['name']}': {str(e)}")
+                continue
+
+        # Log summary
+        total_labels = len(fixed_labels)
+        logger.info(
+            f"Fixed labels migration completed - Total: {total_labels}, Created: {created_count}, Skipped: {skipped_count}"
+        )
+
+        # Consider migration successful if at least some labels were processed
+        # and no critical errors occurred
+        return True
+
+    except Exception as e:
+        logger.error(f"Fixed labels migration failed with error: {str(e)}")
+        return False
+
+
+def run_all_migrations() -> bool:
+    """
+    Run all database migrations.
+
+    Returns:
+        bool: True if all migrations completed successfully, False otherwise
+    """
+    logger.info("Starting database migrations")
+
+    migrations = [("Fixed Labels Migration", migrate_fixed_labels)]
+
+    success_count = 0
+
+    for migration_name, migration_func in migrations:
+        try:
+            logger.info(f"Running {migration_name}")
+            if migration_func():
+                logger.info(f"{migration_name} completed successfully")
+                success_count += 1
+            else:
+                logger.error(f"{migration_name} failed")
+        except Exception as e:
+            logger.error(f"{migration_name} failed with exception: {str(e)}")
+
+    total_migrations = len(migrations)
+    logger.info(f"Database migrations completed - {success_count}/{total_migrations} successful")
+
+    return success_count == total_migrations

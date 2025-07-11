@@ -27,46 +27,46 @@ def migrate_fixed_labels() -> bool:
     """
     logger.info("Starting fixed labels migration")
 
-    # Define the fixed labels with appropriate colors
+
     fixed_labels: List[Dict[str, Any]] = [
         {
             "name": "Feature",
-            "color": "#22c55e",  # Green - for new features
+            "color": "#22c55e",  
             "description": "New feature implementation",
         },
         {
             "name": "Bug",
-            "color": "#ef4444",  # Red - for bugs
+            "color": "#ef4444", 
             "description": "Bug fixes and error corrections",
         },
         {
             "name": "Refactoring/Optimization",
-            "color": "#f59e0b",  # Amber - for improvements
+            "color": "#f59e0b",  
             "description": "Code refactoring and performance optimization",
         },
         {
             "name": "API",
-            "color": "#3b82f6",  # Blue - for API related work
+            "color": "#3b82f6",  
             "description": "API development and integration",
         },
         {
             "name": "UI/UX",
-            "color": "#8b5cf6",  # Purple - for design work
+            "color": "#8b5cf6", 
             "description": "User interface and user experience improvements",
         },
         {
             "name": "Testing",
-            "color": "#06b6d4",  # Cyan - for testing
+            "color": "#06b6d4", 
             "description": "Testing and quality assurance",
         },
         {
             "name": "Documentation",
-            "color": "#64748b",  # Slate - for documentation
+            "color": "#64748b",  
             "description": "Documentation and guides",
         },
         {
             "name": "Review",
-            "color": "#ec4899",  # Pink - for review tasks
+            "color": "#ec4899",  
             "description": "Code review and peer review tasks",
         },
     ]
@@ -81,7 +81,7 @@ def migrate_fixed_labels() -> bool:
 
         for label_data in fixed_labels:
             try:
-                # Check if label already exists (case-insensitive search)
+
                 existing_label = labels_collection.find_one(
                     {"name": {"$regex": f"^{label_data['name']}$", "$options": "i"}, "isDeleted": {"$ne": True}}
                 )
@@ -91,25 +91,25 @@ def migrate_fixed_labels() -> bool:
                     skipped_count += 1
                     continue
 
-                # Create the label document
+
                 label_document = {
                     "name": label_data["name"],
                     "color": label_data["color"],
                     "isDeleted": False,
                     "createdAt": current_time,
                     "updatedAt": None,
-                    "createdBy": "system",  # System user for predefined labels
+                    "createdBy": "system", 
                     "updatedBy": None,
                 }
 
-                # Validate the document using the LabelModel
+ 
                 try:
                     LabelModel(**label_document)
                 except Exception as validation_error:
                     logger.error(f"Label validation failed for '{label_data['name']}': {validation_error}")
                     continue
 
-                # Insert the label
+
                 result = labels_collection.insert_one(label_document)
 
                 if result.inserted_id:
@@ -122,14 +122,12 @@ def migrate_fixed_labels() -> bool:
                 logger.error(f"Error processing label '{label_data['name']}': {str(e)}")
                 continue
 
-        # Log summary
+
         total_labels = len(fixed_labels)
         logger.info(
             f"Fixed labels migration completed - Total: {total_labels}, Created: {created_count}, Skipped: {skipped_count}"
         )
 
-        # Consider migration successful if at least some labels were processed
-        # and no critical errors occurred
         return True
 
     except Exception as e:

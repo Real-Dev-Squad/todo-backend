@@ -1,4 +1,3 @@
-from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.request import Request
@@ -10,8 +9,7 @@ from drf_spectacular.types import OpenApiTypes
 from todo.services.google_oauth_service import GoogleOAuthService
 from todo.services.user_service import UserService
 from todo.utils.google_jwt_utils import generate_google_token_pair
-from todo.constants.messages import ApiErrors, AppMessages
-from todo.middlewares.jwt_auth import get_current_user_info
+from todo.constants.messages import AppMessages
 
 
 class GoogleLoginView(APIView):
@@ -235,17 +233,3 @@ class GoogleLogoutView(APIView):
             "domain": getattr(settings, "SESSION_COOKIE_DOMAIN", None),
         }
         response.delete_cookie("sessionid", **session_delete_config)
-
-
-class UsersView(APIView):
-    def get(self, request: Request):
-        profile = request.query_params.get("profile")
-        if profile == "true":
-            user_info = get_current_user_info(request)
-            if not user_info:
-                raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
-            return Response(
-                {"statusCode": 200, "message": "Current user details fetched successfully", "data": user_info},
-                status=200,
-            )
-        return Response({"statusCode": 404, "message": "Route does not exist.", "data": None}, status=404)

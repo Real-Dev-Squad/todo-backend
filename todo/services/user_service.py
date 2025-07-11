@@ -3,6 +3,7 @@ from todo.repositories.user_repository import UserRepository
 from todo.constants.messages import ValidationErrors, RepositoryErrors
 from todo.exceptions.google_auth_exceptions import GoogleUserNotFoundException, GoogleAPIException
 from rest_framework.exceptions import ValidationError as DRFValidationError
+from typing import List, Tuple
 
 
 class UserService:
@@ -24,6 +25,14 @@ class UserService:
         return user
 
     @classmethod
+    def search_users(cls, query: str, page: int = 1, limit: int = 10) -> Tuple[List[UserModel], int]:
+        """
+        Search users by name or email using fuzzy search
+        """
+        cls._validate_search_params(query, page, limit)
+        return UserRepository.search_users(query, page, limit)
+
+    @classmethod
     def _validate_google_user_data(cls, google_user_data: dict) -> None:
         validation_errors = {}
 
@@ -35,6 +44,25 @@ class UserService:
 
         if not google_user_data.get("name"):
             validation_errors["name"] = ValidationErrors.MISSING_NAME
+
+        if validation_errors:
+            raise DRFValidationError(validation_errors)
+
+    @classmethod
+    def _validate_search_params(cls, query: str, page: int, limit: int) -> None:
+        validation_errors = {}
+
+        if not query or not query.strip():
+            validation_errors["query"] = "Search query cannot be empty"
+
+        if page < 1:
+            validation_errors["page"] = ValidationErrors.PAGE_POSITIVE
+
+        if limit < 1:
+            validation_errors["limit"] = ValidationErrors.LIMIT_POSITIVE
+
+        if limit > 100:
+            validation_errors["limit"] = ValidationErrors.MAX_LIMIT_EXCEEDED.format(100)
 
         if validation_errors:
             raise DRFValidationError(validation_errors)

@@ -68,7 +68,7 @@ class TaskRepositoryTests(TestCase):
 
         page = 1
         limit = 10
-        result = TaskRepository.list(page, limit, sort_by="createdAt", order="desc")
+        result = TaskRepository.list(page, limit, sort_by="createdAt", order="desc", user_id=None)
 
         self.assertEqual(len(result), len(self.task_data))
         self.assertTrue(all(isinstance(task, TaskModel) for task in result))
@@ -83,7 +83,7 @@ class TaskRepositoryTests(TestCase):
         mock_cursor.__iter__ = MagicMock(return_value=iter([]))
         self.mock_collection.find.return_value.sort.return_value.skip.return_value.limit.return_value = mock_cursor
 
-        result = TaskRepository.list(2, 10, sort_by="createdAt", order="desc")
+        result = TaskRepository.list(2, 10, sort_by="createdAt", order="desc", user_id=None)
 
         self.assertEqual(result, [])
         self.mock_collection.find.assert_called_once()
@@ -358,39 +358,39 @@ class TaskRepositorySortingTests(TestCase):
 
     def test_list_sort_by_priority_desc(self):
         """Test sorting by priority descending (HIGH→MEDIUM→LOW)"""
-        TaskRepository.list(1, 10, SORT_FIELD_PRIORITY, SORT_ORDER_DESC)
+        TaskRepository.list(1, 10, SORT_FIELD_PRIORITY, SORT_ORDER_DESC, user_id=None)
 
         self.mock_collection.find.assert_called_once()
 
         self.mock_collection.find.return_value.sort.assert_called_once_with([(SORT_FIELD_PRIORITY, 1)])
 
     def test_list_sort_by_priority_asc(self):
-        TaskRepository.list(1, 10, SORT_FIELD_PRIORITY, SORT_ORDER_ASC)
+        TaskRepository.list(1, 10, SORT_FIELD_PRIORITY, SORT_ORDER_ASC, user_id=None)
 
         self.mock_collection.find.assert_called_once()
 
         self.mock_collection.find.return_value.sort.assert_called_once_with([(SORT_FIELD_PRIORITY, -1)])
 
     def test_list_sort_by_created_at_desc(self):
-        TaskRepository.list(1, 10, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC)
+        TaskRepository.list(1, 10, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC, user_id=None)
 
         self.mock_collection.find.assert_called_once()
         self.mock_collection.find.return_value.sort.assert_called_once_with([(SORT_FIELD_CREATED_AT, -1)])
 
     def test_list_sort_by_created_at_asc(self):
-        TaskRepository.list(1, 10, SORT_FIELD_CREATED_AT, SORT_ORDER_ASC)
+        TaskRepository.list(1, 10, SORT_FIELD_CREATED_AT, SORT_ORDER_ASC, user_id=None)
 
         self.mock_collection.find.assert_called_once()
         self.mock_collection.find.return_value.sort.assert_called_once_with([(SORT_FIELD_CREATED_AT, 1)])
 
     def test_list_sort_by_due_at_desc(self):
-        TaskRepository.list(1, 10, SORT_FIELD_DUE_AT, SORT_ORDER_DESC)
+        TaskRepository.list(1, 10, SORT_FIELD_DUE_AT, SORT_ORDER_DESC, user_id=None)
 
         self.mock_collection.find.assert_called_once()
         self.mock_collection.find.return_value.sort.assert_called_once_with([(SORT_FIELD_DUE_AT, -1)])
 
     def test_list_sort_by_due_at_asc(self):
-        TaskRepository.list(1, 10, SORT_FIELD_DUE_AT, SORT_ORDER_ASC)
+        TaskRepository.list(1, 10, SORT_FIELD_DUE_AT, SORT_ORDER_ASC, user_id=None)
 
         self.mock_collection.find.assert_called_once()
         self.mock_collection.find.return_value.sort.assert_called_once_with([(SORT_FIELD_DUE_AT, 1)])
@@ -401,7 +401,7 @@ class TaskRepositorySortingTests(TestCase):
 
         TaskRepository.list(1, 10, SORT_FIELD_ASSIGNEE, SORT_ORDER_DESC)
 
-        mock_assignee_sort.assert_called_once_with(1, 10, SORT_ORDER_DESC)
+        mock_assignee_sort.assert_called_once_with(1, 10, SORT_ORDER_DESC, None)
 
         self.mock_collection.find.assert_not_called()
 

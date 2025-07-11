@@ -14,55 +14,72 @@ class TaskRepository(MongoRepository):
     collection_name = TaskModel.collection_name
 
     @classmethod
-    def list(cls, page: int, limit: int, sort_by: str, order: str) -> List[TaskModel]:
+    def list(cls, page: int, limit: int, sort_by: str, order: str, user_id: str = None) -> List[TaskModel]:
         tasks_collection = cls.get_collection()
+
+        query_filter = {"$or": [{"createdBy": user_id}, {"assignee": user_id}]} if user_id else {}
 
         if sort_by == SORT_FIELD_PRIORITY:
             sort_direction = 1 if order == SORT_ORDER_DESC else -1
             sort_criteria = [(sort_by, sort_direction)]
         elif sort_by == SORT_FIELD_ASSIGNEE:
-            return cls._list_sorted_by_assignee(page, limit, order)
+            return cls._list_sorted_by_assignee(page, limit, order, user_id)
         else:
             sort_direction = -1 if order == SORT_ORDER_DESC else 1
             sort_criteria = [(sort_by, sort_direction)]
 
-        tasks_cursor = tasks_collection.find().sort(sort_criteria).skip((page - 1) * limit).limit(limit)
+        tasks_cursor = tasks_collection.find(query_filter).sort(sort_criteria).skip((page - 1) * limit).limit(limit)
         return [TaskModel(**task) for task in tasks_cursor]
 
     @classmethod
-    def _list_sorted_by_assignee(cls, page: int, limit: int, order: str) -> List[TaskModel]:
+    def _list_sorted_by_assignee(cls, page: int, limit: int, order: str, user_id: str = None) -> List[TaskModel]:
         """Handle assignee sorting using aggregation pipeline to sort by user names"""
         tasks_collection = cls.get_collection()
 
         sort_direction = -1 if order == SORT_ORDER_DESC else 1
 
-        pipeline = [
-            {
-                "$addFields": {
-                    "assignee_oid": {
-                        "$cond": {
-                            "if": {"$ne": ["$assignee", None]},
-                            "then": {"$toObjectId": "$assignee"},
-                            "else": None,
+        pipeline = []
+
+        if user_id:
+            pipeline.append({"$match": {"$or": [{"createdBy": user_id}, {"assignee": user_id}]}})
+
+        pipeline.extend(
+            [
+                {
+                    "$addFields": {
+                        "assignee_oid": {
+                            "$cond": {
+                                "if": {"$ne": ["$assignee", None]},
+                                "then": {"$toObjectId": "$assignee"},
+                                "else": None,
+                            }
                         }
                     }
-                }
-            },
-            {"$lookup": {"from": "users", "localField": "assignee_oid", "foreignField": "_id", "as": "assignee_user"}},
-            {"$addFields": {"assignee_name": {"$ifNull": [{"$arrayElemAt": ["$assignee_user.name", 0]}, ""]}}},
-            {"$sort": {"assignee_name": sort_direction}},
-            {"$skip": (page - 1) * limit},
-            {"$limit": limit},
-            {"$project": {"assignee_user": 0, "assignee_name": 0, "assignee_oid": 0}},
-        ]
+                },
+                {
+                    "$lookup": {
+                        "from": "users",
+                        "localField": "assignee_oid",
+                        "foreignField": "_id",
+                        "as": "assignee_user",
+                    }
+                },
+                {"$addFields": {"assignee_name": {"$ifNull": [{"$arrayElemAt": ["$assignee_user.name", 0]}, ""]}}},
+                {"$sort": {"assignee_name": sort_direction}},
+                {"$skip": (page - 1) * limit},
+                {"$limit": limit},
+                {"$project": {"assignee_user": 0, "assignee_name": 0, "assignee_oid": 0}},
+            ]
+        )
 
         result = list(tasks_collection.aggregate(pipeline))
         return [TaskModel(**task) for task in result]
 
     @classmethod
-    def count(cls) -> int:
+    def count(cls, user_id: str = None) -> int:
         tasks_collection = cls.get_collection()
-        return tasks_collection.count_documents({})
+        query_filter = {"$or": [{"createdBy": user_id}, {"assignee": user_id}]} if user_id else {}
+        return tasks_collection.count_documents(query_filter)
 
     @classmethod
     def get_all(cls) -> List[TaskModel]:

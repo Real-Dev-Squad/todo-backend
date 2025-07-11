@@ -1,8 +1,6 @@
-import unittest
 from unittest.mock import patch
-from rest_framework.test import APIRequestFactory
 from rest_framework import status
-from todo.views.task import TaskListView
+from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
 from todo.constants.task import (
     SORT_FIELD_PRIORITY,
     SORT_FIELD_DUE_AT,
@@ -13,10 +11,9 @@ from todo.constants.task import (
 )
 
 
-class TaskSortingIntegrationTest(unittest.TestCase):
+class TaskSortingIntegrationTest(AuthenticatedMongoTestCase):
     def setUp(self):
-        self.factory = APIRequestFactory()
-        self.view = TaskListView.as_view()
+        super().setUp()
 
     @patch("todo.repositories.task_repository.TaskRepository.count")
     @patch("todo.repositories.task_repository.TaskRepository.list")
@@ -24,11 +21,10 @@ class TaskSortingIntegrationTest(unittest.TestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        request = self.factory.get("/tasks", {"sort_by": "priority", "order": "desc"})
-        response = self.view(request)
+        response = self.client.get("/v1/tasks", {"sort_by": "priority", "order": "desc"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_list.assert_called_with(1, 20, SORT_FIELD_PRIORITY, SORT_ORDER_DESC)
+        mock_list.assert_called_with(1, 20, SORT_FIELD_PRIORITY, SORT_ORDER_DESC, str(self.user_id))
 
     @patch("todo.repositories.task_repository.TaskRepository.count")
     @patch("todo.repositories.task_repository.TaskRepository.list")
@@ -36,12 +32,11 @@ class TaskSortingIntegrationTest(unittest.TestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        request = self.factory.get("/tasks", {"sort_by": "dueAt"})
-        response = self.view(request)
+        response = self.client.get("/v1/tasks", {"sort_by": "dueAt"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        mock_list.assert_called_with(1, 20, SORT_FIELD_DUE_AT, SORT_ORDER_ASC)
+        mock_list.assert_called_with(1, 20, SORT_FIELD_DUE_AT, SORT_ORDER_ASC, str(self.user_id))
 
     @patch("todo.repositories.task_repository.TaskRepository.count")
     @patch("todo.repositories.task_repository.TaskRepository._list_sorted_by_assignee")
@@ -49,12 +44,11 @@ class TaskSortingIntegrationTest(unittest.TestCase):
         mock_assignee_sort.return_value = []
         mock_count.return_value = 0
 
-        request = self.factory.get("/tasks", {"sort_by": "assignee", "order": "asc"})
-        response = self.view(request)
+        response = self.client.get("/v1/tasks", {"sort_by": "assignee", "order": "asc"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        mock_assignee_sort.assert_called_once_with(1, 20, SORT_ORDER_ASC)
+        mock_assignee_sort.assert_called_once_with(1, 20, SORT_ORDER_ASC, str(self.user_id))
 
     @patch("todo.repositories.task_repository.TaskRepository.count")
     @patch("todo.repositories.task_repository.TaskRepository._list_sorted_by_assignee")
@@ -63,9 +57,9 @@ class TaskSortingIntegrationTest(unittest.TestCase):
         mock_assignee_sort.return_value = []
         mock_count.return_value = 0
 
-        def list_side_effect(page, limit, sort_by, order):
+        def list_side_effect(page, limit, sort_by, order, user_id):
             if sort_by == SORT_FIELD_ASSIGNEE:
-                return mock_assignee_sort(page, limit, order)
+                return mock_assignee_sort(page, limit, order, user_id)
             return []
 
         mock_list.side_effect = list_side_effect
@@ -84,15 +78,14 @@ class TaskSortingIntegrationTest(unittest.TestCase):
                 mock_count.reset_mock()
                 mock_list.side_effect = list_side_effect
 
-                request = self.factory.get("/tasks", {"sort_by": sort_field})
-                response = self.view(request)
+                response = self.client.get("/v1/tasks", {"sort_by": sort_field})
 
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
 
                 if sort_field == SORT_FIELD_ASSIGNEE:
-                    mock_assignee_sort.assert_called_with(1, 20, expected_order)
+                    mock_assignee_sort.assert_called_with(1, 20, expected_order, str(self.user_id))
                 else:
-                    mock_list.assert_called_with(1, 20, sort_field, expected_order)
+                    mock_list.assert_called_with(1, 20, sort_field, expected_order, str(self.user_id))
 
     @patch("todo.repositories.task_repository.TaskRepository.count")
     @patch("todo.repositories.task_repository.TaskRepository.list")
@@ -100,20 +93,17 @@ class TaskSortingIntegrationTest(unittest.TestCase):
         mock_list.return_value = []
         mock_count.return_value = 100
 
-        request = self.factory.get("/tasks", {"page": "3", "limit": "5", "sort_by": "createdAt", "order": "asc"})
-        response = self.view(request)
+        response = self.client.get("/v1/tasks", {"page": "3", "limit": "5", "sort_by": "createdAt", "order": "asc"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        mock_list.assert_called_with(3, 5, SORT_FIELD_CREATED_AT, SORT_ORDER_ASC)
+        mock_list.assert_called_with(3, 5, SORT_FIELD_CREATED_AT, SORT_ORDER_ASC, str(self.user_id))
 
     def test_invalid_sort_parameters_integration(self):
-        request = self.factory.get("/tasks", {"sort_by": "invalid_field"})
-        response = self.view(request)
+        response = self.client.get("/v1/tasks", {"sort_by": "invalid_field"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        request = self.factory.get("/tasks", {"sort_by": "priority", "order": "invalid_order"})
-        response = self.view(request)
+        response = self.client.get("/v1/tasks", {"sort_by": "priority", "order": "invalid_order"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     @patch("todo.repositories.task_repository.TaskRepository.count")
@@ -122,12 +112,11 @@ class TaskSortingIntegrationTest(unittest.TestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        request = self.factory.get("/tasks")
-        response = self.view(request)
+        response = self.client.get("/v1/tasks")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        mock_list.assert_called_with(1, 20, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC)
+        mock_list.assert_called_with(1, 20, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC, str(self.user_id))
 
     @patch("todo.services.task_service.reverse_lazy", return_value="/v1/tasks")
     @patch("todo.repositories.task_repository.TaskRepository.count")
@@ -142,8 +131,7 @@ class TaskSortingIntegrationTest(unittest.TestCase):
             patch("todo.services.task_service.LabelRepository.list_by_ids", return_value=[]),
             patch("todo.services.task_service.UserRepository.get_by_id", return_value=None),
         ):
-            request = self.factory.get("/tasks", {"page": "2", "limit": "1", "sort_by": "priority", "order": "desc"})
-            response = self.view(request)
+            response = self.client.get("/v1/tasks", {"page": "2", "limit": "1", "sort_by": "priority", "order": "desc"})
 
             self.assertEqual(response.status_code, status.HTTP_200_OK)
 

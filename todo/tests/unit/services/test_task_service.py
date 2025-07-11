@@ -55,7 +55,9 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         mock_label_repo.return_value = label_models
         mock_user_repo.return_value = self.get_user_model()
 
-        response: GetTasksResponse = TaskService.get_tasks(page=2, limit=1, sort_by="createdAt", order="desc")
+        response: GetTasksResponse = TaskService.get_tasks(
+            page=2, limit=1, sort_by="createdAt", order="desc", user_id=str(self.user_id)
+        )
 
         self.assertIsInstance(response, GetTasksResponse)
         self.assertEqual(len(response.tasks), 1)
@@ -68,7 +70,7 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
             response.links.prev, f"{self.mock_reverse_lazy('tasks')}?page=1&limit=1&sort_by=createdAt&order=desc"
         )
 
-        mock_list.assert_called_once_with(2, 1, "createdAt", "desc")
+        mock_list.assert_called_once_with(2, 1, "createdAt", "desc", str(self.user_id))
         mock_count.assert_called_once()
 
     @patch("todo.services.task_service.UserRepository.get_by_id")
@@ -83,7 +85,9 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         mock_label_repo.return_value = label_models
         mock_user_repo.return_value = self.get_user_model()
 
-        response: GetTasksResponse = TaskService.get_tasks(page=1, limit=1, sort_by="createdAt", order="desc")
+        response: GetTasksResponse = TaskService.get_tasks(
+            page=1, limit=1, sort_by="createdAt", order="desc", user_id=str(self.user_id)
+        )
 
         self.assertIsNotNone(response.links)
         self.assertIsNone(response.links.prev)
@@ -98,13 +102,15 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        response: GetTasksResponse = TaskService.get_tasks(page=1, limit=10, sort_by="createdAt", order="desc")
+        response: GetTasksResponse = TaskService.get_tasks(
+            page=1, limit=10, sort_by="createdAt", order="desc", user_id="test_user"
+        )
 
         self.assertIsInstance(response, GetTasksResponse)
         self.assertEqual(len(response.tasks), 0)
         self.assertIsNone(response.links)
 
-        mock_list.assert_called_once_with(1, 10, "createdAt", "desc")
+        mock_list.assert_called_once_with(1, 10, "createdAt", "desc", "test_user")
         mock_count.assert_called_once()
 
     @patch("todo.services.task_service.TaskRepository.count")
@@ -113,7 +119,9 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         mock_list.return_value = []
         mock_count.return_value = 50
 
-        response: GetTasksResponse = TaskService.get_tasks(page=999, limit=10, sort_by="createdAt", order="desc")
+        response: GetTasksResponse = TaskService.get_tasks(
+            page=999, limit=10, sort_by="createdAt", order="desc", user_id="test_user"
+        )
 
         self.assertIsInstance(response, GetTasksResponse)
         self.assertEqual(len(response.tasks), 0)
@@ -181,7 +189,7 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         with patch("todo.services.task_service.TaskService._validate_pagination_params") as mock_validate:
             mock_validate.side_effect = ValidationError("Test validation error")
 
-            response = TaskService.get_tasks(page=1, limit=10, sort_by="createdAt", order="desc")
+            response = TaskService.get_tasks(page=1, limit=10, sort_by="createdAt", order="desc", user_id="test_user")
 
             self.assertIsInstance(response, GetTasksResponse)
             self.assertEqual(len(response.tasks), 0)
@@ -191,7 +199,7 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
     def test_get_tasks_handles_general_exception(self, mock_list: Mock):
         mock_list.side_effect = Exception("Test general error")
 
-        response = TaskService.get_tasks(page=1, limit=10, sort_by="createdAt", order="desc")
+        response = TaskService.get_tasks(page=1, limit=10, sort_by="createdAt", order="desc", user_id="test_user")
 
         self.assertIsInstance(response, GetTasksResponse)
         self.assertEqual(len(response.tasks), 0)
@@ -282,9 +290,9 @@ class TaskServiceSortingTests(TestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        TaskService.get_tasks(page=1, limit=20, sort_by="createdAt", order="desc")
+        TaskService.get_tasks(page=1, limit=20, sort_by="createdAt", order="desc", user_id="test_user")
 
-        mock_list.assert_called_once_with(1, 20, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC)
+        mock_list.assert_called_once_with(1, 20, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC, "test_user")
 
     @patch("todo.services.task_service.TaskRepository.count")
     @patch("todo.services.task_service.TaskRepository.list")
@@ -292,9 +300,9 @@ class TaskServiceSortingTests(TestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order=SORT_ORDER_DESC)
+        TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order=SORT_ORDER_DESC, user_id="test_user")
 
-        mock_list.assert_called_once_with(1, 20, SORT_FIELD_PRIORITY, SORT_ORDER_DESC)
+        mock_list.assert_called_once_with(1, 20, SORT_FIELD_PRIORITY, SORT_ORDER_DESC, "test_user")
 
     @patch("todo.services.task_service.TaskRepository.count")
     @patch("todo.services.task_service.TaskRepository.list")
@@ -302,9 +310,9 @@ class TaskServiceSortingTests(TestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_DUE_AT, order="asc")
+        TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_DUE_AT, order="asc", user_id="test_user")
 
-        mock_list.assert_called_once_with(1, 20, SORT_FIELD_DUE_AT, SORT_ORDER_ASC)
+        mock_list.assert_called_once_with(1, 20, SORT_FIELD_DUE_AT, SORT_ORDER_ASC, "test_user")
 
     @patch("todo.services.task_service.TaskRepository.count")
     @patch("todo.services.task_service.TaskRepository.list")
@@ -312,9 +320,9 @@ class TaskServiceSortingTests(TestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order="desc")
+        TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order="desc", user_id="test_user")
 
-        mock_list.assert_called_once_with(1, 20, SORT_FIELD_PRIORITY, SORT_ORDER_DESC)
+        mock_list.assert_called_once_with(1, 20, SORT_FIELD_PRIORITY, SORT_ORDER_DESC, "test_user")
 
     @patch("todo.services.task_service.TaskRepository.count")
     @patch("todo.services.task_service.TaskRepository.list")
@@ -322,9 +330,9 @@ class TaskServiceSortingTests(TestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_ASSIGNEE, order="asc")
+        TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_ASSIGNEE, order="asc", user_id="test_user")
 
-        mock_list.assert_called_once_with(1, 20, SORT_FIELD_ASSIGNEE, SORT_ORDER_ASC)
+        mock_list.assert_called_once_with(1, 20, SORT_FIELD_ASSIGNEE, SORT_ORDER_ASC, "test_user")
 
     @patch("todo.services.task_service.TaskRepository.count")
     @patch("todo.services.task_service.TaskRepository.list")
@@ -332,9 +340,9 @@ class TaskServiceSortingTests(TestCase):
         mock_list.return_value = []
         mock_count.return_value = 0
 
-        TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_CREATED_AT, order="desc")
+        TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_CREATED_AT, order="desc", user_id="test_user")
 
-        mock_list.assert_called_once_with(1, 20, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC)
+        mock_list.assert_called_once_with(1, 20, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC, "test_user")
 
     @patch("todo.services.task_service.reverse_lazy", return_value="/v1/tasks")
     def test_build_page_url_includes_sort_parameters(self, mock_reverse):
@@ -367,7 +375,9 @@ class TaskServiceSortingTests(TestCase):
             patch("todo.services.task_service.UserRepository.get_by_id", return_value=mock_user),
             patch("todo.services.task_service.reverse_lazy", return_value="/v1/tasks"),
         ):
-            response = TaskService.get_tasks(page=2, limit=1, sort_by=SORT_FIELD_PRIORITY, order=SORT_ORDER_DESC)
+            response = TaskService.get_tasks(
+                page=2, limit=1, sort_by=SORT_FIELD_PRIORITY, order=SORT_ORDER_DESC, user_id="test_user"
+            )
 
             self.assertIsNotNone(response.links)
             self.assertIn("sort_by=priority", response.links.next)

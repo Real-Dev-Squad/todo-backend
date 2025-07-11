@@ -66,6 +66,11 @@ class RoleService:
 
             clean_update_data = {k: v for k, v in update_data.items() if v is not None}
 
+            if "type" in clean_update_data and isinstance(clean_update_data["type"], str):
+                clean_update_data["type"] = RoleType(clean_update_data["type"])
+            if "scope" in clean_update_data and isinstance(clean_update_data["scope"], str):
+                clean_update_data["scope"] = RoleScope(clean_update_data["scope"])
+
             updated_role = RoleRepository.update(role_id, clean_update_data)
             if not updated_role:
                 raise RoleOperationException(f"Failed to update role with ID: {role_id}")

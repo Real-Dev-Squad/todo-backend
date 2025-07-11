@@ -7,8 +7,8 @@ from todo.views.auth import (
     GoogleLoginView,
     GoogleCallbackView,
     GoogleLogoutView,
-    UsersView,
 )
+from todo.views.user import UsersView, UserSearchView
 
 urlpatterns = [
     path("teams", TeamListView.as_view(), name="teams"),
@@ -20,4 +20,5 @@ urlpatterns = [
     path("auth/google/callback/", GoogleCallbackView.as_view(), name="google_callback"),
     path("auth/google/logout/", GoogleLogoutView.as_view(), name="google_logout"),
     path("users", UsersView.as_view(), name="users"),
+    path("users/search", UserSearchView.as_view(), name="user_search"),
 ]

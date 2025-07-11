@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
 from pymongo.collection import ReturnDocument
+from pymongo import ASCENDING
 
 from todo.models.user import UserModel
 from todo.models.common.pyobjectid import PyObjectId
@@ -54,3 +55,92 @@ class UserRepository:
             if isinstance(e, GoogleAPIException):
                 raise
             raise GoogleAPIException(RepositoryErrors.USER_CREATE_UPDATE_FAILED.format(str(e)))
+
+    @classmethod
+    def search_users(cls, query: str, page: int = 1, limit: int = 10) -> tuple[List[UserModel], int]:
+        """
+        Search users by name or email using fuzzy search with MongoDB regex
+        """
+        try:
+            collection = cls._get_collection()
+
+            # Create case-insensitive regex pattern for fuzzy search
+            regex_pattern = {"$regex": query, "$options": "i"}
+
+            # Search in both name and email fields
+            search_filter = {"$or": [{"name": regex_pattern}, {"email_id": regex_pattern}]}
+
+            skip = (page - 1) * limit
+            total_count = collection.count_documents(search_filter)
+
+            cursor = collection.find(search_filter).sort("name", ASCENDING).skip(skip).limit(limit)
+
+            users = [UserModel(**doc) for doc in cursor]
+
+            return users, total_count
+
+        except Exception as e:
+            raise GoogleAPIException(f"User search failed: {str(e)}")
+
+    @classmethod
+    def search_users_by_name(cls, name: str, page: int = 1, limit: int = 10) -> tuple[List[UserModel], int]:
+        """
+        Search users by name only
+        """
+        try:
+            collection = cls._get_collection()
+
+            regex_pattern = {"$regex": name, "$options": "i"}
+            search_filter = {"name": regex_pattern}
+
+            skip = (page - 1) * limit
+            total_count = collection.count_documents(search_filter)
+
+            cursor = collection.find(search_filter).sort("name", ASCENDING).skip(skip).limit(limit)
+            users = [UserModel(**doc) for doc in cursor]
+
+            return users, total_count
+
+        except Exception as e:
+            raise GoogleAPIException(f"User search by name failed: {str(e)}")
+
+    @classmethod
+    def search_users_by_email(cls, email: str, page: int = 1, limit: int = 10) -> tuple[List[UserModel], int]:
+        """
+        Search users by email only
+        """
+        try:
+            collection = cls._get_collection()
+
+            regex_pattern = {"$regex": email, "$options": "i"}
+            search_filter = {"email_id": regex_pattern}
+
+            skip = (page - 1) * limit
+            total_count = collection.count_documents(search_filter)
+
+            cursor = collection.find(search_filter).sort("email_id", ASCENDING).skip(skip).limit(limit)
+            users = [UserModel(**doc) for doc in cursor]
+
+            return users, total_count
+
+        except Exception as e:
+            raise GoogleAPIException(f"User search by email failed: {str(e)}")
+
+    @classmethod
+    def get_all_users(cls, page: int = 1, limit: int = 10) -> tuple[List[UserModel], int]:
+        """
+        Get all users with pagination
+        """
+        try:
+            collection = cls._get_collection()
+
+            skip = (page - 1) * limit
+            total_count = collection.count_documents({})
+
+            cursor = collection.find({}).sort("name", ASCENDING).skip(skip).limit(limit)
+            users = [UserModel(**doc) for doc in cursor]
+
+            return users, total_count
+
+        except Exception as e:
+            raise GoogleAPIException(f"Failed to get users: {str(e)}")

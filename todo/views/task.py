@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.request import Request
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import AuthenticationFailed, ValidationError
 from django.conf import settings
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
@@ -49,16 +49,29 @@ class TaskListView(APIView):
     )
     def get(self, request: Request):
         """
-        Retrieve a paginated list of tasks.
+        Retrieve a paginated list of tasks, or if profile=true, only the current user's tasks.
         """
         query = GetTaskQueryParamsSerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
+        if query.validated_data["profile"]:
+            user = get_current_user_info(request)
+            if not user:
+                raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
+            response = TaskService.get_tasks_for_user(
+                user_id=user["user_id"], page=query.validated_data["page"], limit=query.validated_data["limit"]
+            )
+            return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
+
+        user = get_current_user_info(request)
+        if not user:
+            raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
 
         response = TaskService.get_tasks(
             page=query.validated_data["page"],
             limit=query.validated_data["limit"],
             sort_by=query.validated_data["sort_by"],
             order=query.validated_data.get("order"),
+            user_id=user["user_id"],
         )
         return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
 

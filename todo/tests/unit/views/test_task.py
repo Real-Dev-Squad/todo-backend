@@ -1,5 +1,3 @@
-from unittest import TestCase
-from rest_framework.test import APIRequestFactory
 from rest_framework.reverse import reverse
 from rest_framework import status
 from unittest.mock import patch, Mock
@@ -9,7 +7,6 @@ from datetime import datetime, timedelta, timezone
 from bson.objectid import ObjectId
 from bson.errors import InvalidId as BsonInvalidId
 from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
-from todo.views.task import TaskListView
 from todo.dto.user_dto import UserDTO
 from todo.dto.task_dto import TaskDTO
 from todo.dto.responses.get_tasks_response import GetTasksResponse
@@ -31,6 +28,7 @@ from todo.constants.messages import ValidationErrors, ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from todo.dto.deferred_details_dto import DeferredDetailsDTO
+from rest_framework.test import APIClient
 
 
 class TaskViewTests(AuthenticatedMongoTestCase):
@@ -45,7 +43,9 @@ class TaskViewTests(AuthenticatedMongoTestCase):
 
         response: Response = self.client.get(self.url, self.valid_params)
 
-        mock_get_tasks.assert_called_once_with(page=1, limit=10, sort_by="createdAt", order="desc")
+        mock_get_tasks.assert_called_once_with(
+            page=1, limit=10, sort_by="createdAt", order="desc", user_id=str(self.user_id)
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         expected_response = mock_get_tasks.return_value.model_dump(mode="json", exclude_none=True)
         self.assertDictEqual(response.data, expected_response)
@@ -56,7 +56,9 @@ class TaskViewTests(AuthenticatedMongoTestCase):
 
         response: Response = self.client.get(self.url)
         default_limit = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"]
-        mock_get_tasks.assert_called_once_with(page=1, limit=default_limit, sort_by="createdAt", order="desc")
+        mock_get_tasks.assert_called_once_with(
+            page=1, limit=default_limit, sort_by="createdAt", order="desc", user_id=str(self.user_id)
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_get_tasks_returns_400_for_invalid_query_params(self):
@@ -146,38 +148,38 @@ class TaskViewTests(AuthenticatedMongoTestCase):
         mock_get_task_by_id.assert_called_once_with(task_id)
 
 
-class TaskViewTest(TestCase):
+class TaskViewTest(AuthenticatedMongoTestCase):
     def setUp(self):
-        self.factory = APIRequestFactory()
-        self.view = TaskListView.as_view()
+        super().setUp()
 
     @patch("todo.services.task_service.TaskService.get_tasks")
     def test_get_tasks_with_default_pagination(self, mock_get_tasks):
         """Test GET /tasks without any query parameters uses default pagination"""
         mock_get_tasks.return_value = GetTasksResponse(tasks=task_dtos)
 
-        request = self.factory.get("/tasks")
-        response = self.view(request)
+        response = self.client.get("/v1/tasks")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         default_limit = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"]
-        mock_get_tasks.assert_called_once_with(page=1, limit=default_limit, sort_by="createdAt", order="desc")
+        mock_get_tasks.assert_called_once_with(
+            page=1, limit=default_limit, sort_by="createdAt", order="desc", user_id=str(self.user_id)
+        )
 
     @patch("todo.services.task_service.TaskService.get_tasks")
     def test_get_tasks_with_valid_pagination(self, mock_get_tasks):
         """Test GET /tasks with valid page and limit parameters"""
         mock_get_tasks.return_value = GetTasksResponse(tasks=task_dtos)
 
-        request = self.factory.get("/tasks", {"page": "2", "limit": "15"})
-        response = self.view(request)
+        response = self.client.get("/v1/tasks", {"page": "2", "limit": "15"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_get_tasks.assert_called_once_with(page=2, limit=15, sort_by="createdAt", order="desc")
+        mock_get_tasks.assert_called_once_with(
+            page=2, limit=15, sort_by="createdAt", order="desc", user_id=str(self.user_id)
+        )
 
     def test_get_tasks_with_invalid_page(self):
         """Test GET /tasks with invalid page parameter"""
-        request = self.factory.get("/tasks", {"page": "0"})
-        response = self.view(request)
+        response = self.client.get("/v1/tasks", {"page": "0"})
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         error_detail = str(response.data)
@@ -186,8 +188,7 @@ class TaskViewTest(TestCase):
 
     def test_get_tasks_with_invalid_limit(self):
         """Test GET /tasks with invalid limit parameter"""
-        request = self.factory.get("/tasks", {"limit": "0"})
-        response = self.view(request)
+        response = self.client.get("/v1/tasks", {"limit": "0"})
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         error_detail = str(response.data)
@@ -196,38 +197,38 @@ class TaskViewTest(TestCase):
 
     def test_get_tasks_with_non_numeric_parameters(self):
         """Test GET /tasks with non-numeric parameters"""
-        request = self.factory.get("/tasks", {"page": "abc", "limit": "def"})
-        response = self.view(request)
+        response = self.client.get("/v1/tasks", {"page": "abc", "limit": "def"})
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         error_detail = str(response.data)
         self.assertTrue("page" in error_detail or "limit" in error_detail)
 
 
-class TaskViewSortingTests(TestCase):
+class TaskViewSortingTests(AuthenticatedMongoTestCase):
     def setUp(self):
-        self.factory = APIRequestFactory()
-        self.view = TaskListView.as_view()
+        super().setUp()
 
     @patch("todo.services.task_service.TaskService.get_tasks")
     def test_get_tasks_with_sort_by_priority(self, mock_get_tasks):
         mock_get_tasks.return_value = GetTasksResponse(tasks=task_dtos)
 
-        request = self.factory.get("/tasks", {"sort_by": "priority"})
-        response = self.view(request)
+        response = self.client.get("/v1/tasks", {"sort_by": "priority"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_get_tasks.assert_called_once_with(page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order="desc")
+        mock_get_tasks.assert_called_once_with(
+            page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order="desc", user_id=str(self.user_id)
+        )
 
     @patch("todo.services.task_service.TaskService.get_tasks")
     def test_get_tasks_with_sort_by_and_order(self, mock_get_tasks):
         mock_get_tasks.return_value = GetTasksResponse(tasks=task_dtos)
 
-        request = self.factory.get("/tasks", {"sort_by": "dueAt", "order": "desc"})
-        response = self.view(request)
+        response = self.client.get("/v1/tasks", {"sort_by": "dueAt", "order": "desc"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_get_tasks.assert_called_once_with(page=1, limit=20, sort_by=SORT_FIELD_DUE_AT, order=SORT_ORDER_DESC)
+        mock_get_tasks.assert_called_once_with(
+            page=1, limit=20, sort_by=SORT_FIELD_DUE_AT, order=SORT_ORDER_DESC, user_id=str(self.user_id)
+        )
 
     @patch("todo.services.task_service.TaskService.get_tasks")
     def test_get_tasks_with_all_sort_fields(self, mock_get_tasks):
@@ -244,11 +245,12 @@ class TaskViewSortingTests(TestCase):
             with self.subTest(sort_field=sort_field):
                 mock_get_tasks.reset_mock()
 
-                request = self.factory.get("/tasks", {"sort_by": sort_field})
-                response = self.view(request)
+                response = self.client.get("/v1/tasks", {"sort_by": sort_field})
 
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
-                mock_get_tasks.assert_called_once_with(page=1, limit=20, sort_by=sort_field, order=expected_order)
+                mock_get_tasks.assert_called_once_with(
+                    page=1, limit=20, sort_by=sort_field, order=expected_order, user_id=str(self.user_id)
+                )
 
     @patch("todo.services.task_service.TaskService.get_tasks")
     def test_get_tasks_with_all_order_values(self, mock_get_tasks):
@@ -260,15 +262,15 @@ class TaskViewSortingTests(TestCase):
             with self.subTest(order=order):
                 mock_get_tasks.reset_mock()
 
-                request = self.factory.get("/tasks", {"sort_by": SORT_FIELD_PRIORITY, "order": order})
-                response = self.view(request)
+                response = self.client.get("/v1/tasks", {"sort_by": SORT_FIELD_PRIORITY, "order": order})
 
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
-                mock_get_tasks.assert_called_once_with(page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order=order)
+                mock_get_tasks.assert_called_once_with(
+                    page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order=order, user_id=str(self.user_id)
+                )
 
     def test_get_tasks_with_invalid_sort_by(self):
-        request = self.factory.get("/tasks", {"sort_by": "invalid_field"})
-        response = self.view(request)
+        response = self.client.get("/v1/tasks", {"sort_by": "invalid_field"})
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -276,8 +278,7 @@ class TaskViewSortingTests(TestCase):
         self.assertIn("sort_by", error_detail)
 
     def test_get_tasks_with_invalid_order(self):
-        request = self.factory.get("/tasks", {"sort_by": SORT_FIELD_PRIORITY, "order": "invalid_order"})
-        response = self.view(request)
+        response = self.client.get("/v1/tasks", {"sort_by": SORT_FIELD_PRIORITY, "order": "invalid_order"})
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -288,34 +289,35 @@ class TaskViewSortingTests(TestCase):
     def test_get_tasks_sorting_with_pagination(self, mock_get_tasks):
         mock_get_tasks.return_value = GetTasksResponse(tasks=task_dtos)
 
-        request = self.factory.get(
-            "/tasks", {"page": "2", "limit": "15", "sort_by": SORT_FIELD_DUE_AT, "order": SORT_ORDER_ASC}
+        response = self.client.get(
+            "/v1/tasks", {"page": "2", "limit": "15", "sort_by": SORT_FIELD_DUE_AT, "order": SORT_ORDER_ASC}
         )
-        response = self.view(request)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_get_tasks.assert_called_once_with(page=2, limit=15, sort_by=SORT_FIELD_DUE_AT, order=SORT_ORDER_ASC)
+        mock_get_tasks.assert_called_once_with(
+            page=2, limit=15, sort_by=SORT_FIELD_DUE_AT, order=SORT_ORDER_ASC, user_id=str(self.user_id)
+        )
 
     @patch("todo.services.task_service.TaskService.get_tasks")
     def test_get_tasks_default_behavior_unchanged(self, mock_get_tasks):
         mock_get_tasks.return_value = GetTasksResponse(tasks=task_dtos)
 
-        request = self.factory.get("/tasks")
-        response = self.view(request)
+        response = self.client.get("/v1/tasks")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_get_tasks.assert_called_once_with(page=1, limit=20, sort_by=SORT_FIELD_CREATED_AT, order="desc")
+        mock_get_tasks.assert_called_once_with(
+            page=1, limit=20, sort_by=SORT_FIELD_CREATED_AT, order="desc", user_id=str(self.user_id)
+        )
 
     def test_get_tasks_edge_case_combinations(self):
         with patch("todo.services.task_service.TaskService.get_tasks") as mock_get_tasks:
             mock_get_tasks.return_value = GetTasksResponse(tasks=task_dtos)
 
-            request = self.factory.get("/tasks", {"order": SORT_ORDER_ASC})
-            response = self.view(request)
+            response = self.client.get("/v1/tasks", {"order": SORT_ORDER_ASC})
 
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             mock_get_tasks.assert_called_once_with(
-                page=1, limit=20, sort_by=SORT_FIELD_CREATED_AT, order=SORT_ORDER_ASC
+                page=1, limit=20, sort_by=SORT_FIELD_CREATED_AT, order=SORT_ORDER_ASC, user_id=str(self.user_id)
             )
 
 
@@ -770,3 +772,21 @@ class TaskDetailViewPatchTests(AuthenticatedMongoTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["errors"][0]["detail"], expected_detail)
+
+
+class TaskViewProfileTrueTests(AuthenticatedMongoTestCase):
+    def setUp(self):
+        super().setUp()
+        self.url = reverse("tasks")
+
+    @patch("todo.services.task_service.TaskService.get_tasks_for_user")
+    def test_get_tasks_profile_true_returns_user_tasks(self, mock_get_tasks_for_user):
+        mock_get_tasks_for_user.return_value = GetTasksResponse(tasks=[])
+        response = self.client.get(self.url + "?profile=true")
+        mock_get_tasks_for_user.assert_called_once()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_get_tasks_profile_true_requires_auth(self):
+        client = APIClient()
+        response = client.get(self.url + "?profile=true")
+        self.assertEqual(response.status_code, 401)

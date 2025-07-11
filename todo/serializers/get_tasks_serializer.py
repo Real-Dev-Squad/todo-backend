@@ -22,6 +22,9 @@ class GetTaskQueryParamsSerializer(serializers.Serializer):
             "min_value": "limit must be greater than or equal to 1",
         },
     )
+
+    profile = serializers.BooleanField(required=False, error_messages={"invalid": "profile must be a boolean value."})
+
     sort_by = serializers.ChoiceField(
         choices=SORT_FIELDS,
         required=False,

@@ -34,15 +34,15 @@ JWT_COOKIE_SETTINGS.update(
 
 GOOGLE_COOKIE_SETTINGS.update(
     {
-        "COOKIE_DOMAIN": "staging-todo.realdevsquad.com",
+        "COOKIE_DOMAIN": "realdevsquad.com",
         "COOKIE_SECURE": True,
-        "COOKIE_SAMESITE": "None",
+        "COOKIE_SAMESITE": "NONE",
     }
 )
 
 MAIN_APP.update(
     {
-        "RDS_BACKEND_BASE_URL": f"{BASE_URL}{SERVICE_DOMAINS['RDS_API']}",
+        "RDS_BACKEND_BASE_URL": f"{BASE_URL}{SERVICE_DOMAINS['RDS_API']}/staging-todo",
     }
 )
 
@@ -69,7 +69,7 @@ CORS_ALLOWED_HEADERS = [
 # Security settings for staging
 SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = True
-SESSION_COOKIE_DOMAIN = "staging-todo.realdevsquad.com"
+SESSION_COOKIE_DOMAIN = "realdevsquad.com"
 SESSION_COOKIE_SAMESITE = "None"
 CSRF_COOKIE_SECURE = True
 

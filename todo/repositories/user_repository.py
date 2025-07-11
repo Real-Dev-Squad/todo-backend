@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
 from pymongo.collection import ReturnDocument
+from pymongo import ASCENDING
 
 from todo.models.user import UserModel
 from todo.models.common.pyobjectid import PyObjectId
@@ -54,3 +55,18 @@ class UserRepository:
             if isinstance(e, GoogleAPIException):
                 raise
             raise GoogleAPIException(RepositoryErrors.USER_CREATE_UPDATE_FAILED.format(str(e)))
+
+    @classmethod
+    def search_users(cls, query: str, page: int = 1, limit: int = 10) -> tuple[List[UserModel], int]:
+        """
+        Search users by name or email using fuzzy search with MongoDB regex
+        """
+
+        collection = cls._get_collection()
+        regex_pattern = {"$regex": query, "$options": "i"}
+        search_filter = {"$or": [{"name": regex_pattern}, {"email_id": regex_pattern}]}
+        skip = (page - 1) * limit
+        total_count = collection.count_documents(search_filter)
+        cursor = collection.find(search_filter).sort("name", ASCENDING).skip(skip).limit(limit)
+        users = [UserModel(**doc) for doc in cursor]
+        return users, total_count

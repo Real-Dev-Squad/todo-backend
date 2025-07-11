@@ -62,11 +62,16 @@ class TaskListView(APIView):
             )
             return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
 
+        user = get_current_user_info(request)
+        if not user:
+            raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
+
         response = TaskService.get_tasks(
             page=query.validated_data["page"],
             limit=query.validated_data["limit"],
             sort_by=query.validated_data["sort_by"],
             order=query.validated_data.get("order"),
+            user_id=user["user_id"],
         )
         return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
 

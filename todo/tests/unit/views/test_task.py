@@ -47,7 +47,7 @@ class TaskViewTests(AuthenticatedMongoTestCase):
             page=1, limit=10, sort_by="createdAt", order="desc", user_id=str(self.user_id)
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        expected_response = mock_get_tasks.return_value.model_dump(mode="json", exclude_none=True)
+        expected_response = mock_get_tasks.return_value.model_dump(mode="json")
         self.assertDictEqual(response.data, expected_response)
 
     @patch("todo.services.task_service.TaskService.get_tasks")
@@ -516,7 +516,7 @@ class TaskDetailViewPatchTests(AuthenticatedMongoTestCase):
             task_id=self.task_id_str, validated_data=valid_payload, user_id=str(self.user_id)
         )
 
-        expected_response_data = self.updated_task_dto_fixture.model_dump(mode="json", exclude_none=True)
+        expected_response_data = self.updated_task_dto_fixture.model_dump(mode="json")
         self.assertEqual(response.data, expected_response_data)
 
     @patch("todo.views.task.UpdateTaskSerializer")

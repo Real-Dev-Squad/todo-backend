@@ -1,3 +1,4 @@
+from bson import ObjectId
 from pydantic import Field, validator
 from typing import ClassVar
 from datetime import datetime, timezone
@@ -36,7 +37,9 @@ class TeamModel(Document, ObjectIdValidatorMixin):
     def validate_object_id(cls, v):
         if v is None:
             return v
-        return cls.validate_object_id(v)
+        if not ObjectId.is_valid(v):
+            raise ValueError(f"Invalid ObjectId: {v}")
+        return ObjectId(v)
 
 
 class UserTeamDetailsModel(Document, ObjectIdValidatorMixin):

@@ -31,7 +31,7 @@ class TeamService:
             # Create team
             team = TeamModel(
                 name=dto.name,
-                description=dto.description,
+                description=dto.description if dto.description else None,
                 poc_id=PyObjectId(dto.poc_id) if dto.poc_id else None,
                 created_by=PyObjectId(created_by_user_id),
                 updated_by=PyObjectId(created_by_user_id),

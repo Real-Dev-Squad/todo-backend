@@ -31,7 +31,7 @@ class TeamService:
 
             # Generate invite code
             invite_code = generate_invite_code(dto.name)
-            
+
             # Create team
             team = TeamModel(
                 name=dto.name,

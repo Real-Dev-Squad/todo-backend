@@ -8,11 +8,11 @@ from todo.models.common.pyobjectid import PyObjectId
 
 class ObjectIdValidatorMixin:
     @classmethod
-    def validate_object_id(cls, v, field_name="ObjectId"):
+    def validate_object_id(cls, v):
         if v is None:
-            raise ValueError(f"{field_name} cannot be None")
+            raise ValueError(f"Object ID cannot be None")
         if not PyObjectId.is_valid(v):
-            raise ValueError(f"Invalid {field_name} format: {v}")
+            raise ValueError(f"Invalid Object ID format: {v}")
         return v
 
 
@@ -33,8 +33,8 @@ class TeamModel(Document, ObjectIdValidatorMixin):
     is_deleted: bool = False
 
     @validator("created_by", "updated_by", "poc_id")
-    def validate_object_id(cls, v, info):
-        return cls.validate_object_id(v, info.field_name)
+    def validate_object_id(cls, v:
+        return cls.validate_object_id(v)
 
 
 class UserTeamDetailsModel(Document, ObjectIdValidatorMixin):
@@ -54,5 +54,5 @@ class UserTeamDetailsModel(Document, ObjectIdValidatorMixin):
     updated_by: PyObjectId
 
     @validator("user_id", "team_id", "created_by", "updated_by")
-    def validate_object_ids(cls, v, info):
-        return cls.validate_object_id(v, info.field_name)
+    def validate_object_ids(cls, v):
+        return cls.validate_object_id(v)

@@ -27,46 +27,45 @@ def migrate_fixed_labels() -> bool:
     """
     logger.info("Starting fixed labels migration")
 
-
     fixed_labels: List[Dict[str, Any]] = [
         {
             "name": "Feature",
-            "color": "#22c55e",  
+            "color": "#22c55e",
             "description": "New feature implementation",
         },
         {
             "name": "Bug",
-            "color": "#ef4444", 
+            "color": "#ef4444",
             "description": "Bug fixes and error corrections",
         },
         {
             "name": "Refactoring/Optimization",
-            "color": "#f59e0b",  
+            "color": "#f59e0b",
             "description": "Code refactoring and performance optimization",
         },
         {
             "name": "API",
-            "color": "#3b82f6",  
+            "color": "#3b82f6",
             "description": "API development and integration",
         },
         {
             "name": "UI/UX",
-            "color": "#8b5cf6", 
+            "color": "#8b5cf6",
             "description": "User interface and user experience improvements",
         },
         {
             "name": "Testing",
-            "color": "#06b6d4", 
+            "color": "#06b6d4",
             "description": "Testing and quality assurance",
         },
         {
             "name": "Documentation",
-            "color": "#64748b",  
+            "color": "#64748b",
             "description": "Documentation and guides",
         },
         {
             "name": "Review",
-            "color": "#ec4899",  
+            "color": "#ec4899",
             "description": "Code review and peer review tasks",
         },
     ]
@@ -81,7 +80,6 @@ def migrate_fixed_labels() -> bool:
 
         for label_data in fixed_labels:
             try:
-
                 existing_label = labels_collection.find_one(
                     {"name": {"$regex": f"^{label_data['name']}$", "$options": "i"}, "isDeleted": {"$ne": True}}
                 )
@@ -91,7 +89,6 @@ def migrate_fixed_labels() -> bool:
                     skipped_count += 1
                     continue
 
-
                 label_document = {
                     "name": label_data["name"],
                     "color": label_data["color"],
@@ -99,17 +96,15 @@ def migrate_fixed_labels() -> bool:
                     "isDeleted": False,
                     "createdAt": current_time,
                     "updatedAt": None,
-                    "createdBy": "system", 
+                    "createdBy": "system",
                     "updatedBy": None,
                 }
 
- 
                 try:
                     LabelModel(**label_document)
                 except Exception as validation_error:
                     logger.error(f"Label validation failed for '{label_data['name']}': {validation_error}")
                     continue
-
 
                 result = labels_collection.insert_one(label_document)
 
@@ -122,7 +117,6 @@ def migrate_fixed_labels() -> bool:
             except Exception as e:
                 logger.error(f"Error processing label '{label_data['name']}': {str(e)}")
                 continue
-
 
         total_labels = len(fixed_labels)
         logger.info(

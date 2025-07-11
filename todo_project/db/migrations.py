@@ -95,6 +95,7 @@ def migrate_fixed_labels() -> bool:
                 label_document = {
                     "name": label_data["name"],
                     "color": label_data["color"],
+                    "description": label_data["description"],
                     "isDeleted": False,
                     "createdAt": current_time,
                     "updatedAt": None,

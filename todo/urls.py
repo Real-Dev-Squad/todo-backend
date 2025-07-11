@@ -7,8 +7,8 @@ from todo.views.auth import (
     GoogleLoginView,
     GoogleCallbackView,
     GoogleLogoutView,
-    UsersView,
 )
+from todo.views.user import UsersView
 
 urlpatterns = [
     path("teams", TeamListView.as_view(), name="teams"),

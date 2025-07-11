@@ -43,6 +43,7 @@ class TeamDTO(BaseModel):
     name: str
     description: Optional[str] = None
     poc_id: Optional[str] = None
+    invite_code: str
     created_by: str
     updated_by: str
     created_at: datetime

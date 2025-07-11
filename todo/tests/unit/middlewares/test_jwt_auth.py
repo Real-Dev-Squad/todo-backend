@@ -3,8 +3,10 @@ from unittest.mock import Mock, patch
 from django.http import HttpRequest, JsonResponse
 from rest_framework import status
 import json
-
-from todo.middlewares.jwt_auth import JWTAuthenticationMiddleware, is_google_user, is_rds_user, get_current_user_info
+from todo.middlewares.jwt_auth import (
+    JWTAuthenticationMiddleware,
+    get_current_user_info,
+)
 from todo.constants.messages import AuthErrorMessages
 
 
@@ -52,7 +54,9 @@ class JWTAuthenticationMiddlewareTests(TestCase):
         response = self.middleware(self.request)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         response_data = json.loads(response.content)
-        self.assertEqual(response_data["message"], AuthErrorMessages.AUTHENTICATION_REQUIRED)
+        self.assertEqual(
+            response_data["message"], AuthErrorMessages.AUTHENTICATION_REQUIRED
+        )
 
     @patch("todo.middlewares.jwt_auth.JWTAuthenticationMiddleware._try_rds_auth")
     def test_rds_token_invalid(self, mock_rds_auth):
@@ -62,41 +66,23 @@ class JWTAuthenticationMiddlewareTests(TestCase):
         response = self.middleware(self.request)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         response_data = json.loads(response.content)
-        self.assertEqual(response_data["message"], AuthErrorMessages.AUTHENTICATION_REQUIRED)
+        self.assertEqual(
+            response_data["message"], AuthErrorMessages.AUTHENTICATION_REQUIRED
+        )
 
     def test_no_tokens_provided(self):
         """Test handling of request with no tokens"""
         response = self.middleware(self.request)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         response_data = json.loads(response.content)
-        self.assertEqual(response_data["message"], AuthErrorMessages.AUTHENTICATION_REQUIRED)
+        self.assertEqual(
+            response_data["message"], AuthErrorMessages.AUTHENTICATION_REQUIRED
+        )
 
 
 class AuthUtilityFunctionsTests(TestCase):
     def setUp(self):
         self.request = Mock(spec=HttpRequest)
-
-    def test_is_google_user(self):
-        """Test checking if request is from Google user"""
-        self.request.auth_type = "google"
-        self.assertTrue(is_google_user(self.request))
-
-        self.request.auth_type = None
-        self.assertFalse(is_google_user(self.request))
-
-        self.request.auth_type = "rds"
-        self.assertFalse(is_google_user(self.request))
-
-    def test_is_rds_user(self):
-        """Test checking if request is from RDS user"""
-        self.request.auth_type = "rds"
-        self.assertTrue(is_rds_user(self.request))
-
-        self.request.auth_type = None
-        self.assertFalse(is_rds_user(self.request))
-
-        self.request.auth_type = "google"
-        self.assertFalse(is_rds_user(self.request))
 
     def test_get_current_user_info_google(self):
         """Test getting user info for Google user"""

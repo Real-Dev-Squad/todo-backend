@@ -16,7 +16,11 @@ from todo.services.task_service import TaskService
 from todo.dto.task_dto import CreateTaskDTO
 from todo.dto.responses.create_task_response import CreateTaskResponse
 from todo.dto.responses.get_task_by_id_response import GetTaskByIdResponse
-from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
+from todo.dto.responses.error_response import (
+    ApiErrorResponse,
+    ApiErrorDetail,
+    ApiErrorSource,
+)
 from todo.constants.messages import ApiErrors
 from todo.constants.messages import ValidationErrors
 
@@ -53,18 +57,17 @@ class TaskListView(APIView):
         """
         query = GetTaskQueryParamsSerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
-        if query.validated_data["profile"]:
-            user = get_current_user_info(request)
-            if not user:
-                raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
-            response = TaskService.get_tasks_for_user(
-                user_id=user["user_id"], page=query.validated_data["page"], limit=query.validated_data["limit"]
-            )
-            return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
-
         user = get_current_user_info(request)
-        if not user:
-            raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
+        if query.validated_data["profile"]:
+            response = TaskService.get_tasks_for_user(
+                user_id=user["user_id"],
+                page=query.validated_data["page"],
+                limit=query.validated_data["limit"],
+            )
+            return Response(
+                data=response.model_dump(mode="json", exclude_none=True),
+                status=status.HTTP_200_OK,
+            )
 
         response = TaskService.get_tasks(
             page=query.validated_data["page"],
@@ -73,7 +76,10 @@ class TaskListView(APIView):
             order=query.validated_data.get("order"),
             user_id=user["user_id"],
         )
-        return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
+        return Response(
+            data=response.model_dump(mode="json", exclude_none=True),
+            status=status.HTTP_200_OK,
+        )
 
     @extend_schema(
         operation_id="create_task",
@@ -108,20 +114,34 @@ class TaskListView(APIView):
             dto = CreateTaskDTO(**serializer.validated_data, createdBy=user["user_id"])
             response: CreateTaskResponse = TaskService.create_task(dto)
 
-            return Response(data=response.model_dump(mode="json"), status=status.HTTP_201_CREATED)
+            return Response(
+                data=response.model_dump(mode="json"), status=status.HTTP_201_CREATED
+            )
 
         except ValueError as e:
             if isinstance(e.args[0], ApiErrorResponse):
                 error_response = e.args[0]
-                return Response(data=error_response.model_dump(mode="json"), status=error_response.statusCode)
+                return Response(
+                    data=error_response.model_dump(mode="json"),
+                    status=error_response.statusCode,
+                )
 
             fallback_response = ApiErrorResponse(
                 statusCode=500,
                 message=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
-                errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}],
+                errors=[
+                    {
+                        "detail": (
+                            str(e)
+                            if settings.DEBUG
+                            else ApiErrors.INTERNAL_SERVER_ERROR
+                        )
+                    }
+                ],
             )
             return Response(
-                data=fallback_response.model_dump(mode="json"), status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                data=fallback_response.model_dump(mode="json"),
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
     def _handle_validation_errors(self, errors):
@@ -139,13 +159,20 @@ class TaskListView(APIView):
             else:
                 formatted_errors.append(
                     ApiErrorDetail(
-                        source={ApiErrorSource.PARAMETER: field}, title=ApiErrors.VALIDATION_ERROR, detail=str(messages)
+                        source={ApiErrorSource.PARAMETER: field},
+                        title=ApiErrors.VALIDATION_ERROR,
+                        detail=str(messages),
                     )
                 )
 
-        error_response = ApiErrorResponse(statusCode=400, message=ApiErrors.VALIDATION_ERROR, errors=formatted_errors)
+        error_response = ApiErrorResponse(
+            statusCode=400, message=ApiErrors.VALIDATION_ERROR, errors=formatted_errors
+        )
 
-        return Response(data=error_response.model_dump(mode="json"), status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            data=error_response.model_dump(mode="json"),
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class TaskDetailView(APIView):
@@ -174,7 +201,9 @@ class TaskDetailView(APIView):
         """
         task_dto = TaskService.get_task_by_id(task_id)
         response_data = GetTaskByIdResponse(data=task_dto)
-        return Response(data=response_data.model_dump(mode="json"), status=status.HTTP_200_OK)
+        return Response(
+            data=response_data.model_dump(mode="json"), status=status.HTTP_200_OK
+        )
 
     @extend_schema(
         operation_id="delete_task",
@@ -251,9 +280,16 @@ class TaskDetailView(APIView):
             serializer.is_valid(raise_exception=True)
 
             updated_task_dto = TaskService.update_task(
-                task_id=task_id, validated_data=serializer.validated_data, user_id=user["user_id"]
+                task_id=task_id,
+                validated_data=serializer.validated_data,
+                user_id=user["user_id"],
             )
         else:
-            raise ValidationError({"action": ValidationErrors.UNSUPPORTED_ACTION.format(action)})
+            raise ValidationError(
+                {"action": ValidationErrors.UNSUPPORTED_ACTION.format(action)}
+            )
 
-        return Response(data=updated_task_dto.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
+        return Response(
+            data=updated_task_dto.model_dump(mode="json", exclude_none=True),
+            status=status.HTTP_200_OK,
+        )

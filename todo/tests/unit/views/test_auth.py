@@ -5,7 +5,7 @@ from unittest.mock import patch, Mock, PropertyMock
 from bson.objectid import ObjectId
 
 from todo.views.auth import GoogleCallbackView
-from todo.utils.google_jwt_utils import generate_google_token_pair
+from todo.utils.jwt_utils import generate_token_pair
 from todo.constants.messages import AppMessages
 from todo.tests.fixtures.user import google_auth_user_payload, users_db_data
 
@@ -213,7 +213,7 @@ class GoogleLogoutViewTests(APITestCase):
             "email": google_auth_user_payload["email"],
             "name": google_auth_user_payload["name"],
         }
-        tokens = generate_google_token_pair(user_data)
+        tokens = generate_token_pair(user_data)
         self.client.cookies["ext-access"] = tokens["access_token"]
         self.client.cookies["ext-refresh"] = tokens["refresh_token"]
 
@@ -258,7 +258,7 @@ class UserViewProfileTrueTests(APITestCase):
             "email": "test@example.com",
             "name": "Test User",
         }
-        tokens = generate_google_token_pair(self.user_data)
+        tokens = generate_token_pair(self.user_data)
         self.client.cookies["ext-access"] = tokens["access_token"]
         self.client.cookies["ext-refresh"] = tokens["refresh_token"]
 

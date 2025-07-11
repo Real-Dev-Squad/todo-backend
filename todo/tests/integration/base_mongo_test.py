@@ -4,7 +4,7 @@ from django.test import TransactionTestCase, override_settings
 from pymongo import MongoClient
 from todo.models.user import UserModel
 from todo.tests.testcontainers.shared_mongo import get_shared_mongo_container
-from todo.utils.google_jwt_utils import generate_google_token_pair
+from todo.utils.jwt_utils import generate_token_pair
 from todo_project.db.config import DatabaseManager
 from rest_framework.test import APIClient
 from todo.tests.fixtures.user import google_auth_user_payload
@@ -63,7 +63,7 @@ class AuthenticatedMongoTestCase(BaseMongoTestCase):
         )
 
     def _set_auth_cookies(self):
-        tokens = generate_google_token_pair(self.user_data)
+        tokens = generate_token_pair(self.user_data)
         self.client.cookies["ext-access"] = tokens["access_token"]
         self.client.cookies["ext-refresh"] = tokens["refresh_token"]
 

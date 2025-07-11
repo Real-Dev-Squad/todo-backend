@@ -15,15 +15,14 @@ from todo.exceptions.task_exceptions import (
     TaskStateConflictException,
 )
 from todo.exceptions.user_exceptions import UserNotFoundException
-from .auth_exceptions import TokenExpiredError, TokenMissingError, TokenInvalidError
-from .google_auth_exceptions import (
-    GoogleAuthException,
-    GoogleTokenExpiredError,
-    GoogleTokenInvalidError,
-    GoogleRefreshTokenExpiredError,
-    GoogleAPIException,
-    GoogleUserNotFoundException,
-    GoogleTokenMissingError,
+from .auth_exceptions import (
+    AuthException,
+    TokenExpiredError,
+    TokenInvalidError,
+    RefreshTokenExpiredError,
+    APIException,
+    UserNotFoundException,
+    TokenMissingError,
 )
 
 
@@ -96,7 +95,7 @@ def handle_exception(exc, context):
         )
         return Response(data=final_response_data.model_dump(mode="json", exclude_none=True), status=status_code)
 
-    elif isinstance(exc, GoogleTokenMissingError):
+    elif isinstance(exc, TokenMissingError):
         status_code = status.HTTP_401_UNAUTHORIZED
         error_list.append(
             ApiErrorDetail(
@@ -112,7 +111,7 @@ def handle_exception(exc, context):
             authenticated=False,
         )
         return Response(data=final_response_data.model_dump(mode="json", exclude_none=True), status=status_code)
-    elif isinstance(exc, GoogleTokenExpiredError):
+    elif isinstance(exc, TokenExpiredError):
         status_code = status.HTTP_401_UNAUTHORIZED
         error_list.append(
             ApiErrorDetail(
@@ -128,7 +127,7 @@ def handle_exception(exc, context):
             authenticated=False,
         )
         return Response(data=final_response_data.model_dump(mode="json", exclude_none=True), status=status_code)
-    elif isinstance(exc, GoogleTokenInvalidError):
+    elif isinstance(exc, TokenInvalidError):
         status_code = status.HTTP_401_UNAUTHORIZED
         error_list.append(
             ApiErrorDetail(
@@ -144,7 +143,7 @@ def handle_exception(exc, context):
             authenticated=False,
         )
         return Response(data=final_response_data.model_dump(mode="json", exclude_none=True), status=status_code)
-    elif isinstance(exc, GoogleRefreshTokenExpiredError):
+    elif isinstance(exc, RefreshTokenExpiredError):
         status_code = status.HTTP_403_FORBIDDEN
         error_list.append(
             ApiErrorDetail(
@@ -153,7 +152,7 @@ def handle_exception(exc, context):
                 detail=str(exc),
             )
         )
-    elif isinstance(exc, GoogleAuthException):
+    elif isinstance(exc, AuthException):
         status_code = status.HTTP_400_BAD_REQUEST
         error_list.append(
             ApiErrorDetail(
@@ -162,7 +161,7 @@ def handle_exception(exc, context):
                 detail=str(exc),
             )
         )
-    elif isinstance(exc, GoogleAPIException):
+    elif isinstance(exc, APIException):
         status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         error_list.append(
             ApiErrorDetail(
@@ -171,7 +170,7 @@ def handle_exception(exc, context):
                 detail=str(exc),
             )
         )
-    elif isinstance(exc, GoogleUserNotFoundException):
+    elif isinstance(exc, UserNotFoundException):
         status_code = status.HTTP_404_NOT_FOUND
         error_list.append(
             ApiErrorDetail(

@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from todo.dto.responses.get_labels_response import GetLabelsResponse
 from todo.dto.label_dto import LabelDTO
 from todo.constants.messages import ApiErrors
-from todo.utils.google_jwt_utils import generate_google_token_pair
+from todo.utils.jwt_utils import generate_token_pair
 
 
 class AuthenticatedTestCase(APISimpleTestCase):
@@ -24,7 +24,7 @@ class AuthenticatedTestCase(APISimpleTestCase):
             "email": "test@example.com",
             "name": "Test User",
         }
-        tokens = generate_google_token_pair(user_data)
+        tokens = generate_token_pair(user_data)
 
         self.client.cookies["ext-access"] = tokens["access_token"]
         self.client.cookies["ext-refresh"] = tokens["refresh_token"]

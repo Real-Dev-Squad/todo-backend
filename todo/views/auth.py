@@ -9,9 +9,8 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiRespon
 from drf_spectacular.types import OpenApiTypes
 from todo.services.google_oauth_service import GoogleOAuthService
 from todo.services.user_service import UserService
-from todo.utils.google_jwt_utils import generate_google_token_pair
-from todo.constants.messages import ApiErrors, AppMessages
-from todo.middlewares.jwt_auth import get_current_user_info
+from todo.utils.jwt_utils import generate_token_pair
+from todo.constants.messages import AppMessages
 
 
 class GoogleLoginView(APIView):
@@ -45,15 +44,6 @@ class GoogleLoginView(APIView):
         redirect_url = request.query_params.get("redirectURL")
         auth_url, state = GoogleOAuthService.get_authorization_url(redirect_url)
         request.session["oauth_state"] = state
-
-        if request.headers.get("Accept") == "application/json" or request.query_params.get("format") == "json":
-            return Response(
-                {
-                    "statusCode": status.HTTP_200_OK,
-                    "message": "Google OAuth URL generated successfully",
-                    "data": {"authUrl": auth_url, "state": state},
-                }
-            )
 
         return HttpResponseRedirect(auth_url)
 
@@ -119,11 +109,9 @@ class GoogleCallbackView(APIView):
             google_data = GoogleOAuthService.handle_callback(code)
             user = UserService.create_or_update_user(google_data)
 
-            tokens = generate_google_token_pair(
+            tokens = generate_token_pair(
                 {
                     "user_id": str(user.id),
-                    "google_id": user.google_id,
-                    "email": user.email_id,
                     "name": user.name,
                 }
             )
@@ -144,20 +132,25 @@ class GoogleCallbackView(APIView):
         return {
             "path": "/",
             "domain": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
-            "secure": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SECURE", False),
+            "secure": True,
             "httponly": True,
-            "samesite": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SAMESITE", "Lax"),
+            "samesite": "Strict",
         }
 
     def _set_auth_cookies(self, response, tokens):
         config = self._get_cookie_config()
-        response.set_cookie("ext-access", tokens["access_token"], max_age=tokens["expires_in"], **config)
         response.set_cookie(
-            "ext-refresh", tokens["refresh_token"], max_age=settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"], **config
+            "ext-access", tokens["access_token"], max_age=tokens["expires_in"], **config
+        )
+        response.set_cookie(
+            "ext-refresh",
+            tokens["refresh_token"],
+            max_age=settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"],
+            **config,
         )
 
 
-class GoogleLogoutView(APIView):
+class LogoutView(APIView):
     @extend_schema(
         operation_id="google_logout",
         summary="Logout user",
@@ -213,15 +206,6 @@ class GoogleLogoutView(APIView):
         self._clear_auth_cookies(response)
         return response
 
-    def _get_cookie_config(self):
-        return {
-            "path": "/",
-            "domain": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
-            "secure": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SECURE", False),
-            "httponly": True,
-            "samesite": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SAMESITE", "Lax"),
-        }
-
     def _clear_auth_cookies(self, response):
         delete_config = {
             "path": "/",
@@ -232,20 +216,6 @@ class GoogleLogoutView(APIView):
 
         session_delete_config = {
             "path": getattr(settings, "SESSION_COOKIE_PATH", "/"),
-            "domain": getattr(settings, "SESSION_COOKIE_DOMAIN", None),
+            "domain": getattr(settings, "SESSION_COOKIE_DOMAIN"),
         }
         response.delete_cookie("sessionid", **session_delete_config)
-
-
-class UsersView(APIView):
-    def get(self, request: Request):
-        profile = request.query_params.get("profile")
-        if profile == "true":
-            user_info = get_current_user_info(request)
-            if not user_info:
-                raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
-            return Response(
-                {"statusCode": 200, "message": "Current user details fetched successfully", "data": user_info},
-                status=200,
-            )
-        return Response({"statusCode": 404, "message": "Route does not exist.", "data": None}, status=404)

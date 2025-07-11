@@ -5,7 +5,7 @@ from bson import ObjectId
 from todo.repositories.user_repository import UserRepository
 from todo.models.user import UserModel
 from todo.models.common.pyobjectid import PyObjectId
-from todo.exceptions.google_auth_exceptions import GoogleUserNotFoundException, GoogleAPIException
+from todo.exceptions.auth_exceptions import UserNotFoundException, APIException
 from todo.tests.fixtures.user import users_db_data
 from todo.constants.messages import RepositoryErrors
 
@@ -45,7 +45,7 @@ class UserRepositoryTests(TestCase):
         user_id = str(ObjectId())
         self.mock_collection.find_one.side_effect = Exception("Database error")
 
-        with self.assertRaises(GoogleUserNotFoundException):
+        with self.assertRaises(UserNotFoundException):
             UserRepository.get_by_id(user_id)
 
     @patch("todo.repositories.user_repository.DatabaseManager")
@@ -66,7 +66,7 @@ class UserRepositoryTests(TestCase):
         mock_db_manager.return_value = self.mock_db_manager
         self.mock_collection.find_one_and_update.return_value = None
 
-        with self.assertRaises(GoogleAPIException) as context:
+        with self.assertRaises(APIException) as context:
             UserRepository.create_or_update(self.valid_user_data)
         self.assertIn(RepositoryErrors.USER_OPERATION_FAILED, str(context.exception))
 
@@ -75,7 +75,7 @@ class UserRepositoryTests(TestCase):
         mock_db_manager.return_value = self.mock_db_manager
         self.mock_collection.find_one_and_update.side_effect = Exception("Database error")
 
-        with self.assertRaises(GoogleAPIException) as context:
+        with self.assertRaises(APIException) as context:
             UserRepository.create_or_update(self.valid_user_data)
         self.assertIn(RepositoryErrors.USER_CREATE_UPDATE_FAILED.format("Database error"), str(context.exception))
 

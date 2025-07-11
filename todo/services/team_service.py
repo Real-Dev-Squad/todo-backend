@@ -4,6 +4,7 @@ from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
 from todo.constants.messages import AppMessages
+from todo.utils.invite_code_utils import generate_invite_code
 
 DEFAULT_ROLE_ID = "1"
 
@@ -28,11 +29,15 @@ class TeamService:
             # Member IDs and POC ID validation is handled at DTO level
             member_ids = dto.member_ids or []
 
+            # Generate invite code
+            invite_code = generate_invite_code(dto.name)
+            
             # Create team
             team = TeamModel(
                 name=dto.name,
                 description=dto.description if dto.description else None,
                 poc_id=PyObjectId(dto.poc_id) if dto.poc_id else None,
+                invite_code=invite_code,
                 created_by=PyObjectId(created_by_user_id),
                 updated_by=PyObjectId(created_by_user_id),
             )
@@ -75,6 +80,7 @@ class TeamService:
                 name=created_team.name,
                 description=created_team.description,
                 poc_id=str(created_team.poc_id) if created_team.poc_id else None,
+                invite_code=created_team.invite_code,
                 created_by=str(created_team.created_by),
                 updated_by=str(created_team.updated_by),
                 created_at=created_team.created_at,

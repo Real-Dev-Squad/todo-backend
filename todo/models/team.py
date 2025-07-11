@@ -10,7 +10,7 @@ class ObjectIdValidatorMixin:
     @classmethod
     def validate_object_id(cls, v):
         if v is None:
-            raise ValueError(f"Object ID cannot be None")
+            raise ValueError("Object ID cannot be None")
         if not PyObjectId.is_valid(v):
             raise ValueError(f"Invalid Object ID format: {v}")
         return v
@@ -33,7 +33,7 @@ class TeamModel(Document, ObjectIdValidatorMixin):
     is_deleted: bool = False
 
     @validator("created_by", "updated_by", "poc_id")
-    def validate_object_id(cls, v:
+    def validate_object_id(cls, v):
         return cls.validate_object_id(v)
 
 

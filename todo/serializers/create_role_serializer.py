@@ -11,11 +11,16 @@ class CreateRoleSerializer(serializers.Serializer):
     created_by = serializers.CharField(max_length=100)
 
     def validate_name(self, value):
-        if not value.strip():
+        if not value or not value.strip():
             raise serializers.ValidationError("Role name cannot be blank")
         return value.strip()
 
     def validate_created_by(self, value):
-        if not value.strip():
+        if not value or not value.strip():
             raise serializers.ValidationError("Created by cannot be blank")
         return value.strip()
+
+    def validate_description(self, value):
+        if value:
+            return value.strip()
+        return value

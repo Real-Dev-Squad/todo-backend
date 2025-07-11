@@ -30,7 +30,13 @@ class RoleService:
 
     @classmethod
     def create_role(
-        cls, name: str, description: str, role_type: str, scope: str, is_active: bool, created_by: str
+        cls,
+        name: str,
+        description: Optional[str],
+        role_type: str,
+        scope: str,
+        is_active: bool,
+        created_by: str,
     ) -> RoleDTO:
         try:
             role_model = RoleModel(

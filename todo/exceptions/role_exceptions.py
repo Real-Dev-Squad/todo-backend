@@ -1,15 +1,13 @@
 class RoleNotFoundException(Exception):
     def __init__(self, role_id: str | None = None):
-        if role_id:
-            self.message = f"Role with ID {role_id} not found"
-        else:
-            self.message = "Role not found"
-        super().__init__(self.message)
+        message = f"Role with ID {role_id} not found" if role_id else "Role not found"
+        super().__init__(message)
 
 
 class RoleAlreadyExistsException(Exception):
-    def __init__(self, message: str):
-        self.message = message
+    def __init__(self, role_name: str):
+        self.role_name = role_name
+        self.message = f"Role with name '{role_name}' already exists"
         super().__init__(self.message)
 
 

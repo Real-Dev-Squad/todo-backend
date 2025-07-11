@@ -8,7 +8,7 @@ from drf_spectacular.types import OpenApiTypes
 
 from todo.serializers.create_role_serializer import CreateRoleSerializer
 from todo.serializers.update_role_serializer import UpdateRoleSerializer
-from todo.serializers.get_roles_serializer import GetRolesQuerySerializer
+from todo.serializers.get_roles_serializer import RoleQuerySerializer
 from todo.services.role_service import RoleService
 from todo.exceptions.role_exceptions import RoleNotFoundException, RoleAlreadyExistsException
 
@@ -47,7 +47,7 @@ class RoleListView(APIView):
     )
     def get(self, request: Request):
         try:
-            query_serializer = GetRolesQuerySerializer(data=request.query_params)
+            query_serializer = RoleQuerySerializer(data=request.query_params)
             query_serializer.is_valid(raise_exception=True)
 
             filters = {}
@@ -219,7 +219,7 @@ class RoleDetailView(APIView):
     def delete(self, request: Request, role_id: str):
         try:
             RoleService.delete_role(role_id)
-            return Response({"message": "Role deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
         except RoleNotFoundException as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)

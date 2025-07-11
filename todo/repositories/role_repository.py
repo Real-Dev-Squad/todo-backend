@@ -1,3 +1,4 @@
+from bson.errors import InvalidId
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from bson import ObjectId
@@ -5,7 +6,7 @@ from pymongo import ReturnDocument
 
 from todo.models.role import RoleModel
 from todo.repositories.common.mongo_repository import MongoRepository
-
+from todo.constants.role import RoleType, RoleScope
 
 class RoleRepository(MongoRepository):
     collection_name = RoleModel.collection_name
@@ -24,7 +25,29 @@ class RoleRepository(MongoRepository):
                 query["scope"] = filters["scope"]
 
         roles_cursor = roles_collection.find(query)
-        return [RoleModel(**role) for role in roles_cursor]
+        roles = []
+        
+        for role_doc in roles_cursor:
+            try:
+                role_model = cls._document_to_model(role_doc)
+                roles.append(role_model)
+            except Exception as e:
+                # Log the error and skip this document
+                print(f"Error converting role document to model: {e}")
+                print(f"Document: {role_doc}")
+                continue
+        
+        return roles
+
+    @classmethod
+    def _document_to_model(cls, role_doc: dict) -> RoleModel:
+        if "type" in role_doc and isinstance(role_doc["type"], str):
+            role_doc["type"] = RoleType(role_doc["type"])
+        
+        if "scope" in role_doc and isinstance(role_doc["scope"], str):
+            role_doc["scope"] = RoleScope(role_doc["scope"])
+        
+        return RoleModel(**role_doc)
 
     @classmethod
     def create(cls, role: RoleModel) -> RoleModel:
@@ -48,14 +71,14 @@ class RoleRepository(MongoRepository):
         roles_collection = cls.get_collection()
         role_data = roles_collection.find_one({"_id": ObjectId(role_id)})
         if role_data:
-            return RoleModel(**role_data)
+            return cls._document_to_model(role_data)
         return None
 
     @classmethod
     def update(cls, role_id: str, update_data: dict) -> Optional[RoleModel]:
         try:
             obj_id = ObjectId(role_id)
-        except Exception:
+        except InvalidId:
             return None
 
         if "name" in update_data:
@@ -74,7 +97,7 @@ class RoleRepository(MongoRepository):
         )
 
         if updated_role_doc:
-            return RoleModel(**updated_role_doc)
+            return cls._document_to_model(updated_role_doc)
         return None
 
     @classmethod
@@ -93,5 +116,5 @@ class RoleRepository(MongoRepository):
         roles_collection = cls.get_collection()
         role_data = roles_collection.find_one({"name": name})
         if role_data:
-            return RoleModel(**role_data)
+            return cls._document_to_model(role_data)
         return None

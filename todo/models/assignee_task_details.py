@@ -38,4 +38,4 @@ class AssigneeTaskDetailsModel(Document):
     def validate_relation_type(cls, v):
         if v not in ["team", "user"]:
             raise ValueError("relation_type must be either 'team' or 'user'")
-        return v 
+        return v

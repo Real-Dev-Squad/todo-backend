@@ -68,20 +68,20 @@ class UpdateTaskSerializer(serializers.Serializer):
     def validate_assignee(self, value):
         if not value:
             return None
-        
+
         if not isinstance(value, dict):
             raise serializers.ValidationError("Assignee must be a dictionary")
-        
+
         assignee_id = value.get("assignee_id")
         relation_type = value.get("relation_type")
-        
+
         if not assignee_id:
             raise serializers.ValidationError("assignee_id is required")
-        
+
         if not relation_type or relation_type not in ["team", "user"]:
             raise serializers.ValidationError("relation_type must be either 'team' or 'user'")
-        
+
         if not ObjectId.is_valid(assignee_id):
             raise serializers.ValidationError(ValidationErrors.INVALID_OBJECT_ID.format(assignee_id))
-        
+
         return value

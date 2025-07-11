@@ -44,17 +44,17 @@ class AssigneeTaskDetailsRepository(MongoRepository):
         """
         collection = cls.get_collection()
         try:
-            assignee_tasks_data = collection.find({
-                "assignee_id": ObjectId(assignee_id), 
-                "relation_type": relation_type,
-                "is_active": True
-            })
+            assignee_tasks_data = collection.find(
+                {"assignee_id": ObjectId(assignee_id), "relation_type": relation_type, "is_active": True}
+            )
             return [AssigneeTaskDetailsModel(**data) for data in assignee_tasks_data]
         except Exception:
             return []
 
     @classmethod
-    def update_assignee(cls, task_id: str, assignee_id: str, relation_type: str, user_id: str) -> Optional[AssigneeTaskDetailsModel]:
+    def update_assignee(
+        cls, task_id: str, assignee_id: str, relation_type: str, user_id: str
+    ) -> Optional[AssigneeTaskDetailsModel]:
         """
         Update the assignee for a task.
         """
@@ -67,11 +67,11 @@ class AssigneeTaskDetailsRepository(MongoRepository):
                     "$set": {
                         "is_active": False,
                         "updated_by": ObjectId(user_id),
-                        "updated_at": datetime.now(timezone.utc)
+                        "updated_at": datetime.now(timezone.utc),
                     }
-                }
+                },
             )
-            
+
             # Create new assignee relationship
             new_assignee = AssigneeTaskDetailsModel(
                 assignee_id=ObjectId(assignee_id),
@@ -80,7 +80,7 @@ class AssigneeTaskDetailsRepository(MongoRepository):
                 created_by=ObjectId(user_id),
                 updated_by=None,
             )
-            
+
             return cls.create(new_assignee)
         except Exception:
             return None
@@ -98,10 +98,10 @@ class AssigneeTaskDetailsRepository(MongoRepository):
                     "$set": {
                         "is_active": False,
                         "updated_by": ObjectId(user_id),
-                        "updated_at": datetime.now(timezone.utc)
+                        "updated_at": datetime.now(timezone.utc),
                     }
-                }
+                },
             )
             return result.modified_count > 0
         except Exception:
-            return False 
+            return False

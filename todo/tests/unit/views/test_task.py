@@ -348,11 +348,7 @@ class CreateTaskViewTests(AuthenticatedMongoTestCase):
             priority=TaskPriority[self.valid_payload["priority"]],
             status=TaskStatus[self.valid_payload["status"]],
             assignee=AssigneeInfoDTO(
-                id=self.user_id,
-                name="SYSTEM",
-                relation_type="user",
-                is_action_taken=False,
-                is_active=True
+                id=self.user_id, name="SYSTEM", relation_type="user", is_action_taken=False, is_active=True
             ),
             isAcknowledged=False,
             labels=[],
@@ -485,11 +481,7 @@ class TaskDetailViewPatchTests(AuthenticatedMongoTestCase):
             priority=TaskPriority.HIGH.value,
             status=TaskStatus.IN_PROGRESS.value,
             assignee=AssigneeInfoDTO(
-                id="user_assignee_id",
-                name="SYSTEM",
-                relation_type="user",
-                is_action_taken=False,
-                is_active=True
+                id="user_assignee_id", name="SYSTEM", relation_type="user", is_action_taken=False, is_active=True
             ),
             isAcknowledged=True,
             labels=[],

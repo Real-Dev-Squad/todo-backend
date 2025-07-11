@@ -12,7 +12,7 @@ class TaskDetailAPIIntegrationTest(AuthenticatedMongoTestCase):
         super().setUp()
         self.db.tasks.delete_many({})
         self.db.assignee_task_details.delete_many({})
-        
+
         self.task_doc = tasks_db_data[1].copy()
         self.task_doc["_id"] = self.task_doc.pop("id")
         # Remove assignee from task document since it's now in separate collection

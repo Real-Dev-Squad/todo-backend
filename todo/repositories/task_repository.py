@@ -43,21 +43,20 @@ class TaskRepository(MongoRepository):
         """Get task IDs where user is assigned (either directly or as team member)."""
         direct_assignments = AssigneeTaskDetailsRepository.get_by_assignee_id(user_id, "user")
         direct_task_ids = [assignment.task_id for assignment in direct_assignments]
-        
+
         # Get teams where user is a member
         from todo.repositories.team_repository import UserTeamDetailsRepository
+
         user_teams = UserTeamDetailsRepository.get_by_user_id(user_id)
         team_ids = [str(team.team_id) for team in user_teams]
-        
+
         # Get tasks assigned to those teams
         team_task_ids = []
         for team_id in team_ids:
             team_assignments = AssigneeTaskDetailsRepository.get_by_assignee_id(team_id, "team")
             team_task_ids.extend([assignment.task_id for assignment in team_assignments])
-        
+
         return direct_task_ids + team_task_ids
-
-
 
     @classmethod
     def count(cls, user_id: str = None) -> int:

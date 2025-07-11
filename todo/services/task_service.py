@@ -170,7 +170,7 @@ class TaskService:
     def _prepare_assignee_dto(cls, assignee_details: AssigneeTaskDetailsModel) -> AssigneeInfoDTO:
         """Prepare assignee DTO from assignee task details."""
         assignee_id = str(assignee_details.assignee_id)
-        
+
         # Get assignee details based on relation type
         if assignee_details.relation_type == "user":
             assignee = UserRepository.get_by_id(assignee_id)
@@ -178,10 +178,10 @@ class TaskService:
             assignee = TeamRepository.get_by_id(assignee_id)
         else:
             return None
-            
+
         if not assignee:
             return None
-            
+
         return AssigneeInfoDTO(
             id=assignee_id,
             name=assignee.name,
@@ -262,7 +262,7 @@ class TaskService:
             assignee_info = validated_data["assignee"]
             assignee_id = assignee_info.get("assignee_id")
             relation_type = assignee_info.get("relation_type")
-            
+
             if relation_type == "user":
                 assignee_data = UserRepository.get_by_id(assignee_id)
                 if not assignee_data:
@@ -287,10 +287,7 @@ class TaskService:
         if "assignee" in validated_data:
             assignee_info = validated_data["assignee"]
             AssigneeTaskDetailsRepository.update_assignee(
-                task_id, 
-                assignee_info["assignee_id"], 
-                assignee_info["relation_type"], 
-                user_id
+                task_id, assignee_info["assignee_id"], assignee_info["relation_type"], user_id
             )
 
         if not update_payload:
@@ -365,7 +362,7 @@ class TaskService:
         if dto.assignee:
             assignee_id = dto.assignee.get("assignee_id")
             relation_type = dto.assignee.get("relation_type")
-            
+
             if relation_type == "user":
                 user = UserRepository.get_by_id(assignee_id)
                 if not user:
@@ -414,7 +411,7 @@ class TaskService:
 
         try:
             created_task = TaskRepository.create(task)
-            
+
             # Create assignee relationship if assignee is provided
             if dto.assignee:
                 assignee_relationship = AssigneeTaskDetailsModel(
@@ -422,10 +419,10 @@ class TaskService:
                     task_id=created_task.id,
                     relation_type=dto.assignee["relation_type"],
                     created_by=PyObjectId(dto.createdBy),
-                    updated_by=None, 
+                    updated_by=None,
                 )
                 AssigneeTaskDetailsRepository.create(assignee_relationship)
-            
+
             task_dto = cls.prepare_task_dto(created_task)
             return CreateTaskResponse(data=task_dto)
         except ValueError as e:

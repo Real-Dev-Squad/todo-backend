@@ -32,7 +32,7 @@ class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
             task_fixture.pop("dueAt", None)
 
         self.db.tasks.insert_one(task_fixture)
-        
+
         # Create assignee task details in separate collection
         assignee_details = {
             "_id": ObjectId(),
@@ -47,7 +47,7 @@ class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
             "updated_at": None,
         }
         self.db.assignee_task_details.insert_one(assignee_details)
-        
+
         return str(new_id)
 
     def test_defer_task_success(self):

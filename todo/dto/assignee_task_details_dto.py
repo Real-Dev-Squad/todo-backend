@@ -3,9 +3,6 @@ from typing import Optional, Literal
 from datetime import datetime
 from bson import ObjectId
 
-from todo.repositories.user_repository import UserRepository
-from todo.repositories.team_repository import TeamRepository
-
 
 class CreateAssigneeTaskDetailsDTO(BaseModel):
     assignee_id: str
@@ -52,4 +49,4 @@ class AssigneeInfoDTO(BaseModel):
     name: str
     relation_type: Literal["team", "user"]
     is_action_taken: bool
-    is_active: bool 
+    is_active: bool

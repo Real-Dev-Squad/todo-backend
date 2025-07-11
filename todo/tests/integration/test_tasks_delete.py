@@ -13,13 +13,13 @@ class TaskDeleteAPIIntegrationTest(AuthenticatedMongoTestCase):
         super().setUp()
         self.db.tasks.delete_many({})
         self.db.assignee_task_details.delete_many({})
-        
+
         task_doc = tasks_db_data[0].copy()
         task_doc["_id"] = task_doc.pop("id")
         # Remove assignee from task document since it's now in separate collection
         task_doc.pop("assignee", None)
         self.db.tasks.insert_one(task_doc)
-        
+
         # Create assignee task details in separate collection
         assignee_details = {
             "_id": ObjectId(),
@@ -34,7 +34,7 @@ class TaskDeleteAPIIntegrationTest(AuthenticatedMongoTestCase):
             "updated_at": None,
         }
         self.db.assignee_task_details.insert_one(assignee_details)
-        
+
         self.existing_task_id = str(task_doc["_id"])
         self.non_existent_id = str(ObjectId())
         self.invalid_task_id = "invalid-task-id"

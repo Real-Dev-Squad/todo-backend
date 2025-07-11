@@ -60,7 +60,7 @@ class TaskListView(APIView):
             response = TaskService.get_tasks_for_user(
                 user_id=user["user_id"], page=query.validated_data["page"], limit=query.validated_data["limit"]
             )
-            return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
+            return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
 
         user = get_current_user_info(request)
         if not user:
@@ -73,7 +73,7 @@ class TaskListView(APIView):
             order=query.validated_data.get("order"),
             user_id=user["user_id"],
         )
-        return Response(data=response.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
+        return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
 
     @extend_schema(
         operation_id="create_task",
@@ -256,4 +256,4 @@ class TaskDetailView(APIView):
         else:
             raise ValidationError({"action": ValidationErrors.UNSUPPORTED_ACTION.format(action)})
 
-        return Response(data=updated_task_dto.model_dump(mode="json", exclude_none=True), status=status.HTTP_200_OK)
+        return Response(data=updated_task_dto.model_dump(mode="json"), status=status.HTTP_200_OK)

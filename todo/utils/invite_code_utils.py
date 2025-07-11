@@ -21,7 +21,6 @@ def generate_invite_code(team_name: str) -> str:
     base36 = ""
     characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-
     while len(base36) < 6:
         hash_int, i = divmod(hash_int, 36) if hash_int > 0 else (0, 0)
         base36 = characters[i] + base36

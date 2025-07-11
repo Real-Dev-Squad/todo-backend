@@ -81,6 +81,17 @@ class UsersView(APIView):
         try:
             users, total_count = UserService.search_users(search, page, limit)
 
+            # Return 204 if no users found
+            if not users:
+                return Response(
+                    {
+                        "statusCode": status.HTTP_204_NO_CONTENT,
+                        "message": "No users found",
+                        "data": None,
+                    },
+                    status=status.HTTP_204_NO_CONTENT,
+                )
+
             user_dtos = [
                 UserSearchDTO(
                     id=str(user.id),

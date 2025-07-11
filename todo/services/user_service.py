@@ -29,13 +29,8 @@ class UserService:
         """
         Search users by name or email using fuzzy search
         """
-        try:
-            cls._validate_search_params(query, page, limit)
-            return UserRepository.search_users(query, page, limit)
-        except (GoogleUserNotFoundException, GoogleAPIException, DRFValidationError):
-            raise
-        except Exception as e:
-            raise GoogleAPIException(f"User search failed: {str(e)}") from e
+        cls._validate_search_params(query, page, limit)
+        return UserRepository.search_users(query, page, limit)
 
     @classmethod
     def _validate_google_user_data(cls, google_user_data: dict) -> None:

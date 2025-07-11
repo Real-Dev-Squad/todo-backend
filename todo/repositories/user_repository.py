@@ -61,23 +61,12 @@ class UserRepository:
         """
         Search users by name or email using fuzzy search with MongoDB regex
         """
-        try:
-            collection = cls._get_collection()
 
-            # Create case-insensitive regex pattern for fuzzy search
-            regex_pattern = {"$regex": query, "$options": "i"}
-
-            # Search in both name and email fields
-            search_filter = {"$or": [{"name": regex_pattern}, {"email_id": regex_pattern}]}
-
-            skip = (page - 1) * limit
-            total_count = collection.count_documents(search_filter)
-
-            cursor = collection.find(search_filter).sort("name", ASCENDING).skip(skip).limit(limit)
-
-            users = [UserModel(**doc) for doc in cursor]
-
-            return users, total_count
-
-        except Exception as e:
-            raise GoogleAPIException(f"User search failed: {str(e)}")
+        collection = cls._get_collection()
+        regex_pattern = {"$regex": query, "$options": "i"}
+        search_filter = {"$or": [{"name": regex_pattern}, {"email_id": regex_pattern}]}
+        skip = (page - 1) * limit
+        total_count = collection.count_documents(search_filter)
+        cursor = collection.find(search_filter).sort("name", ASCENDING).skip(skip).limit(limit)
+        users = [UserModel(**doc) for doc in cursor]
+        return users, total_count

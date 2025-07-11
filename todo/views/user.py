@@ -78,62 +78,41 @@ class UsersView(APIView):
         if not search:
             return Response({"statusCode": 404, "message": "Route does not exist.", "data": None}, status=404)
 
-        try:
-            users, total_count = UserService.search_users(search, page, limit)
+        users, total_count = UserService.search_users(search, page, limit)
 
-            # Return 204 if no users found
-            if not users:
-                return Response(
-                    {
-                        "statusCode": status.HTTP_204_NO_CONTENT,
-                        "message": "No users found",
-                        "data": None,
-                    },
-                    status=status.HTTP_204_NO_CONTENT,
-                )
-
-            user_dtos = [
-                UserSearchDTO(
-                    id=str(user.id),
-                    name=user.name,
-                    email_id=user.email_id,
-                    created_at=user.created_at,
-                    updated_at=user.updated_at,
-                )
-                for user in users
-            ]
-
-            response_data = UserSearchResponseDTO(
-                users=user_dtos,
-                total_count=total_count,
-                page=page,
-                limit=limit,
-            )
-
+        if not users:
             return Response(
                 {
-                    "statusCode": status.HTTP_200_OK,
-                    "message": "Users searched successfully",
-                    "data": response_data.model_dump(),
+                    "statusCode": status.HTTP_204_NO_CONTENT,
+                    "message": "No users found",
+                    "data": None,
                 },
-                status=status.HTTP_200_OK,
+                status=status.HTTP_204_NO_CONTENT,
             )
 
-        except ValueError as e:
-            return Response(
-                {
-                    "statusCode": status.HTTP_400_BAD_REQUEST,
-                    "message": "Invalid parameters",
-                    "error": str(e),
-                },
-                status=status.HTTP_400_BAD_REQUEST,
+        user_dtos = [
+            UserSearchDTO(
+                id=str(user.id),
+                name=user.name,
+                email_id=user.email_id,
+                created_at=user.created_at,
+                updated_at=user.updated_at,
             )
-        except Exception as e:
-            return Response(
-                {
-                    "statusCode": status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    "message": "Internal server error",
-                    "error": str(e),
-                },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            for user in users
+        ]
+
+        response_data = UserSearchResponseDTO(
+            users=user_dtos,
+            total_count=total_count,
+            page=page,
+            limit=limit,
+        )
+
+        return Response(
+            {
+                "statusCode": status.HTTP_200_OK,
+                "message": "Users searched successfully",
+                "data": response_data.model_dump(),
+            },
+            status=status.HTTP_200_OK,
+        )

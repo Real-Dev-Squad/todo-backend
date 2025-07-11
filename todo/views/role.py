@@ -61,7 +61,7 @@ class RoleListView(APIView):
             role_dtos = RoleService.get_all_roles(filters=filters)
             roles_data = [role_dto.model_dump() for role_dto in role_dtos]
 
-            return Response({"roles": roles_data, "total": len(roles_data)}, status=status.HTTP_200_OK)
+            return Response({"data": roles_data, "total": len(roles_data)}, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response(
@@ -101,7 +101,7 @@ class RoleListView(APIView):
             )
 
             return Response(
-                {"role": role_dto.model_dump(), "message": "Role created successfully"}, status=status.HTTP_201_CREATED
+                {"data": role_dto.model_dump(), "message": "Role created successfully"}, status=status.HTTP_201_CREATED
             )
 
         except RoleAlreadyExistsException as e:
@@ -137,7 +137,7 @@ class RoleDetailView(APIView):
     def get(self, request: Request, role_id: str):
         try:
             role_dto = RoleService.get_role_by_id(role_id)
-            return Response({"role": role_dto.model_dump()}, status=status.HTTP_200_OK)
+            return Response({"data": role_dto.model_dump()}, status=status.HTTP_200_OK)
 
         except RoleNotFoundException as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)

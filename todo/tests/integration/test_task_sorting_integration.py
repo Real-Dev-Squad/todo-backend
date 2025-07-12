@@ -39,30 +39,23 @@ class TaskSortingIntegrationTest(AuthenticatedMongoTestCase):
         mock_list.assert_called_with(1, 20, SORT_FIELD_DUE_AT, SORT_ORDER_ASC, str(self.user_id))
 
     @patch("todo.repositories.task_repository.TaskRepository.count")
-    @patch("todo.repositories.task_repository.TaskRepository._list_sorted_by_assignee")
-    def test_assignee_sorting_uses_aggregation(self, mock_assignee_sort, mock_count):
-        mock_assignee_sort.return_value = []
+    @patch("todo.repositories.task_repository.TaskRepository.list")
+    def test_assignee_sorting_uses_aggregation(self, mock_list, mock_count):
+        mock_list.return_value = []
         mock_count.return_value = 0
 
         response = self.client.get("/v1/tasks", {"sort_by": "assignee", "order": "asc"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        mock_assignee_sort.assert_called_once_with(1, 20, SORT_ORDER_ASC, str(self.user_id))
+        # Assignee sorting now falls back to createdAt sorting
+        mock_list.assert_called_once_with(1, 20, SORT_FIELD_ASSIGNEE, SORT_ORDER_ASC, str(self.user_id))
 
     @patch("todo.repositories.task_repository.TaskRepository.count")
-    @patch("todo.repositories.task_repository.TaskRepository._list_sorted_by_assignee")
     @patch("todo.repositories.task_repository.TaskRepository.list")
-    def test_field_specific_defaults_integration(self, mock_list, mock_assignee_sort, mock_count):
-        mock_assignee_sort.return_value = []
+    def test_field_specific_defaults_integration(self, mock_list, mock_count):
+        mock_list.return_value = []
         mock_count.return_value = 0
-
-        def list_side_effect(page, limit, sort_by, order, user_id):
-            if sort_by == SORT_FIELD_ASSIGNEE:
-                return mock_assignee_sort(page, limit, order, user_id)
-            return []
-
-        mock_list.side_effect = list_side_effect
 
         test_cases = [
             (SORT_FIELD_CREATED_AT, SORT_ORDER_DESC),
@@ -74,18 +67,12 @@ class TaskSortingIntegrationTest(AuthenticatedMongoTestCase):
         for sort_field, expected_order in test_cases:
             with self.subTest(sort_field=sort_field, expected_order=expected_order):
                 mock_list.reset_mock()
-                mock_assignee_sort.reset_mock()
                 mock_count.reset_mock()
-                mock_list.side_effect = list_side_effect
 
                 response = self.client.get("/v1/tasks", {"sort_by": sort_field})
 
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-                if sort_field == SORT_FIELD_ASSIGNEE:
-                    mock_assignee_sort.assert_called_with(1, 20, expected_order, str(self.user_id))
-                else:
-                    mock_list.assert_called_with(1, 20, sort_field, expected_order, str(self.user_id))
+                mock_list.assert_called_with(1, 20, sort_field, expected_order, str(self.user_id))
 
     @patch("todo.repositories.task_repository.TaskRepository.count")
     @patch("todo.repositories.task_repository.TaskRepository.list")

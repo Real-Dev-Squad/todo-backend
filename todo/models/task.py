@@ -29,7 +29,6 @@ class TaskModel(Document):
     description: str | None = None
     priority: TaskPriority | None = TaskPriority.LOW
     status: TaskStatus | None = TaskStatus.TODO
-    assignee: str | None = None
     isAcknowledged: bool = False
     labels: List[PyObjectId] | None = []
     isDeleted: bool = False

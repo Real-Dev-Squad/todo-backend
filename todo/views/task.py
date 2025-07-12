@@ -57,6 +57,19 @@ class TaskListView(APIView):
         """
         query = GetTaskQueryParamsSerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
+        if query.validated_data["profile"]:
+            user = get_current_user_info(request)
+            if not user:
+                raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
+            response = TaskService.get_tasks_for_user(
+                user_id=user["user_id"],
+                page=query.validated_data["page"],
+                limit=query.validated_data["limit"],
+            )
+            return Response(
+                data=response.model_dump(mode="json"), status=status.HTTP_200_OK
+            )
+
         user = get_current_user_info(request)
         if query.validated_data["profile"]:
             response = TaskService.get_tasks_for_user(
@@ -77,8 +90,7 @@ class TaskListView(APIView):
             user_id=user["user_id"],
         )
         return Response(
-            data=response.model_dump(mode="json", exclude_none=True),
-            status=status.HTTP_200_OK,
+            data=response.model_dump(mode="json"), status=status.HTTP_200_OK
         )
 
     @extend_schema(
@@ -290,6 +302,5 @@ class TaskDetailView(APIView):
             )
 
         return Response(
-            data=updated_task_dto.model_dump(mode="json", exclude_none=True),
-            status=status.HTTP_200_OK,
+            data=updated_task_dto.model_dump(mode="json"), status=status.HTTP_200_OK
         )

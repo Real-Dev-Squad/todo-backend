@@ -1,18 +1,22 @@
 # Application Messages
 class AppMessages:
     TASK_CREATED = "Task created successfully"
+    TEAM_CREATED = "Team created successfully"
     GOOGLE_LOGIN_SUCCESS = "Successfully logged in with Google"
     GOOGLE_LOGOUT_SUCCESS = "Successfully logged out"
     TOKEN_REFRESHED = "Access token refreshed successfully"
+    USERS_SEARCHED_SUCCESS = "Users searched successfully"
 
 
 # Repository error messages
 class RepositoryErrors:
     TASK_CREATION_FAILED = "Failed to create task: {0}"
+    TEAM_CREATION_FAILED = "Failed to create team: {0}"
     DB_INIT_FAILED = "Failed to initialize database: {0}"
     USER_NOT_FOUND = "User not found: {0}"
     USER_OPERATION_FAILED = "User operation failed"
     USER_CREATE_UPDATE_FAILED = "User create/update failed: {0}"
+    USER_SEARCH_FAILED = "User search failed: {0}"
 
 
 # API error messages
@@ -44,6 +48,7 @@ class ApiErrors:
     UNAUTHORIZED_TITLE = "You are not authorized to perform this action"
     USER_NOT_FOUND = "User with ID {0} not found."
     USER_NOT_FOUND_GENERIC = "User not found."
+    SEARCH_QUERY_EMPTY = "Search query cannot be empty"
 
 
 # Validation error messages
@@ -66,6 +71,7 @@ class ValidationErrors:
     MISSING_GOOGLE_ID = "Google ID is required"
     MISSING_EMAIL = "Email is required"
     MISSING_NAME = "Name is required"
+    SEARCH_QUERY_EMPTY = "Search query cannot be empty"
 
 
 # Auth messages

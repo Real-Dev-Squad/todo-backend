@@ -87,7 +87,9 @@ class GoogleCallbackView(APIView):
         state = request.query_params.get("state")
         error = request.query_params.get("error")
         
-        frontend_callback = f"{settings.SERVICES.get("TODO_UI").get("URL")}/{settings.SERVICES.get("TODO_UI").get("REDIRECT_PATH")}"
+        todo_ui_config = settings.SERVICES.get("TODO_UI", {})
+        frontend_callback = f"{todo_ui_config.get('URL', '')}/{todo_ui_config.get('REDIRECT_PATH', '')}"
+
         if error:
             return HttpResponseRedirect(f"{frontend_callback}?error={error}")
 
@@ -125,9 +127,9 @@ class GoogleCallbackView(APIView):
         return {
             "path": "/",
             "domain": settings.COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
-            "secure": True,
-            "httponly": True,
-            "samesite": "Strict",
+            "secure": settings.COOKIE_SETTINGS.get("COOKIE_SECURE"),
+            "httponly": settings.COOKIE_SETTINGS.get("COOKIE_HTTPONLY"),
+            "samesite": settings.COOKIE_SETTINGS.get("COOKIE_SAMESITE"),
         }
 
     def _set_auth_cookies(self, response, tokens):

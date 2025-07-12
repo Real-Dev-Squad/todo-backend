@@ -48,8 +48,6 @@ class JWTAuthenticationMiddleware:
                 )
 
         except (TokenMissingError, TokenExpiredError, TokenInvalidError) as e:
-            return self._handle_rds_auth_error(e)
-        except (TokenExpiredError, TokenInvalidError) as e:
             return self._handle_auth_error(e)
         except Exception:
             error_response = ApiErrorResponse(
@@ -90,7 +88,7 @@ class JWTAuthenticationMiddleware:
     def _try_refresh(self, request) -> bool:
         """Try to refresh access token"""
         try:
-            refresh_token = request.COOKIES.get("ext-refresh")
+            refresh_token = (settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME"),)
             if not refresh_token:
                 return False
             payload = validate_refresh_token(refresh_token)
@@ -118,11 +116,11 @@ class JWTAuthenticationMiddleware:
         request.user_id = payload["user_id"]
 
     def _process_response(self, request, response):
-        """Process response and set new cookies if Google token was refreshed"""
+        """Process response and set new cookies if token was refreshed"""
         if hasattr(request, "_new_access_token"):
             config = self._get_cookie_config()
             response.set_cookie(
-                settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME"),
+                settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"),
                 request._new_access_token,
                 max_age=request._access_token_expires,
                 **config,

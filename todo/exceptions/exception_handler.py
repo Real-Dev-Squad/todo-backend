@@ -14,7 +14,6 @@ from todo.exceptions.task_exceptions import (
     UnprocessableEntityException,
     TaskStateConflictException,
 )
-from todo.exceptions.user_exceptions import UserNotFoundException
 from .auth_exceptions import (
     AuthException,
     TokenExpiredError,

@@ -1,7 +1,7 @@
 from todo.models.user import UserModel
 from todo.repositories.user_repository import UserRepository
 from todo.constants.messages import ValidationErrors, RepositoryErrors
-from todo.exceptions.exception_handler import (
+from todo.exceptions.auth_exceptions import (
     UserNotFoundException,
     APIException,
 )

@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.request import Request
 from django.conf import settings
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from todo.serializers.create_team_serializer import CreateTeamSerializer
 from todo.services.team_service import TeamService
@@ -13,6 +14,19 @@ from todo.constants.messages import ApiErrors
 
 
 class TeamListView(APIView):
+    @extend_schema(
+        operation_id="create_team",
+        summary="Create a new team",
+        description="Create a new team with the provided details. The current user will be set as the team creator.",
+        tags=["teams"],
+        request=CreateTeamSerializer,
+        responses={
+            201: CreateTeamResponse,
+            400: OpenApiResponse(description="Bad request - Invalid team data"),
+            401: OpenApiResponse(description="Unauthorized - Authentication required"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+    )
     def post(self, request: Request):
         """
         Create a new team.

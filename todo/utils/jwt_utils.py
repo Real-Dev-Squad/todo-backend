@@ -14,7 +14,9 @@ from todo.constants.messages import AuthErrorMessages
 def generate_access_token(user_data: dict) -> str:
     try:
         now = datetime.now(timezone.utc)
-        expiry = now + timedelta(seconds=settings.GOOGLE_JWT["ACCESS_TOKEN_LIFETIME"])
+        expiry = now + timedelta(
+            seconds=settings.JWT_CONFIG.get("ACCESS_TOKEN_LIFETIME")
+        )
 
         payload = {
             "iss": "todo-app-auth",
@@ -27,8 +29,8 @@ def generate_access_token(user_data: dict) -> str:
 
         token = jwt.encode(
             payload=payload,
-            key=settings.GOOGLE_JWT["PRIVATE_KEY"],
-            algorithm=settings.GOOGLE_JWT["ALGORITHM"],
+            key=settings.JWT_CONFIG.get("PRIVATE_KEY"),
+            algorithm=settings.JWT_CONFIG.get("ALGORITHM"),
         )
         return token
 
@@ -39,7 +41,9 @@ def generate_access_token(user_data: dict) -> str:
 def generate_refresh_token(user_data: dict) -> str:
     try:
         now = datetime.now(timezone.utc)
-        expiry = now + timedelta(seconds=settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"])
+        expiry = now + timedelta(
+            seconds=settings.JWT_CONFIG.get("REFRESH_TOKEN_LIFETIME")
+        )
 
         payload = {
             "iss": "todo-app-auth",
@@ -51,8 +55,8 @@ def generate_refresh_token(user_data: dict) -> str:
         }
         token = jwt.encode(
             payload=payload,
-            key=settings.GOOGLE_JWT["PRIVATE_KEY"],
-            algorithm=settings.GOOGLE_JWT["ALGORITHM"],
+            key=settings.JWT_CONFIG.get("PRIVATE_KEY"),
+            algorithm=settings.JWT_CONFIG.get("ALGORITHM"),
         )
 
         return token
@@ -65,8 +69,8 @@ def validate_access_token(token: str) -> dict:
     try:
         payload = jwt.decode(
             jwt=token,
-            key=settings.GOOGLE_JWT["PUBLIC_KEY"],
-            algorithms=[settings.GOOGLE_JWT["ALGORITHM"]],
+            key=settings.JWT_CONFIG.get("PUBLIC_KEY"),
+            algorithms=[settings.JWT_CONFIG.get("ALGORITHM")],
         )
 
         if payload.get("token_type") != "access":
@@ -86,8 +90,8 @@ def validate_refresh_token(token: str) -> dict:
     try:
         payload = jwt.decode(
             jwt=token,
-            key=settings.GOOGLE_JWT["PUBLIC_KEY"],
-            algorithms=[settings.GOOGLE_JWT["ALGORITHM"]],
+            key=settings.JWT_CONFIG.get("PUBLIC_KEY"),
+            algorithms=[settings.JWT_CONFIG.get("ALGORITHM")],
         )
         if payload.get("token_type") != "refresh":
             raise TokenInvalidError(AuthErrorMessages.TOKEN_INVALID)
@@ -109,5 +113,5 @@ def generate_token_pair(user_data: dict) -> dict:
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
-        "expires_in": settings.GOOGLE_JWT["ACCESS_TOKEN_LIFETIME"],
+        "expires_in": settings.JWT_CONFIG.get("ACCESS_TOKEN_LIFETIME"),
     }

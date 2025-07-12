@@ -24,7 +24,7 @@ class GoogleOAuthService:
                 "client_id": settings.GOOGLE_OAUTH["CLIENT_ID"],
                 "redirect_uri": redirect_url or settings.GOOGLE_OAUTH["REDIRECT_URI"],
                 "response_type": "code",
-                "scope": " ".join(settings.GOOGLE_OAUTH["SCOPES"]),
+                "scope": "openid email profile",
                 "access_type": "offline",
                 "prompt": "consent",
                 "state": state,
@@ -95,7 +95,7 @@ class GoogleOAuthService:
                 )
 
             user_info = response.json()
-            
+
             required_fields = ["id", "email", "name"]
             missing_fields = [
                 field for field in required_fields if field not in user_info

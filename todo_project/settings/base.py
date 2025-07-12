@@ -14,7 +14,7 @@ SECRET_KEY = os.getenv(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(",")
 
 MONGODB_URI = os.getenv("MONGODB_URI")
 DB_NAME = os.getenv("DB_NAME")
@@ -30,6 +30,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -98,33 +99,26 @@ REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
+# APPEND_SLASH = False # Fix the routing issue with trailing slashes and then uncomment this line
+
 JWT_AUTH = {
     "ALGORITHM": "RS256",
-    "PUBLIC_KEY": os.getenv("RDS_PUBLIC_KEY") or "",
-}
-
-JWT_COOKIE_SETTINGS = {
-    "RDS_SESSION_COOKIE_NAME": os.getenv("RDS_SESSION_COOKIE_NAME", "rds-session-development"),
-    "RDS_SESSION_V2_COOKIE_NAME": os.getenv("RDS_SESSION_V2_COOKIE_NAME", "rds-session-v2-development"),
-    "COOKIE_DOMAIN": os.getenv("COOKIE_DOMAIN", None),
-    "COOKIE_SECURE": os.getenv("COOKIE_SECURE", "True").lower() == "true",
-    "COOKIE_HTTPONLY": True,
-    "COOKIE_SAMESITE": os.getenv("COOKIE_SAMESITE", "None"),
-    "COOKIE_PATH": "/",
+    "PUBLIC_KEY": os.getenv("RDS_PUBLIC_KEY"),
 }
 
 GOOGLE_OAUTH = {
     "CLIENT_ID": os.getenv("GOOGLE_OAUTH_CLIENT_ID"),
     "CLIENT_SECRET": os.getenv("GOOGLE_OAUTH_CLIENT_SECRET"),
     "REDIRECT_URI": os.getenv("GOOGLE_OAUTH_REDIRECT_URI"),
-    "SCOPES": ["openid", "email", "profile"],
 }
 
-TESTING = "test" in sys.argv or "pytest" in sys.modules or os.getenv("TESTING") == "True"
+TESTING = (
+    "test" in sys.argv or "pytest" in sys.modules or os.getenv("TESTING") == "True"
+)
 
 if TESTING:
     # Test JWT configuration (HS256 - simpler for tests)
-    GOOGLE_JWT = {
+    JWT_CONFIG = {
         "ALGORITHM": "HS256",
         "PRIVATE_KEY": "test-secret-key-for-jwt-signing-very-long-key-needed-for-security",
         "PUBLIC_KEY": "test-secret-key-for-jwt-signing-very-long-key-needed-for-security",
@@ -132,7 +126,7 @@ if TESTING:
         "REFRESH_TOKEN_LIFETIME": int(os.getenv("REFRESH_LIFETIME", "604800")),
     }
 else:
-    GOOGLE_JWT = {
+    JWT_CONFIG = {
         "ALGORITHM": "RS256",
         "PRIVATE_KEY": os.getenv("PRIVATE_KEY"),
         "PUBLIC_KEY": os.getenv("PUBLIC_KEY"),
@@ -140,21 +134,24 @@ else:
         "REFRESH_TOKEN_LIFETIME": int(os.getenv("REFRESH_LIFETIME", "604800")),
     }
 
-GOOGLE_COOKIE_SETTINGS = {
+COOKIE_SETTINGS = {
     "ACCESS_COOKIE_NAME": os.getenv("ACCESS_COOKIE_NAME", "ext-access"),
     "REFRESH_COOKIE_NAME": os.getenv("REFRESH_COOKIE_NAME", "ext-refresh"),
-    "COOKIE_DOMAIN": os.getenv("COOKIE_DOMAIN", None),
-    "COOKIE_SECURE": os.getenv("COOKIE_SECURE", "False").lower() == "true",
+    "COOKIE_DOMAIN": os.getenv("COOKIE_DOMAIN", "localhost"),
+    "COOKIE_SECURE": os.getenv("COOKIE_SECURE", "true").lower() == "true",
     "COOKIE_HTTPONLY": True,
-    "COOKIE_SAMESITE": os.getenv("COOKIE_SAMESITE", "Lax"),
+    "COOKIE_SAMESITE": os.getenv("COOKIE_SAMESITE", "Strict"),
     "COOKIE_PATH": "/",
 }
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
-
-# RDS Backend Integration
-MAIN_APP = {
-    "RDS_BACKEND_BASE_URL": os.getenv("RDS_BACKEND_BASE_URL", "http://localhost:8087"),
+SERVICES = {
+    "TODO_UI": {
+        "URL": os.getenv("TODO_UI_BASE_URL", "http://localhost:3000"),
+        "REDIRECT_PATH": os.getenv("TODO_UI_REDIRECT_PATH", "dashboard"),
+    },
+    "TODO_BACKEND": {
+        "URL": os.getenv("TODO_BACKEND_BASE_URL", "http://localhost:8000"),
+    },
 }
 
 DATABASES = {
@@ -176,7 +173,7 @@ PUBLIC_PATHS = [
     "/static/",
     "/v1/auth/google/login",
     "/v1/auth/google/callback",
-    "/v1/auth/google/logout",
+    "/v1/auth/logout",
     "/v1/auth/google/status",
     "/v1/auth/google/refresh",
 ]
@@ -189,6 +186,15 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": "/v1/",
+    "SWAGGER_UI_SETTINGS": {
+        "url": os.getenv("SWAGGER_UI_URL", "/api/schema"),
+    },
+    "SERVERS": [
+        {
+            "url": f"{SERVICES.get('TODO_BACKEND').get('URL')}",
+            "description": "Development server",
+        },
+    ],
     "TAGS": [
         {"name": "tasks", "description": "Task management operations"},
         {"name": "auth", "description": "Authentication operations"},
@@ -209,3 +215,23 @@ SPECTACULAR_SETTINGS = {
 }
 
 STATIC_URL = "/static/"
+
+CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS").split(",")
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
+CSRF_COOKIE_SECURE = COOKIE_SETTINGS.get("COOKIE_SECURE")
+
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SAMESITE = "Lax"

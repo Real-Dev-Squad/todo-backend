@@ -87,28 +87,24 @@ class GoogleCallbackView(APIView):
         code = request.query_params.get("code")
         state = request.query_params.get("state")
         error = request.query_params.get("error")
-
+        
+        frontend_callback = f"{settings.SERVICES.get("TODO_UI").get("URL")}/{settings.SERVICES.get("TODO_UI").get("REDIRECT_PATH")}"
         if error:
-            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error={error}")
 
         if not code:
-            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error=missing_code")
 
         if not state:
-            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error=missing_state")
 
         stored_state = request.session.get("oauth_state")
         if not stored_state or stored_state != state:
-            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error=invalid_state")
 
         try:
             google_data = GoogleOAuthService.handle_callback(code)
             user = UserService.create_or_update_user(google_data)
-
             tokens = generate_token_pair(
                 {
                     "user_id": str(user.id),
@@ -116,7 +112,6 @@ class GoogleCallbackView(APIView):
                 }
             )
 
-            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             response = HttpResponseRedirect(f"{frontend_callback}?success=true")
 
             self._set_auth_cookies(response, tokens)
@@ -125,13 +120,12 @@ class GoogleCallbackView(APIView):
             return response
 
         except Exception:
-            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error=auth_failed")
 
     def _get_cookie_config(self):
         return {
             "path": "/",
-            "domain": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
+            "domain": settings.COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
             "secure": True,
             "httponly": True,
             "samesite": "Strict",
@@ -140,12 +134,15 @@ class GoogleCallbackView(APIView):
     def _set_auth_cookies(self, response, tokens):
         config = self._get_cookie_config()
         response.set_cookie(
-            "ext-access", tokens["access_token"], max_age=tokens["expires_in"], **config
+            settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"),
+            tokens["access_token"],
+            max_age=tokens["expires_in"],
+            **config,
         )
         response.set_cookie(
-            "ext-refresh",
+            settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME"),
             tokens["refresh_token"],
-            max_age=settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"],
+            max_age=settings.JWT_CONFIG.get("REFRESH_TOKEN_LIFETIME"),
             **config,
         )
 
@@ -209,10 +206,15 @@ class LogoutView(APIView):
     def _clear_auth_cookies(self, response):
         delete_config = {
             "path": "/",
-            "domain": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
+            "domain": settings.COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
         }
-        response.delete_cookie("ext-access", **delete_config)
-        response.delete_cookie("ext-refresh", **delete_config)
+
+        response.delete_cookie(
+            settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"), **delete_config
+        )
+        response.delete_cookie(
+            settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME"), **delete_config
+        )
 
         session_delete_config = {
             "path": getattr(settings, "SESSION_COOKIE_PATH", "/"),

@@ -10,7 +10,7 @@ from todo.exceptions.auth_exceptions import (
     TokenExpiredError,
     TokenInvalidError,
     RefreshTokenExpiredError,
-    TokenMissingError
+    TokenMissingError,
 )
 from todo.constants.messages import AuthErrorMessages, ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
@@ -28,7 +28,6 @@ class JWTAuthenticationMiddleware:
 
         try:
             auth_success = self._try_authentication(request)
-            print(f"Authentication success: {auth_success}")
             if auth_success:
                 response = self.get_response(request)
                 return self._process_response(request, response)
@@ -69,19 +68,13 @@ class JWTAuthenticationMiddleware:
             )
 
     def _try_authentication(self, request) -> bool:
-        if self._try_auth(request):
-            return True
-
-        return False
-
-    def _try_auth(self, request) -> bool:
         try:
-            access_token = request.COOKIES.get("ext-access")
-
+            access_token = request.COOKIES.get(
+                settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME")
+            )
             if access_token:
                 try:
                     payload = validate_access_token(access_token)
-                    print(f"Access token payload: {payload}")
                     self._set_user_data(request, payload)
                     return True
                 except (TokenExpiredError, TokenInvalidError):
@@ -98,16 +91,12 @@ class JWTAuthenticationMiddleware:
         """Try to refresh access token"""
         try:
             refresh_token = request.COOKIES.get("ext-refresh")
-
             if not refresh_token:
                 return False
-
             payload = validate_refresh_token(refresh_token)
 
             user_data = {
                 "user_id": payload["user_id"],
-                "email": payload["email"],
-                "name": payload.get("name", ""),
             }
 
             new_access_token = generate_access_token(user_data)
@@ -115,7 +104,7 @@ class JWTAuthenticationMiddleware:
             self._set_user_data(request, payload)
 
             request._new_access_token = new_access_token
-            request._access_token_expires = settings.GOOGLE_JWT["ACCESS_TOKEN_LIFETIME"]
+            request._access_token_expires = settings.JWT_CONFIG["ACCESS_TOKEN_LIFETIME"]
 
             return True
 
@@ -133,7 +122,7 @@ class JWTAuthenticationMiddleware:
         if hasattr(request, "_new_access_token"):
             config = self._get_cookie_config()
             response.set_cookie(
-                "ext-access",
+                settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME"),
                 request._new_access_token,
                 max_age=request._access_token_expires,
                 **config,
@@ -144,10 +133,10 @@ class JWTAuthenticationMiddleware:
         """Get cookie configuration"""
         return {
             "path": "/",
-            "domain": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
-            "secure": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SECURE", False),
+            "domain": settings.COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
+            "secure": settings.COOKIE_SETTINGS.get("COOKIE_SECURE"),
             "httponly": True,
-            "samesite": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SAMESITE", "Lax"),
+            "samesite": settings.COOKIE_SETTINGS.get("COOKIE_SAMESITE"),
         }
 
     def _is_public_path(self, path: str) -> bool:

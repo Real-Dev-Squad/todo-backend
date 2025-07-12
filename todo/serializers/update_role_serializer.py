@@ -1,11 +1,10 @@
 from rest_framework import serializers
-from todo.constants.role import ROLE_TYPE_CHOICES, ROLE_SCOPE_CHOICES
+from todo.constants.role import ROLE_SCOPE_CHOICES
 
 
 class UpdateRoleSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100, required=False)
     description = serializers.CharField(max_length=500, required=False, allow_blank=True)
-    type = serializers.ChoiceField(choices=ROLE_TYPE_CHOICES, required=False)
     scope = serializers.ChoiceField(choices=ROLE_SCOPE_CHOICES, required=False)
     is_active = serializers.BooleanField(required=False)
 

@@ -7,7 +7,8 @@ import logging
 
 from todo.models.role import RoleModel
 from todo.repositories.common.mongo_repository import MongoRepository
-from todo.constants.role import RoleType, RoleScope
+from todo.constants.role import RoleScope
+from todo.exceptions.role_exceptions import RoleAlreadyExistsException
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +24,8 @@ class RoleRepository(MongoRepository):
         if filters:
             if "is_active" in filters:
                 query["is_active"] = filters["is_active"]
-            if "type" in filters:
-                query["type"] = filters["type"]
+            if "name" in filters:
+                query["name"] = filters["name"]
             if "scope" in filters:
                 query["scope"] = filters["scope"]
 
@@ -44,9 +45,6 @@ class RoleRepository(MongoRepository):
 
     @classmethod
     def _document_to_model(cls, role_doc: dict) -> RoleModel:
-        if "type" in role_doc and isinstance(role_doc["type"], str):
-            role_doc["type"] = RoleType(role_doc["type"])
-
         if "scope" in role_doc and isinstance(role_doc["scope"], str):
             role_doc["scope"] = RoleScope(role_doc["scope"])
 
@@ -56,9 +54,9 @@ class RoleRepository(MongoRepository):
     def create(cls, role: RoleModel) -> RoleModel:
         roles_collection = cls.get_collection()
 
-        existing_role = roles_collection.find_one({"name": role.name})
+        existing_role = roles_collection.find_one({"name": role.name, "scope": role.scope.value})
         if existing_role:
-            raise ValueError(f"Role with name '{role.name}' already exists")
+            raise RoleAlreadyExistsException(role.name)
 
         role.created_at = datetime.now(timezone.utc)
         role.updated_at = None
@@ -85,9 +83,9 @@ class RoleRepository(MongoRepository):
             return None
 
         if "name" in update_data:
-            existing_role = cls.get_by_name(update_data["name"])
+            existing_role = cls.get_by_name_and_scope(update_data["name"], update_data.get("scope", "GLOBAL"))
             if existing_role and str(existing_role.id) != role_id:
-                raise ValueError(f"Role with name '{update_data['name']}' already exists")
+                raise RoleAlreadyExistsException(update_data["name"])
 
         update_data["updated_at"] = datetime.now(timezone.utc)
 
@@ -118,6 +116,14 @@ class RoleRepository(MongoRepository):
     def get_by_name(cls, name: str) -> Optional[RoleModel]:
         roles_collection = cls.get_collection()
         role_data = roles_collection.find_one({"name": name})
+        if role_data:
+            return cls._document_to_model(role_data)
+        return None
+
+    @classmethod
+    def get_by_name_and_scope(cls, name: str, scope: str) -> Optional[RoleModel]:
+        roles_collection = cls.get_collection()
+        role_data = roles_collection.find_one({"name": name, "scope": scope})
         if role_data:
             return cls._document_to_model(role_data)
         return None

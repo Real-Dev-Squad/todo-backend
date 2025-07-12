@@ -2,7 +2,7 @@ from pydantic import Field, ConfigDict
 from typing import ClassVar
 from datetime import datetime
 
-from todo.constants.role import RoleType, RoleScope
+from todo.constants.role import RoleScope
 from todo.models.common.document import Document
 from todo.models.common.pyobjectid import PyObjectId
 
@@ -13,7 +13,6 @@ class RoleModel(Document):
     id: PyObjectId | None = Field(None, alias="_id")
     name: str
     description: str | None = None
-    type: RoleType
     scope: RoleScope = RoleScope.GLOBAL
     is_active: bool = True
     created_by: str

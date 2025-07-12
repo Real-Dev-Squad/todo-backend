@@ -2,18 +2,76 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.request import Request
-from django.conf import settings
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
+from typing import Dict, Any, Callable
 
 from todo.serializers.create_role_serializer import CreateRoleSerializer
 from todo.serializers.update_role_serializer import UpdateRoleSerializer
 from todo.serializers.get_roles_serializer import RoleQuerySerializer
 from todo.services.role_service import RoleService
-from todo.exceptions.role_exceptions import RoleNotFoundException, RoleAlreadyExistsException
+from todo.exceptions.global_exception_handler import GlobalExceptionHandler
+from todo.exceptions.role_exceptions import (
+    RoleNotFoundException,
+    RoleAlreadyExistsException,
+    RoleOperationException,
+)
 
 
-class RoleListView(APIView):
+class BaseRoleView(APIView):
+    """Base class for role views with common exception handling."""
+
+    def _handle_exceptions(self, func: Callable) -> Response:
+        """
+        Common exception handling for all role operations.
+
+        Args:
+            func: The function to execute with exception handling
+
+        Returns:
+            Response: HTTP response with appropriate error handling
+        """
+        try:
+            return func()
+        except RoleNotFoundException as e:
+            error_response = GlobalExceptionHandler.handle_role_not_found(e)
+            return Response({"error": error_response["error"]}, status=error_response["status_code"])
+        except RoleAlreadyExistsException as e:
+            error_response = GlobalExceptionHandler.handle_role_already_exists(e)
+            return Response({"error": error_response["error"]}, status=error_response["status_code"])
+        except RoleOperationException as e:
+            error_response = GlobalExceptionHandler.handle_role_operation_error(e)
+            return Response({"error": error_response["error"]}, status=error_response["status_code"])
+        except Exception as e:
+            error_response = GlobalExceptionHandler.handle_generic_error(e)
+            return Response({"error": error_response["error"]}, status=error_response["status_code"])
+
+
+class RoleListView(BaseRoleView):
+    @classmethod
+    def _build_filters(cls, query_serializer: RoleQuerySerializer) -> Dict[str, Any]:
+        """
+        Build filters dictionary from query parameters.
+
+        Args:
+            query_serializer: Validated query serializer
+
+        Returns:
+            Dict[str, Any]: Filters dictionary for the service layer
+        """
+        filters = {}
+
+        if query_serializer.validated_data.get("is_active") is not None:
+            filters["is_active"] = query_serializer.validated_data["is_active"]
+
+        if query_serializer.validated_data.get("name"):
+            filters["name"] = query_serializer.validated_data["name"]
+
+        if query_serializer.validated_data.get("scope"):
+            filters["scope"] = query_serializer.validated_data["scope"]
+
+        return filters
+
     @extend_schema(
         operation_id="get_roles",
         summary="Get all roles",
@@ -27,10 +85,10 @@ class RoleListView(APIView):
                 description="Filter by active status",
             ),
             OpenApiParameter(
-                name="type",
+                name="name",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description="Filter by role type",
+                description="Filter by role name",
             ),
             OpenApiParameter(
                 name="scope",
@@ -46,28 +104,19 @@ class RoleListView(APIView):
         },
     )
     def get(self, request: Request):
-        try:
+        """Get all roles with optional filtering."""
+
+        def _execute():
             query_serializer = RoleQuerySerializer(data=request.query_params)
             query_serializer.is_valid(raise_exception=True)
 
-            filters = {}
-            if query_serializer.validated_data.get("is_active") is not None:
-                filters["is_active"] = query_serializer.validated_data["is_active"]
-            if query_serializer.validated_data.get("type"):
-                filters["type"] = query_serializer.validated_data["type"]
-            if query_serializer.validated_data.get("scope"):
-                filters["scope"] = query_serializer.validated_data["scope"]
-
+            filters = self._build_filters(query_serializer)
             role_dtos = RoleService.get_all_roles(filters=filters)
             roles_data = [role_dto.model_dump() for role_dto in role_dtos]
 
-            return Response({"data": roles_data, "total": len(roles_data)}, status=status.HTTP_200_OK)
+            return Response({"roles": roles_data, "total": len(roles_data)}, status=status.HTTP_200_OK)
 
-        except Exception as e:
-            return Response(
-                {"error": str(e) if settings.DEBUG else "Internal server error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        return self._handle_exceptions(_execute)
 
     @extend_schema(
         operation_id="create_role",
@@ -83,7 +132,9 @@ class RoleListView(APIView):
         },
     )
     def post(self, request: Request):
-        try:
+        """Create a new role."""
+
+        def _execute():
             serializer = CreateRoleSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
 
@@ -94,27 +145,19 @@ class RoleListView(APIView):
             role_dto = RoleService.create_role(
                 name=serializer.validated_data["name"],
                 description=serializer.validated_data.get("description"),
-                role_type=serializer.validated_data["type"],
                 scope=serializer.validated_data["scope"],
                 is_active=serializer.validated_data["is_active"],
                 created_by=user_id,
             )
 
             return Response(
-                {"data": role_dto.model_dump(), "message": "Role created successfully"}, status=status.HTTP_201_CREATED
+                {"role": role_dto.model_dump(), "message": "Role created successfully"}, status=status.HTTP_201_CREATED
             )
 
-        except RoleAlreadyExistsException as e:
-            return Response({"error": str(e)}, status=status.HTTP_409_CONFLICT)
-
-        except Exception as e:
-            return Response(
-                {"error": str(e) if settings.DEBUG else "Internal server error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        return self._handle_exceptions(_execute)
 
 
-class RoleDetailView(APIView):
+class RoleDetailView(BaseRoleView):
     @extend_schema(
         operation_id="get_role_by_id",
         summary="Get role by ID",
@@ -135,18 +178,13 @@ class RoleDetailView(APIView):
         },
     )
     def get(self, request: Request, role_id: str):
-        try:
+        """Get a single role by ID."""
+
+        def _execute():
             role_dto = RoleService.get_role_by_id(role_id)
-            return Response({"data": role_dto.model_dump()}, status=status.HTTP_200_OK)
+            return Response({"role": role_dto.model_dump()}, status=status.HTTP_200_OK)
 
-        except RoleNotFoundException as e:
-            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
-
-        except Exception as e:
-            return Response(
-                {"error": str(e) if settings.DEBUG else "Internal server error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        return self._handle_exceptions(_execute)
 
     @extend_schema(
         operation_id="update_role",
@@ -171,7 +209,9 @@ class RoleDetailView(APIView):
         },
     )
     def patch(self, request: Request, role_id: str):
-        try:
+        """Update an existing role."""
+
+        def _execute():
             serializer = UpdateRoleSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
 
@@ -183,7 +223,6 @@ class RoleDetailView(APIView):
                 role_id=role_id,
                 name=serializer.validated_data.get("name"),
                 description=serializer.validated_data.get("description"),
-                type=serializer.validated_data.get("type"),
                 scope=serializer.validated_data.get("scope"),
                 is_active=serializer.validated_data.get("is_active"),
                 updated_by=user_id,
@@ -193,17 +232,7 @@ class RoleDetailView(APIView):
                 {"role": role_dto.model_dump(), "message": "Role updated successfully"}, status=status.HTTP_200_OK
             )
 
-        except RoleNotFoundException as e:
-            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
-
-        except RoleAlreadyExistsException as e:
-            return Response({"error": str(e)}, status=status.HTTP_409_CONFLICT)
-
-        except Exception as e:
-            return Response(
-                {"error": str(e) if settings.DEBUG else "Internal server error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        return self._handle_exceptions(_execute)
 
     @extend_schema(
         operation_id="delete_role",
@@ -225,15 +254,10 @@ class RoleDetailView(APIView):
         },
     )
     def delete(self, request: Request, role_id: str):
-        try:
+        """Delete a role by ID."""
+
+        def _execute():
             RoleService.delete_role(role_id)
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-        except RoleNotFoundException as e:
-            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
-
-        except Exception as e:
-            return Response(
-                {"error": str(e) if settings.DEBUG else "Internal server error"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+        return self._handle_exceptions(_execute)

@@ -13,7 +13,6 @@ class RoleDTO(BaseModel):
     id: str
     name: str
     description: Optional[str] = None
-    type: str
     scope: str
     is_active: bool
     created_by: str
@@ -37,19 +36,17 @@ class RoleDTO(BaseModel):
         Raises:
             ValueError: If role_model is None or invalid
         """
-        if not hasattr(role_model, "id") or not hasattr(role_model, "name"):
-            raise ValueError("role_model must have required attributes")
+        required_attrs = ["id", "name", "scope", "is_active", "created_by", "created_at"]
+        if not all(hasattr(role_model, attr) for attr in required_attrs):
+            raise ValueError(f"role_model must have all required attributes: {', '.join(required_attrs)}")
+
+        scope_value = role_model.scope.value if hasattr(role_model.scope, "value") else str(role_model.scope)
 
         return cls(
             id=str(role_model.id),
             name=role_model.name,
             description=role_model.description,
-            type=role_model.type.value
-            if hasattr(role_model.type, "value") and role_model.type is not None
-            else role_model.type,
-            scope=role_model.scope.value
-            if hasattr(role_model.scope, "value") and role_model.scope is not None
-            else role_model.scope,
+            scope=scope_value,
             is_active=role_model.is_active,
             created_by=role_model.created_by,
             created_at=role_model.created_at,

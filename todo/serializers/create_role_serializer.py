@@ -1,12 +1,11 @@
 from rest_framework import serializers
-from todo.constants.role import ROLE_TYPE_CHOICES, ROLE_SCOPE_CHOICES, RoleScope
+from todo.constants.role import ROLE_SCOPE_CHOICES
 
 
 class CreateRoleSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100)
     description = serializers.CharField(max_length=500, required=False, allow_blank=True)
-    type = serializers.ChoiceField(choices=ROLE_TYPE_CHOICES)
-    scope = serializers.ChoiceField(choices=ROLE_SCOPE_CHOICES, default=RoleScope.GLOBAL.value)
+    scope = serializers.ChoiceField(choices=ROLE_SCOPE_CHOICES, default="GLOBAL")
     is_active = serializers.BooleanField(default=True)
 
     def validate_name(self, value):

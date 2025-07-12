@@ -29,6 +29,7 @@ from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from todo.dto.deferred_details_dto import DeferredDetailsDTO
 from rest_framework.test import APIClient
+from todo.dto.assignee_task_details_dto import AssigneeInfoDTO
 
 
 class TaskViewTests(AuthenticatedMongoTestCase):
@@ -332,7 +333,7 @@ class CreateTaskViewTests(AuthenticatedMongoTestCase):
             "description": "Cover all core paths",
             "priority": "HIGH",
             "status": "IN_PROGRESS",
-            "assignee": self.user_id,
+            "assignee": {"assignee_id": self.user_id, "relation_type": "user"},
             "labels": [],
             "dueAt": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat().replace("+00:00", "Z"),
         }
@@ -346,7 +347,9 @@ class CreateTaskViewTests(AuthenticatedMongoTestCase):
             description=self.valid_payload["description"],
             priority=TaskPriority[self.valid_payload["priority"]],
             status=TaskStatus[self.valid_payload["status"]],
-            assignee=UserDTO(id=self.user_id, name="SYSTEM"),
+            assignee=AssigneeInfoDTO(
+                id=self.user_id, name="SYSTEM", relation_type="user", is_action_taken=False, is_active=True
+            ),
             isAcknowledged=False,
             labels=[],
             startedAt=datetime.now(timezone.utc),
@@ -477,7 +480,9 @@ class TaskDetailViewPatchTests(AuthenticatedMongoTestCase):
             description="Updated description.",
             priority=TaskPriority.HIGH.value,
             status=TaskStatus.IN_PROGRESS.value,
-            assignee=UserDTO(id="user_assignee_id", name="SYSTEM"),
+            assignee=AssigneeInfoDTO(
+                id="user_assignee_id", name="SYSTEM", relation_type="user", is_action_taken=False, is_active=True
+            ),
             isAcknowledged=True,
             labels=[],
             startedAt=datetime.now(timezone.utc) - timedelta(hours=1),

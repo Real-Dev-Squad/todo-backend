@@ -1,6 +1,7 @@
 from http import HTTPStatus
 from django.urls import reverse
 from bson import ObjectId
+from datetime import datetime, timezone
 
 from todo.tests.fixtures.task import tasks_db_data
 from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
@@ -11,10 +12,32 @@ class TaskDeleteAPIIntegrationTest(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.db.tasks.delete_many({})
+        self.db.assignee_task_details.delete_many({})
+
         task_doc = tasks_db_data[0].copy()
         task_doc["_id"] = task_doc.pop("id")
-        task_doc["assignee"] = self.user_data["user_id"]
+        # Remove assignee from task document since it's now in separate collection
+        task_doc.pop("assignee", None)
+        # Set the task to be created by the test user
+        task_doc["createdBy"] = str(self.user_id)
+        task_doc["updatedBy"] = str(self.user_id)
         self.db.tasks.insert_one(task_doc)
+
+        # Create assignee task details in separate collection
+        assignee_details = {
+            "_id": ObjectId(),
+            "assignee_id": ObjectId(self.user_data["user_id"]),
+            "task_id": str(task_doc["_id"]),
+            "relation_type": "user",
+            "is_action_taken": False,
+            "is_active": True,
+            "created_by": ObjectId(self.user_data["user_id"]),
+            "updated_by": None,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": None,
+        }
+        self.db.assignee_task_details.insert_one(assignee_details)
+
         self.existing_task_id = str(task_doc["_id"])
         self.non_existent_id = str(ObjectId())
         self.invalid_task_id = "invalid-task-id"

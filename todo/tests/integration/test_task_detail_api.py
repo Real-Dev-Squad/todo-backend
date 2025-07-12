@@ -1,6 +1,7 @@
 from http import HTTPStatus
 from django.urls import reverse
 from bson import ObjectId
+from datetime import datetime, timezone
 from todo.tests.fixtures.task import tasks_db_data
 from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
 from todo.constants.messages import ApiErrors, ValidationErrors
@@ -10,12 +11,30 @@ class TaskDetailAPIIntegrationTest(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.db.tasks.delete_many({})
+        self.db.assignee_task_details.delete_many({})
+
         self.task_doc = tasks_db_data[1].copy()
         self.task_doc["_id"] = self.task_doc.pop("id")
-        self.task_doc["assignee"] = str(self.user_id)
+        # Remove assignee from task document since it's now in separate collection
+        self.task_doc.pop("assignee", None)
         self.task_doc["createdBy"] = str(self.user_id)
         self.task_doc["updatedBy"] = str(self.user_id)
         self.db.tasks.insert_one(self.task_doc)
+
+        # Create assignee task details in separate collection
+        assignee_details = {
+            "_id": ObjectId(),
+            "assignee_id": ObjectId(self.user_id),
+            "task_id": str(self.task_doc["_id"]),
+            "relation_type": "user",
+            "is_action_taken": False,
+            "is_active": True,
+            "created_by": ObjectId(self.user_id),
+            "updated_by": None,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": None,
+        }
+        self.db.assignee_task_details.insert_one(assignee_details)
 
         self.existing_task_id = str(self.task_doc["_id"])
         self.non_existent_id = str(ObjectId())
@@ -32,6 +51,10 @@ class TaskDetailAPIIntegrationTest(AuthenticatedMongoTestCase):
         self.assertEqual(data["status"], self.task_doc["status"])
         self.assertEqual(data["displayId"], self.task_doc["displayId"])
         self.assertEqual(data["createdBy"]["id"], self.task_doc["createdBy"])
+        # Check that assignee details are included
+        self.assertIsNotNone(data["assignee"])
+        self.assertEqual(data["assignee"]["id"], str(self.user_id))
+        self.assertEqual(data["assignee"]["relation_type"], "user")
 
     def test_get_task_by_id_not_found(self):
         url = reverse("task_detail", args=[self.non_existent_id])

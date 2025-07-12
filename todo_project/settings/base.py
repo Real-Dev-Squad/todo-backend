@@ -101,11 +101,6 @@ REST_FRAMEWORK = {
 
 # APPEND_SLASH = False # Fix the routing issue with trailing slashes and then uncomment this line
 
-JWT_AUTH = {
-    "ALGORITHM": "RS256",
-    "PUBLIC_KEY": os.getenv("RDS_PUBLIC_KEY"),
-}
-
 GOOGLE_OAUTH = {
     "CLIENT_ID": os.getenv("GOOGLE_OAUTH_CLIENT_ID"),
     "CLIENT_SECRET": os.getenv("GOOGLE_OAUTH_CLIENT_SECRET"),
@@ -135,11 +130,11 @@ else:
     }
 
 COOKIE_SETTINGS = {
-    "ACCESS_COOKIE_NAME": os.getenv("ACCESS_COOKIE_NAME", "ext-access"),
-    "REFRESH_COOKIE_NAME": os.getenv("REFRESH_COOKIE_NAME", "ext-refresh"),
+    "ACCESS_COOKIE_NAME": os.getenv("ACCESS_COOKIE_NAME", "todo-access"),
+    "REFRESH_COOKIE_NAME": os.getenv("REFRESH_COOKIE_NAME", "todo-refresh"),
     "COOKIE_DOMAIN": os.getenv("COOKIE_DOMAIN", "localhost"),
-    "COOKIE_SECURE": os.getenv("COOKIE_SECURE", "true").lower() == "true",
-    "COOKIE_HTTPONLY": True,
+    "COOKIE_SECURE": os.getenv("COOKIE_SECURE", "True").lower() == "true",
+    "COOKIE_HTTPONLY": os.getenv("COOKIE_HTTPONLY", "True").lower() == "true",
     "COOKIE_SAMESITE": os.getenv("COOKIE_SAMESITE", "Strict"),
     "COOKIE_PATH": "/",
 }
@@ -217,7 +212,6 @@ SPECTACULAR_SETTINGS = {
 STATIC_URL = "/static/"
 
 CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS").split(",")
-CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_HEADERS = [
     "accept",
@@ -231,7 +225,7 @@ CORS_ALLOWED_HEADERS = [
     "x-requested-with",
 ]
 
-CSRF_COOKIE_SECURE = COOKIE_SETTINGS.get("COOKIE_SECURE")
+CSRF_COOKIE_SECURE = True
 
 SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_SAMESITE = "Lax"

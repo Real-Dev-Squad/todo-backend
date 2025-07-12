@@ -174,9 +174,7 @@ class LogoutView(APIView):
             302: OpenApiResponse(description="Redirect to specified URL or home page"),
         },
     )
-    def get(self, request: Request):
-        return self._handle_logout(request)
-
+    
     @extend_schema(
         operation_id="google_logout_post",
         summary="Logout user (POST)",
@@ -186,6 +184,7 @@ class LogoutView(APIView):
             200: OpenApiResponse(description="Logout successful"),
         },
     )
+    
     def post(self, request: Request):
         return self._handle_logout(request)
 

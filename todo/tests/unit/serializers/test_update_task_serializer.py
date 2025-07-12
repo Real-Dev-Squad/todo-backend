@@ -19,7 +19,7 @@ class UpdateTaskSerializerTests(TestCase):
             "description": "This is an updated description.",
             "priority": TaskPriority.HIGH.name,
             "status": TaskStatus.IN_PROGRESS.name,
-            "assignee": str(ObjectId()),
+            "assignee": {"assignee_id": str(ObjectId()), "relation_type": "user"},
             "labels": [str(ObjectId()), str(ObjectId())],
             "dueAt": self.future_date.isoformat(),
             "startedAt": (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(),
@@ -126,7 +126,7 @@ class UpdateTaskSerializerTests(TestCase):
         self.assertIsNone(serializer.validated_data["assignee"])
 
     def test_assignee_valid_string(self):
-        data = {"assignee": str(ObjectId())}
+        data = {"assignee": {"assignee_id": str(ObjectId()), "relation_type": "user"}}
         serializer = UpdateTaskSerializer(data=data, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         self.assertEqual(serializer.validated_data["assignee"], data["assignee"])

@@ -13,7 +13,7 @@ class CreateTaskSerializerTest(TestCase):
             "description": "Some test description",
             "priority": "LOW",
             "status": "TODO",
-            "assignee": str(ObjectId()),
+            "assignee": {"assignee_id": str(ObjectId()), "relation_type": "user"},
             "labels": [],
             "dueAt": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat().replace("+00:00", "Z"),
         }

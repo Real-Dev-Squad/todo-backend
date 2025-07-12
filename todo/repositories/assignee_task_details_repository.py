@@ -30,7 +30,7 @@ class AssigneeTaskDetailsRepository(MongoRepository):
         """
         collection = cls.get_collection()
         try:
-            assignee_task_data = collection.find_one({"task_id": ObjectId(task_id), "is_active": True})
+            assignee_task_data = collection.find_one({"task_id": task_id, "is_active": True})
             if assignee_task_data:
                 return AssigneeTaskDetailsModel(**assignee_task_data)
             return None
@@ -45,7 +45,7 @@ class AssigneeTaskDetailsRepository(MongoRepository):
         collection = cls.get_collection()
         try:
             assignee_tasks_data = collection.find(
-                {"assignee_id": ObjectId(assignee_id), "relation_type": relation_type, "is_active": True}
+                {"assignee_id": assignee_id, "relation_type": relation_type, "is_active": True}
             )
             return [AssigneeTaskDetailsModel(**data) for data in assignee_tasks_data]
         except Exception:

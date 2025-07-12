@@ -368,9 +368,7 @@ class TaskService:
                 if not user:
                     raise UserNotFoundException(assignee_id)
             elif relation_type == "team":
-                print("team", assignee_id)
                 team = TeamRepository.get_by_id(assignee_id)
-                print("team", team)
                 if not team:
                     raise ValueError(f"Team not found: {assignee_id}")
 

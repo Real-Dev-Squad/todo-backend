@@ -11,10 +11,16 @@ ROLE_SCOPE_CHOICES = [
     (RoleScope.TEAM.value, "Team"),
 ]
 
-COMMON_ROLE_NAMES = [
-    "admin",
+GLOBAL_ROLE_NAMES = [
     "moderator",
-    "member",
-    "viewer",
-    "editor",
 ]
+
+TEAM_ROLE_NAMES = [
+    "owner",
+    "admin",
+]
+
+VALID_ROLE_NAMES_BY_SCOPE = {
+    RoleScope.GLOBAL.value: GLOBAL_ROLE_NAMES,
+    RoleScope.TEAM.value: TEAM_ROLE_NAMES,
+}

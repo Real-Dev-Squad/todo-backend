@@ -394,41 +394,21 @@ class TaskRepositorySortingTests(TestCase):
         self.mock_collection.find.assert_called_once()
         self.mock_collection.find.return_value.sort.assert_called_once_with([(SORT_FIELD_DUE_AT, 1)])
 
-    @patch("todo.repositories.task_repository.TaskRepository._list_sorted_by_assignee")
-    def test_list_sort_by_assignee_calls_special_method(self, mock_assignee_sort):
-        mock_assignee_sort.return_value = []
-
+    def test_list_sort_by_assignee_falls_back_to_created_at(self):
+        """Test that assignee sorting falls back to createdAt sorting since assignee is in separate collection"""
         TaskRepository.list(1, 10, SORT_FIELD_ASSIGNEE, SORT_ORDER_DESC)
 
-        mock_assignee_sort.assert_called_once_with(1, 10, SORT_ORDER_DESC, None)
+        self.mock_collection.find.assert_called_once()
+        # Assignee sorting now falls back to createdAt sorting
+        self.mock_collection.find.return_value.sort.assert_called_once_with([("createdAt", -1)])
 
-        self.mock_collection.find.assert_not_called()
+    def test_list_sort_by_assignee_asc_falls_back_to_created_at(self):
+        """Test that assignee sorting falls back to createdAt sorting for ascending order"""
+        TaskRepository.list(1, 10, SORT_FIELD_ASSIGNEE, SORT_ORDER_ASC)
 
-    def test_list_sorted_by_assignee_desc(self):
-        mock_pipeline_result = []
-        self.mock_collection.aggregate.return_value = iter(mock_pipeline_result)
-
-        TaskRepository._list_sorted_by_assignee(1, 10, SORT_ORDER_DESC)
-
-        self.mock_collection.aggregate.assert_called_once()
-        pipeline = self.mock_collection.aggregate.call_args[0][0]
-
-        sort_stage = next((stage for stage in pipeline if "$sort" in stage), None)
-        self.assertIsNotNone(sort_stage)
-        self.assertEqual(sort_stage["$sort"]["assignee_name"], -1)
-
-    def test_list_sorted_by_assignee_asc(self):
-        mock_pipeline_result = []
-        self.mock_collection.aggregate.return_value = iter(mock_pipeline_result)
-
-        TaskRepository._list_sorted_by_assignee(1, 10, SORT_ORDER_ASC)
-
-        self.mock_collection.aggregate.assert_called_once()
-        pipeline = self.mock_collection.aggregate.call_args[0][0]
-
-        sort_stage = next((stage for stage in pipeline if "$sort" in stage), None)
-        self.assertIsNotNone(sort_stage)
-        self.assertEqual(sort_stage["$sort"]["assignee_name"], 1)
+        self.mock_collection.find.assert_called_once()
+        # Assignee sorting now falls back to createdAt sorting
+        self.mock_collection.find.return_value.sort.assert_called_once_with([("createdAt", 1)])
 
     def test_list_pagination_with_sorting(self):
         page = 3
@@ -472,6 +452,7 @@ class TestRepositoryDeleteTaskById(TestCase):
         mock_collection.find_one.return_value = {
             "_id": ObjectId(self.task_id),
             "isDeleted": False,
+            "createdBy": self.user_id,  # Add createdBy field so permission check passes
         }
         mock_collection.find_one_and_update.return_value = {
             **self.mock_task_data,

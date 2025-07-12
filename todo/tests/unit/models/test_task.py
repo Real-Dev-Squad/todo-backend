@@ -58,12 +58,11 @@ class TaskModelTest(TestCase):
 
     def test_task_model_allows_none_for_optional_fields(self):
         data = self.valid_task_data.copy()
-        optional_fields = ["description", "assignee", "labels", "dueAt", "updatedBy", "updatedAt", "deferredDetails"]
+        optional_fields = ["description", "labels", "dueAt", "updatedBy", "updatedAt", "deferredDetails"]
 
         for field in optional_fields:
             data[field] = None
 
         task = TaskModel(**data)
         self.assertIsNone(task.description)
-        self.assertIsNone(task.assignee)
         self.assertIsNone(task.dueAt)

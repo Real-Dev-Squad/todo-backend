@@ -333,7 +333,7 @@ class CreateTaskViewTests(AuthenticatedMongoTestCase):
             "description": "Cover all core paths",
             "priority": "HIGH",
             "status": "IN_PROGRESS",
-            "assignee": self.user_id,
+            "assignee": {"assignee_id": self.user_id, "relation_type": "user"},
             "labels": [],
             "dueAt": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat().replace("+00:00", "Z"),
         }

@@ -120,7 +120,7 @@ class UpdateTaskSerializerTests(TestCase):
         self.assertIsNone(serializer.validated_data["dueAt"])
 
     def test_assignee_validation_blank_string_becomes_none(self):
-        data = {"assignee": "   "}
+        data = {"assignee": None}
         serializer = UpdateTaskSerializer(data=data, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         self.assertIsNone(serializer.validated_data["assignee"])

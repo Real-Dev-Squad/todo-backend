@@ -220,6 +220,7 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         )
 
         mock_task_model = MagicMock(spec=TaskModel)
+        mock_task_model.id = ObjectId()
         mock_create.return_value = mock_task_model
         mock_task_dto = MagicMock(spec=TaskDTO)
         mock_prepare_dto.return_value = mock_task_dto

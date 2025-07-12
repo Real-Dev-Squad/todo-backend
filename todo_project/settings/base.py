@@ -132,8 +132,8 @@ else:
     }
 
 COOKIE_SETTINGS = {
-    "ACCESS_COOKIE_NAME": os.getenv("ACCESS_COOKIE_NAME", "todo-access"),
-    "REFRESH_COOKIE_NAME": os.getenv("REFRESH_COOKIE_NAME", "todo-refresh"),
+    "ACCESS_COOKIE_NAME": os.getenv("ACCESS_TOKEN_COOKIE_NAME", "todo-access"),
+    "REFRESH_COOKIE_NAME": os.getenv("REFRESH_TOKEN_COOKIE_NAME", "todo-refresh"),
     "COOKIE_DOMAIN": os.getenv("COOKIE_DOMAIN", "localhost"),
     "COOKIE_SECURE": os.getenv("COOKIE_SECURE", "True").lower() == "true",
     "COOKIE_HTTPONLY": os.getenv("COOKIE_HTTPONLY", "True").lower() == "true",

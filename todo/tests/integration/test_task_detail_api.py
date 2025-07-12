@@ -25,7 +25,7 @@ class TaskDetailAPIIntegrationTest(AuthenticatedMongoTestCase):
         assignee_details = {
             "_id": ObjectId(),
             "assignee_id": ObjectId(self.user_id),
-            "task_id": self.task_doc["_id"],
+            "task_id": str(self.task_doc["_id"]),
             "relation_type": "user",
             "is_action_taken": False,
             "is_active": True,

@@ -18,13 +18,16 @@ class TaskDeleteAPIIntegrationTest(AuthenticatedMongoTestCase):
         task_doc["_id"] = task_doc.pop("id")
         # Remove assignee from task document since it's now in separate collection
         task_doc.pop("assignee", None)
+        # Set the task to be created by the test user
+        task_doc["createdBy"] = str(self.user_id)
+        task_doc["updatedBy"] = str(self.user_id)
         self.db.tasks.insert_one(task_doc)
 
         # Create assignee task details in separate collection
         assignee_details = {
             "_id": ObjectId(),
             "assignee_id": ObjectId(self.user_data["user_id"]),
-            "task_id": task_doc["_id"],
+            "task_id": str(task_doc["_id"]),
             "relation_type": "user",
             "is_action_taken": False,
             "is_active": True,

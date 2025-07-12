@@ -54,7 +54,8 @@ class RoleRepository(MongoRepository):
     def create(cls, role: RoleModel) -> RoleModel:
         roles_collection = cls.get_collection()
 
-        existing_role = roles_collection.find_one({"name": role.name, "scope": role.scope.value})
+        scope_value = role.scope.value if isinstance(role.scope, RoleScope) else role.scope
+        existing_role = roles_collection.find_one({"name": role.name, "scope": scope_value})
         if existing_role:
             raise RoleAlreadyExistsException(role.name)
 
@@ -83,9 +84,16 @@ class RoleRepository(MongoRepository):
             return None
 
         if "name" in update_data:
-            existing_role = cls.get_by_name_and_scope(update_data["name"], update_data.get("scope", "GLOBAL"))
+            scope_value = update_data.get("scope", "GLOBAL")
+            if isinstance(scope_value, RoleScope):
+                scope_value = scope_value.value
+
+            existing_role = cls.get_by_name_and_scope(update_data["name"], scope_value)
             if existing_role and str(existing_role.id) != role_id:
                 raise RoleAlreadyExistsException(update_data["name"])
+
+        if "scope" in update_data and isinstance(update_data["scope"], RoleScope):
+            update_data["scope"] = update_data["scope"].value
 
         update_data["updated_at"] = datetime.now(timezone.utc)
 

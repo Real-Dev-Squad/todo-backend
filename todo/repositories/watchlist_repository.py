@@ -3,6 +3,7 @@ from typing import Optional
 
 from todo.repositories.common.mongo_repository import MongoRepository
 from todo.models.watchlist import WatchlistModel
+from todo.dto.watchlist_dto import WatchlistDTO
 
 
 class WatchlistRepository(MongoRepository):
@@ -22,7 +23,7 @@ class WatchlistRepository(MongoRepository):
         return watchlist_model
 
     @classmethod
-    def get_watchlisted_tasks(cls, page, limit, user_id) -> Tuple[int, List[WatchlistModel]]:
+    def get_watchlisted_tasks(cls, page, limit, user_id) -> Tuple[int, List[WatchlistDTO]]:
         """
         Get paginated list of watchlisted tasks.
         """
@@ -49,7 +50,12 @@ class WatchlistRepository(MongoRepository):
                         {"$unwind": "$task"},
                         {
                             "$replaceRoot": {
-                                "newRoot": {"$mergeObjects": ["$task", {"watchlistId": {"$toString": "$_id"}}]}
+                                "newRoot": {
+                                    "$mergeObjects": [
+                                        "$task",
+                                        {"watchlistId": {"$toString": "$_id"}, "taskId": {"$toString": "$task._id"}},
+                                    ]
+                                }
                             }
                         },
                         {"$skip": skip},
@@ -58,15 +64,13 @@ class WatchlistRepository(MongoRepository):
                     "total": [{"$count": "value"}],
                 }
             },
-            {"$addFields": {"total": {"$ifNull": [{"$arrayElemAt": ["$totalCount.value", 0]}, 0]}}},
+            {"$addFields": {"total": {"$ifNull": [{"$arrayElemAt": ["$total.value", 0]}, 0]}}},
         ]
 
         aggregation_result = watchlist_collection.aggregate(pipeline)
-        result = next(aggregation_result, {"total": [], "data": []})
+        result = next(aggregation_result, {"total": 0, "data": []})
+        count = result.get("total", 0)
 
-        total_docs = result.get("total", [])
-        count = total_docs[0].get("count", 0) if total_docs else 0
-
-        tasks = [WatchlistModel(**doc) for doc in result.get("data", [])]
+        tasks = [WatchlistDTO(**doc) for doc in result.get("data", [])]
 
         return count, tasks

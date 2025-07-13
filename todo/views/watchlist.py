@@ -23,8 +23,6 @@ class WatchlistListView(APIView):
         query.is_valid(raise_exception=True)
 
         user = get_current_user_info(request)
-        if not user:
-            raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
 
         response = WatchlistService.get_watchlisted_tasks(
             page=query.validated_data["page"],

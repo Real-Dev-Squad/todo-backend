@@ -12,6 +12,7 @@ from todo.serializers.get_watchlist_tasks_serializer import GetWatchlistTaskQuer
 from todo.dto.responses.error_response import ApiErrorResponse
 from todo.dto.watchlist_dto import CreateWatchlistDTO
 from todo.dto.responses.create_watchlist_response import CreateWatchlistResponse
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 
 
 class WatchlistListView(APIView):
@@ -61,6 +62,27 @@ class WatchlistListView(APIView):
 
 
 class WatchlistDetailView(APIView):
+    @extend_schema(
+        operation_id="update_watchlist_task",
+        summary="Update watchlist status of a task",
+        description="Update the isActive status of a task in the user's watchlist.",
+        tags=["watchlist"],
+        parameters=[
+            OpenApiParameter(
+                name="task_id",
+                type=str,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the task to update in the watchlist.",
+            ),
+        ],
+        request=UpdateWatchlistSerializer,
+        responses={
+            200: OpenApiResponse(description="Watchlist task updated successfully"),
+            400: OpenApiResponse(description="Bad request"),
+            404: OpenApiResponse(description="Task not found in watchlist"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+    )
     def patch(self, request: Request, task_id: str):
         """
         Update the watchlist status of a task.

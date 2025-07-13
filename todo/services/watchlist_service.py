@@ -126,14 +126,14 @@ class WatchlistService:
             )
 
     @classmethod
-    def update_task(cls, task_id: ObjectId, dto: UpdateWatchlistDTO, user_id: ObjectId) -> CreateWatchlistResponse:
-        task = TaskRepository.get_by_id(task_id)
+    def update_task(cls, taskId: ObjectId, dto: UpdateWatchlistDTO, userId: ObjectId) -> CreateWatchlistResponse:
+        task = TaskRepository.get_by_id(taskId)
         if not task:
-            raise TaskNotFoundException(task_id)
+            raise TaskNotFoundException(taskId)
 
-        updated_watchlist = WatchlistRepository.update(task_id, dto["isActive"], user_id)
+        updated_watchlist = WatchlistRepository.update(taskId, dto["isActive"], userId)
         if not updated_watchlist:
-            raise TaskNotFoundException(task_id)
+            raise TaskNotFoundException(taskId)
 
     @classmethod
     def prepare_watchlisted_task_dto(cls, watchlist_model: WatchlistDTO) -> WatchlistDTO:

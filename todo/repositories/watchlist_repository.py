@@ -78,18 +78,18 @@ class WatchlistRepository(MongoRepository):
         return count, tasks
 
     @classmethod
-    def update(cls, task_Id: ObjectId, isActive: bool, user_id: ObjectId) -> dict:
+    def update(cls, taskId: ObjectId, isActive: bool, userId: ObjectId) -> dict:
         """
         Update the watchlist status of a task.
         """
         watchlist_collection = cls.get_collection()
         update_result = watchlist_collection.update_one(
-            {"userId": str(user_id), "taskId": str(task_Id)},
+            {"userId": str(userId), "taskId": str(taskId)},
             {
                 "$set": {
                     "isActive": isActive,
                     "updatedAt": datetime.now(timezone.utc),
-                    "updatedBy": user_id,
+                    "updatedBy": userId,
                 }
             },
         )

@@ -19,8 +19,6 @@ class WatchlistListView(APIView):
         Add a task to the watchlist.
         """
         user = get_current_user_info(request)
-        if not user:
-            raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
 
         serializer = CreateWatchlistSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

@@ -1,5 +1,6 @@
 from todo.dto.team_dto import CreateTeamDTO, TeamDTO
 from todo.dto.responses.create_team_response import CreateTeamResponse
+from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
@@ -48,27 +49,26 @@ class TeamService:
             user_teams = []
 
             # Add members to the team
-            if member_ids:
-                for user_id in member_ids:
-                    user_team = UserTeamDetailsModel(
-                        user_id=PyObjectId(user_id),
-                        team_id=created_team.id,
-                        role_id=DEFAULT_ROLE_ID,
-                        created_by=PyObjectId(created_by_user_id),
-                        updated_by=PyObjectId(created_by_user_id),
-                    )
-                    user_teams.append(user_team)
+            for member_id in member_ids:
+                user_team = UserTeamDetailsModel(
+                    user_id=PyObjectId(member_id),
+                    team_id=created_team.id,
+                    role_id=DEFAULT_ROLE_ID,
+                    created_by=PyObjectId(created_by_user_id),
+                    updated_by=PyObjectId(created_by_user_id),
+                )
+                user_teams.append(user_team)
 
-            # Add POC if provided and not already in member_ids
-            if dto.poc_id and (not member_ids or dto.poc_id not in member_ids):
-                poc_user_team = UserTeamDetailsModel(
+            # Add POC to the team if specified and not already in members
+            if dto.poc_id and dto.poc_id not in member_ids:
+                user_team = UserTeamDetailsModel(
                     user_id=PyObjectId(dto.poc_id),
                     team_id=created_team.id,
                     role_id=DEFAULT_ROLE_ID,
                     created_by=PyObjectId(created_by_user_id),
                     updated_by=PyObjectId(created_by_user_id),
                 )
-                user_teams.append(poc_user_team)
+                user_teams.append(user_team)
 
             # Create all user-team relationships
             if user_teams:
@@ -87,7 +87,54 @@ class TeamService:
                 updated_at=created_team.updated_at,
             )
 
-            return CreateTeamResponse(team=team_dto, message=AppMessages.TEAM_CREATED)
+            return CreateTeamResponse(
+                team=team_dto,
+                message=AppMessages.TEAM_CREATED,
+            )
 
         except Exception as e:
-            raise ValueError(str(e))
+            raise ValueError(f"Failed to create team: {str(e)}")
+
+    @classmethod
+    def get_user_teams(cls, user_id: str) -> GetUserTeamsResponse:
+        """
+        Get all teams assigned to a specific user.
+
+        Args:
+            user_id: ID of the user to get teams for
+
+        Returns:
+            GetUserTeamsResponse with the list of teams and total count
+
+        Raises:
+            ValueError: If getting user teams fails
+        """
+        try:
+            # Get user-team relationships
+            user_team_details = UserTeamDetailsRepository.get_by_user_id(user_id)
+
+            if not user_team_details:
+                return GetUserTeamsResponse(teams=[], total=0)
+
+            # Get team details for each relationship
+            teams = []
+            for user_team in user_team_details:
+                team = TeamRepository.get_by_id(str(user_team.team_id))
+                if team:
+                    team_dto = TeamDTO(
+                        id=str(team.id),
+                        name=team.name,
+                        description=team.description,
+                        poc_id=str(team.poc_id) if team.poc_id else None,
+                        invite_code=team.invite_code,
+                        created_by=str(team.created_by),
+                        updated_by=str(team.updated_by),
+                        created_at=team.created_at,
+                        updated_at=team.updated_at,
+                    )
+                    teams.append(team_dto)
+
+            return GetUserTeamsResponse(teams=teams, total=len(teams))
+
+        except Exception as e:
+            raise ValueError(f"Failed to get user teams: {str(e)}")

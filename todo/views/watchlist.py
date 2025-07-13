@@ -3,7 +3,6 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed
-from django.conf import settings
 
 from todo.middlewares.jwt_auth import get_current_user_info
 from todo.constants.messages import ApiErrors
@@ -39,7 +38,7 @@ class WatchlistListView(APIView):
             fallback_response = ApiErrorResponse(
                 statusCode=500,
                 message=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
-                errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}],
+                errors=[{"detail": ApiErrors.INTERNAL_SERVER_ERROR}],
             )
             return Response(
                 data=fallback_response.model_dump(mode="json"), status=status.HTTP_500_INTERNAL_SERVER_ERROR

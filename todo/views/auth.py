@@ -41,20 +41,17 @@ class GoogleLoginView(APIView):
     )
     def get(self, request: Request):
         redirect_url = request.query_params.get("redirectURL")
-        format_param = request.query_params.get("format")
         auth_url, state = GoogleOAuthService.get_authorization_url(redirect_url)
         request.session["oauth_state"] = state
 
-        # Check if JSON response is requested
-        if format_param == "json" or request.content_type == "application/json" or request.META.get("HTTP_ACCEPT") == "application/json":
-            return Response({
-                "statusCode": status.HTTP_200_OK,
-                "message": "Google OAuth URL generated successfully",
-                "data": {
-                    "authUrl": auth_url,
-                    "state": state,
+        if request.headers.get("Accept") == "application/json" or request.query_params.get("format") == "json":
+            return Response(
+                {
+                    "statusCode": status.HTTP_200_OK,
+                    "message": "Google OAuth URL generated successfully",
+                    "data": {"authUrl": auth_url, "state": state},
                 }
-            })
+            )
 
         return HttpResponseRedirect(auth_url)
 
@@ -98,9 +95,11 @@ class GoogleCallbackView(APIView):
         code = request.query_params.get("code")
         state = request.query_params.get("state")
         error = request.query_params.get("error")
-        
+
         todo_ui_config = settings.SERVICES.get("TODO_UI", {})
-        frontend_callback = f"{todo_ui_config.get('URL', '')}/{todo_ui_config.get('REDIRECT_PATH', '')}"
+        frontend_callback = (
+            f"{todo_ui_config.get('URL', '')}/{todo_ui_config.get('REDIRECT_PATH', '')}"
+        )
 
         if error:
             return HttpResponseRedirect(f"{frontend_callback}?error={error}")
@@ -170,7 +169,6 @@ class LogoutView(APIView):
             200: OpenApiResponse(description="Logout successful"),
         },
     )
-    
     def post(self, request: Request):
         return self._handle_logout(request)
 

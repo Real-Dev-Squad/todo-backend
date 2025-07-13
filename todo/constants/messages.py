@@ -71,6 +71,7 @@ class ValidationErrors:
     MISSING_GOOGLE_ID = "Google ID is required"
     MISSING_EMAIL = "Email is required"
     MISSING_NAME = "Name is required"
+    MISSING_PICTURE = "Picture is required"
     SEARCH_QUERY_EMPTY = "Search query cannot be empty"
 
 
@@ -82,9 +83,9 @@ class AuthErrorMessages:
     AUTHENTICATION_REQUIRED = "Authentication required"
     TOKEN_EXPIRED_TITLE = "Token Expired"
     INVALID_TOKEN_TITLE = "Invalid Token"
-    GOOGLE_TOKEN_EXPIRED = "Google access token has expired"
-    GOOGLE_REFRESH_TOKEN_EXPIRED = "Google refresh token has expired, please login again"
-    GOOGLE_TOKEN_INVALID = "Invalid Google token"
+    TOKEN_EXPIRED = "Access token has expired"
+    REFRESH_TOKEN_EXPIRED = "Refresh token has expired, please login again"
+    TOKEN_INVALID = "Invalid token"
     MISSING_REQUIRED_PARAMETER = "Missing required parameter: {0}"
     NO_ACCESS_TOKEN = "No access token"
     NO_REFRESH_TOKEN = "No refresh token found"

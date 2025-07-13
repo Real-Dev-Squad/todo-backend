@@ -3,9 +3,10 @@ from rest_framework.reverse import reverse
 from rest_framework import status
 from unittest.mock import patch, Mock, PropertyMock
 from bson.objectid import ObjectId
+from django.conf import settings
 
 from todo.views.auth import GoogleCallbackView
-from todo.utils.google_jwt_utils import generate_google_token_pair
+from todo.utils.jwt_utils import generate_token_pair
 from todo.constants.messages import AppMessages
 from todo.tests.fixtures.user import google_auth_user_payload, users_db_data
 
@@ -168,8 +169,8 @@ class GoogleCallbackViewTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertIn("success=true", response.url)
-        self.assertIn("ext-access", response.cookies)
-        self.assertIn("ext-refresh", response.cookies)
+        self.assertIn(settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"), response.cookies)
+        self.assertIn(settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME"), response.cookies)
         self.assertNotIn("oauth_state", self.client.session)
 
     @patch("todo.services.google_oauth_service.GoogleOAuthService.handle_callback")
@@ -192,19 +193,6 @@ class GoogleLogoutViewTests(APITestCase):
         self.client = APIClient()
         self.url = reverse("google_logout")
 
-    def test_get_returns_json_response(self):
-        redirect_url = "http://localhost:3000"
-        self.client.cookies["ext-access"] = "test_access_token"
-        self.client.cookies["ext-refresh"] = "test_refresh_token"
-
-        response = self.client.get(f"{self.url}?redirectURL={redirect_url}")
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["data"]["success"], True)
-        self.assertEqual(response.data["message"], AppMessages.GOOGLE_LOGOUT_SUCCESS)
-        self.assertEqual(response.cookies.get("ext-access").value, "")
-        self.assertEqual(response.cookies.get("ext-refresh").value, "")
-
     def test_post_returns_success_and_clears_cookies(self):
         """Test that POST requests return JSON"""
         user_data = {
@@ -213,17 +201,17 @@ class GoogleLogoutViewTests(APITestCase):
             "email": google_auth_user_payload["email"],
             "name": google_auth_user_payload["name"],
         }
-        tokens = generate_google_token_pair(user_data)
-        self.client.cookies["ext-access"] = tokens["access_token"]
-        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
+        tokens = generate_token_pair(user_data)
+        self.client.cookies[settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME")] = tokens["access_token"]
+        self.client.cookies[settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME")] = tokens["refresh_token"]
 
         response = self.client.post(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["data"]["success"], True)
         self.assertEqual(response.data["message"], AppMessages.GOOGLE_LOGOUT_SUCCESS)
-        self.assertEqual(response.cookies.get("ext-access").value, "")
-        self.assertEqual(response.cookies.get("ext-refresh").value, "")
+        self.assertEqual(response.cookies.get(settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME")).value, "")
+        self.assertEqual(response.cookies.get(settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME")).value, "")
 
     def test_logout_clears_session(self):
         """Test that logout clears session data"""
@@ -258,21 +246,35 @@ class UserViewProfileTrueTests(APITestCase):
             "email": "test@example.com",
             "name": "Test User",
         }
-        tokens = generate_google_token_pair(self.user_data)
-        self.client.cookies["ext-access"] = tokens["access_token"]
-        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
+        tokens = generate_token_pair(self.user_data)
+        self.client.cookies[settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME")] = tokens["access_token"]
+        self.client.cookies[settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME")] = tokens["refresh_token"]
 
-    def test_requires_profile_true(self):
+    @patch("todo.services.user_service.UserService.get_user_by_id")
+    def test_requires_profile_true(self, mock_get_user):
+        # Without profile=true and without search parameter, it should return 404
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.data["message"], "Route does not exist.")
 
     def test_returns_401_if_not_authenticated(self):
         client = APIClient()
         response = client.get(self.url + "?profile=true")
         self.assertEqual(response.status_code, 401)
 
-    def test_returns_user_info(self):
+    @patch("todo.services.user_service.UserService.get_user_by_id")
+    def test_returns_user_info(self, mock_get_user):
+        from todo.models.user import UserModel
+        mock_user = UserModel(
+            id=ObjectId(self.user_data["user_id"]),
+            google_id=self.user_data["google_id"],
+            email_id=self.user_data["email"],
+            name=self.user_data["name"],
+            picture="https://example.com/picture.jpg"
+        )
+        mock_get_user.return_value = mock_user
+        
         response = self.client.get(self.url + "?profile=true")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["data"]["user_id"], self.user_data["user_id"])
+        self.assertEqual(response.data["data"]["userId"], self.user_data["user_id"])
         self.assertEqual(response.data["data"]["email"], self.user_data["email"])

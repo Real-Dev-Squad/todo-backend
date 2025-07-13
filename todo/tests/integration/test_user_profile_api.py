@@ -21,5 +21,5 @@ class UserProfileAPIIntegrationTest(AuthenticatedMongoTestCase):
         response = self.client.get(self.url + "?profile=true")
         self.assertEqual(response.status_code, HTTPStatus.OK)
         data = response.json()["data"]
-        self.assertEqual(data["user_id"], str(self.user_id))
+        self.assertEqual(data["userId"], str(self.user_id))
         self.assertEqual(data["email"], self.user_data["email"])

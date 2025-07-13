@@ -5,26 +5,8 @@ from bson import ObjectId
 
 from todo.constants.messages import ValidationErrors
 from todo.tests.fixtures.label import label_db_data
-from todo.tests.integration.base_mongo_test import BaseMongoTestCase
+from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
 from todo.constants.messages import ApiErrors
-from todo.utils.google_jwt_utils import generate_google_token_pair
-
-
-class AuthenticatedMongoTestCase(BaseMongoTestCase):
-    def setUp(self):
-        super().setUp()
-        self._setup_auth_cookies()
-
-    def _setup_auth_cookies(self):
-        user_data = {
-            "user_id": str(ObjectId()),
-            "google_id": "test_google_id",
-            "email": "test@example.com",
-            "name": "Test User",
-        }
-        tokens = generate_google_token_pair(user_data)
-        self.client.cookies["ext-access"] = tokens["access_token"]
-        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
 
 
 class LabelListAPIIntegrationTest(AuthenticatedMongoTestCase):

@@ -1,15 +1,13 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.request import Request
+from todo.constants.messages import ApiErrors
+from todo.services.user_service import UserService
 from rest_framework import status
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
-from todo.services.user_service import UserService
 from todo.dto.user_dto import UserSearchDTO, UserSearchResponseDTO
 from todo.dto.responses.error_response import ApiErrorResponse
-from todo.middlewares.jwt_auth import get_current_user_info
-from rest_framework.exceptions import AuthenticationFailed
-from todo.constants.messages import ApiErrors
 
 
 class UsersView(APIView):
@@ -61,11 +59,29 @@ class UsersView(APIView):
     def get(self, request: Request):
         profile = request.query_params.get("profile")
         if profile == "true":
-            user_info = get_current_user_info(request)
-            if not user_info:
-                raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
+            userData = UserService.get_user_by_id(request.user_id)
+            if not userData:
+                return Response(
+                    {
+                        "statusCode": 404,
+                        "message": ApiErrors.USER_NOT_FOUND,
+                        "data": None,
+                    },
+                    status=404,
+                )
+            userData = userData.model_dump(mode="json", exclude_none=True)
+            userResponse = {
+                "userId": userData["id"],
+                "email": userData["email_id"],
+                "name": userData.get("name"),
+                "picture": userData.get("picture"),
+            }
             return Response(
-                {"statusCode": 200, "message": "Current user details fetched successfully", "data": user_info},
+                {
+                    "statusCode": 200,
+                    "message": "Current user details fetched successfully",
+                    "data": userResponse,
+                },
                 status=200,
             )
 
@@ -76,7 +92,10 @@ class UsersView(APIView):
 
         # If no search parameter provided, return 404
         if not search:
-            return Response({"statusCode": 404, "message": "Route does not exist.", "data": None}, status=404)
+            return Response(
+                {"statusCode": 404, "message": "Route does not exist.", "data": None},
+                status=404,
+            )
 
         users, total_count = UserService.search_users(search, page, limit)
 

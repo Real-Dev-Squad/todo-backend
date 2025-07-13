@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 from urllib.parse import urlencode
 
 from todo.services.google_oauth_service import GoogleOAuthService
-from todo.exceptions.google_auth_exceptions import GoogleAPIException, GoogleAuthException
+from todo.exceptions.auth_exceptions import APIException, AuthException
 from todo.constants.messages import ApiErrors
 
 
@@ -14,7 +14,6 @@ class GoogleOAuthServiceTests(TestCase):
                 "CLIENT_ID": "test-client-id",
                 "CLIENT_SECRET": "test-client-secret",
                 "REDIRECT_URI": "http://localhost:3000/auth/callback",
-                "SCOPES": ["email", "profile"],
             }
         }
         self.valid_user_info = {"id": "123456789", "email": "test@example.com", "name": "Test User"}
@@ -33,7 +32,7 @@ class GoogleOAuthServiceTests(TestCase):
             "client_id": self.mock_settings["GOOGLE_OAUTH"]["CLIENT_ID"],
             "redirect_uri": self.mock_settings["GOOGLE_OAUTH"]["REDIRECT_URI"],
             "response_type": "code",
-            "scope": " ".join(self.mock_settings["GOOGLE_OAUTH"]["SCOPES"]),
+            "scope": "openid email profile",
             "access_type": "offline",
             "prompt": "consent",
             "state": state,
@@ -46,7 +45,7 @@ class GoogleOAuthServiceTests(TestCase):
         mock_settings.configure_mock(**self.mock_settings)
         mock_settings.GOOGLE_OAUTH = None
 
-        with self.assertRaises(GoogleAuthException) as context:
+        with self.assertRaises(AuthException) as context:
             GoogleOAuthService.get_authorization_url()
         self.assertIn(ApiErrors.GOOGLE_AUTH_FAILED, str(context.exception))
 
@@ -66,9 +65,9 @@ class GoogleOAuthServiceTests(TestCase):
 
     @patch("todo.services.google_oauth_service.GoogleOAuthService._exchange_code_for_tokens")
     def test_handle_callback_token_error(self, mock_exchange_tokens):
-        mock_exchange_tokens.side_effect = GoogleAPIException(ApiErrors.TOKEN_EXCHANGE_FAILED)
+        mock_exchange_tokens.side_effect = APIException(ApiErrors.TOKEN_EXCHANGE_FAILED)
 
-        with self.assertRaises(GoogleAPIException) as context:
+        with self.assertRaises(APIException) as context:
             GoogleOAuthService.handle_callback("test-code")
         self.assertIn(ApiErrors.TOKEN_EXCHANGE_FAILED, str(context.exception))
 
@@ -98,7 +97,7 @@ class GoogleOAuthServiceTests(TestCase):
         mock_response.status_code = 400
         mock_post.return_value = mock_response
 
-        with self.assertRaises(GoogleAPIException) as context:
+        with self.assertRaises(APIException) as context:
             GoogleOAuthService._exchange_code_for_tokens("test-code")
         self.assertIn(ApiErrors.TOKEN_EXCHANGE_FAILED, str(context.exception))
 
@@ -123,7 +122,7 @@ class GoogleOAuthServiceTests(TestCase):
         mock_response.json.return_value = {"id": "123"}
         mock_get.return_value = mock_response
 
-        with self.assertRaises(GoogleAPIException) as context:
+        with self.assertRaises(APIException) as context:
             GoogleOAuthService._get_user_info("test-token")
             error_msg = str(context.exception)
             self.assertIn(ApiErrors.MISSING_USER_INFO_FIELDS.split(":")[0], error_msg)
@@ -136,6 +135,6 @@ class GoogleOAuthServiceTests(TestCase):
         mock_response.status_code = 400
         mock_get.return_value = mock_response
 
-        with self.assertRaises(GoogleAPIException) as context:
+        with self.assertRaises(APIException) as context:
             GoogleOAuthService._get_user_info("test-token")
         self.assertIn(ApiErrors.USER_INFO_FETCH_FAILED.format("HTTP error"), str(context.exception))

@@ -21,9 +21,9 @@ class TeamListView(APIView):
         try:
             user_id = request.user_id
             response: GetUserTeamsResponse = TeamService.get_user_teams(user_id)
-            
+
             return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
-            
+
         except ValueError as e:
             if isinstance(e.args[0], ApiErrorResponse):
                 error_response = e.args[0]

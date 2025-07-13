@@ -6,7 +6,6 @@ from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
 from todo.constants.messages import AppMessages
 from todo.utils.invite_code_utils import generate_invite_code
-from typing import List
 
 DEFAULT_ROLE_ID = "1"
 
@@ -113,7 +112,7 @@ class TeamService:
         try:
             # Get user-team relationships
             user_team_details = UserTeamDetailsRepository.get_by_user_id(user_id)
-            
+
             if not user_team_details:
                 return GetUserTeamsResponse(teams=[], total=0)
 

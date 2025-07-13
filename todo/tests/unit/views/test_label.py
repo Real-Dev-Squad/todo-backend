@@ -4,11 +4,12 @@ from rest_framework import status
 from unittest.mock import patch, Mock
 from bson.objectid import ObjectId
 from rest_framework.response import Response
+from django.conf import settings
 
 from todo.dto.responses.get_labels_response import GetLabelsResponse
 from todo.dto.label_dto import LabelDTO
 from todo.constants.messages import ApiErrors
-from todo.utils.google_jwt_utils import generate_google_token_pair
+from todo.utils.jwt_utils import generate_token_pair
 
 
 class AuthenticatedTestCase(APISimpleTestCase):
@@ -24,12 +25,13 @@ class AuthenticatedTestCase(APISimpleTestCase):
             "email": "test@example.com",
             "name": "Test User",
         }
-        tokens = generate_google_token_pair(user_data)
+        tokens = generate_token_pair(user_data)
 
-        self.client.cookies["ext-access"] = tokens["access_token"]
-        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
+        self.client.cookies[settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME")] = tokens["access_token"]
+        self.client.cookies[settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME")] = tokens["refresh_token"]
 
 
+@patch("todo.middlewares.jwt_auth.JWTAuthenticationMiddleware._try_authentication", return_value=True)
 class LabelViewTests(AuthenticatedTestCase):
     def setUp(self):
         super().setUp()
@@ -40,7 +42,7 @@ class LabelViewTests(AuthenticatedTestCase):
         ]
 
     @patch("todo.services.label_service.LabelService.get_labels")
-    def test_get_labels_returns_200_for_valid_params(self, mock_get_labels: Mock):
+    def test_get_labels_returns_200_for_valid_params(self, mock_get_labels: Mock, mock_auth):
         mock_get_labels.return_value = GetLabelsResponse(labels=[self.label_dtos[0]], total=1, page=1, limit=10)
 
         response: Response = self.client.get(self.url, {"page": 1, "limit": 10, "search": "bug"})
@@ -50,7 +52,7 @@ class LabelViewTests(AuthenticatedTestCase):
         self.assertEqual(response.data["total"], 1)
 
     @patch("todo.services.label_service.LabelService.get_labels")
-    def test_get_labels_uses_default_values(self, mock_get_labels: Mock):
+    def test_get_labels_uses_default_values(self, mock_get_labels: Mock, mock_auth):
         mock_get_labels.return_value = GetLabelsResponse(labels=self.label_dtos, total=2, page=1, limit=10)
 
         response: Response = self.client.get(self.url)
@@ -60,7 +62,7 @@ class LabelViewTests(AuthenticatedTestCase):
         self.assertEqual(response.data["total"], 2)
 
     @patch("todo.services.label_service.LabelService.get_labels")
-    def test_get_labels_strips_whitespace_from_search(self, mock_get_labels: Mock):
+    def test_get_labels_strips_whitespace_from_search(self, mock_get_labels: Mock, mock_auth):
         mock_get_labels.return_value = GetLabelsResponse(labels=[self.label_dtos[0]], total=1, page=1, limit=10)
 
         response: Response = self.client.get(self.url, {"search": "   bug   "})
@@ -68,7 +70,7 @@ class LabelViewTests(AuthenticatedTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["total"], 1)
 
-    def test_get_labels_returns_400_for_invalid_query_params(self):
+    def test_get_labels_returns_400_for_invalid_query_params(self, mock_auth):
         response: Response = self.client.get(self.url, {"page": "abc", "limit": -1, "search": 123})
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -78,7 +80,7 @@ class LabelViewTests(AuthenticatedTestCase):
         self.assertIn("limit", error_fields)
 
     @patch("todo.services.label_service.LabelService.get_labels")
-    def test_get_labels_returns_with_error_object(self, mock_get_labels: Mock):
+    def test_get_labels_returns_with_error_object(self, mock_get_labels: Mock, mock_auth):
         mock_get_labels.return_value = GetLabelsResponse(
             labels=[], total=0, page=1, limit=10, error={"message": ApiErrors.PAGE_NOT_FOUND, "code": "PAGE_NOT_FOUND"}
         )
@@ -89,7 +91,7 @@ class LabelViewTests(AuthenticatedTestCase):
         self.assertEqual(response.data["error"]["code"], "PAGE_NOT_FOUND")
 
     @patch("todo.services.label_service.LabelService.get_labels")
-    def test_get_labels_handles_internal_error(self, mock_get_labels: Mock):
+    def test_get_labels_handles_internal_error(self, mock_get_labels: Mock, mock_auth):
         mock_get_labels.return_value = GetLabelsResponse(
             labels=[],
             total=0,
@@ -104,7 +106,7 @@ class LabelViewTests(AuthenticatedTestCase):
         self.assertEqual(response.data["error"]["code"], "INTERNAL_ERROR")
 
     @patch("todo.services.label_service.LabelService.get_labels")
-    def test_get_labels_ignores_extra_params(self, mock_get_labels: Mock):
+    def test_get_labels_ignores_extra_params(self, mock_get_labels: Mock, mock_auth):
         mock_get_labels.return_value = GetLabelsResponse(labels=self.label_dtos, total=2, page=1, limit=10)
 
         response: Response = self.client.get(self.url, {"page": 1, "limit": 10, "extra": "ignored"})

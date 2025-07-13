@@ -3,7 +3,10 @@ import secrets
 from urllib.parse import urlencode
 from django.conf import settings
 
-from todo.exceptions.google_auth_exceptions import GoogleAPIException, GoogleAuthException
+from todo.exceptions.auth_exceptions import (
+    APIException,
+    AuthException,
+)
 from todo.constants.messages import ApiErrors
 
 
@@ -21,7 +24,7 @@ class GoogleOAuthService:
                 "client_id": settings.GOOGLE_OAUTH["CLIENT_ID"],
                 "redirect_uri": redirect_url or settings.GOOGLE_OAUTH["REDIRECT_URI"],
                 "response_type": "code",
-                "scope": " ".join(settings.GOOGLE_OAUTH["SCOPES"]),
+                "scope": "openid email profile",
                 "access_type": "offline",
                 "prompt": "consent",
                 "state": state,
@@ -31,7 +34,7 @@ class GoogleOAuthService:
             return auth_url, state
 
         except Exception:
-            raise GoogleAuthException(ApiErrors.GOOGLE_AUTH_FAILED)
+            raise AuthException(ApiErrors.GOOGLE_AUTH_FAILED)
 
     @classmethod
     def handle_callback(cls, authorization_code: str) -> dict:
@@ -48,9 +51,9 @@ class GoogleOAuthService:
             }
 
         except Exception as e:
-            if isinstance(e, GoogleAPIException):
+            if isinstance(e, APIException):
                 raise
-            raise GoogleAPIException(ApiErrors.GOOGLE_API_ERROR) from e
+            raise APIException(ApiErrors.GOOGLE_API_ERROR) from e
 
     @classmethod
     def _exchange_code_for_tokens(cls, code: str) -> dict:
@@ -66,36 +69,44 @@ class GoogleOAuthService:
             response = requests.post(cls.GOOGLE_TOKEN_URL, data=data, timeout=30)
 
             if response.status_code != 200:
-                raise GoogleAPIException(ApiErrors.TOKEN_EXCHANGE_FAILED)
+                raise APIException(ApiErrors.TOKEN_EXCHANGE_FAILED)
 
             tokens = response.json()
 
             if "error" in tokens:
-                raise GoogleAPIException(ApiErrors.GOOGLE_API_ERROR)
+                raise APIException(ApiErrors.GOOGLE_API_ERROR)
 
             return tokens
 
         except requests.exceptions.RequestException:
-            raise GoogleAPIException(ApiErrors.GOOGLE_API_ERROR)
+            raise APIException(ApiErrors.GOOGLE_API_ERROR)
 
     @classmethod
     def _get_user_info(cls, access_token: str) -> dict:
         try:
             headers = {"Authorization": f"Bearer {access_token}"}
-            response = requests.get(cls.GOOGLE_USER_INFO_URL, headers=headers, timeout=30)
+            response = requests.get(
+                cls.GOOGLE_USER_INFO_URL, headers=headers, timeout=30
+            )
 
             if response.status_code != 200:
-                raise GoogleAPIException(ApiErrors.USER_INFO_FETCH_FAILED.format("HTTP error"))
+                raise APIException(
+                    ApiErrors.USER_INFO_FETCH_FAILED.format("HTTP error")
+                )
 
             user_info = response.json()
 
             required_fields = ["id", "email", "name"]
-            missing_fields = [field for field in required_fields if field not in user_info]
+            missing_fields = [
+                field for field in required_fields if field not in user_info
+            ]
 
             if missing_fields:
-                raise GoogleAPIException(ApiErrors.MISSING_USER_INFO_FIELDS.format(", ".join(missing_fields)))
+                raise APIException(
+                    ApiErrors.MISSING_USER_INFO_FIELDS.format(", ".join(missing_fields))
+                )
 
             return user_info
 
         except requests.exceptions.RequestException:
-            raise GoogleAPIException(ApiErrors.GOOGLE_API_ERROR)
+            raise APIException(ApiErrors.GOOGLE_API_ERROR)

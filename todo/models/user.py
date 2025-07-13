@@ -16,5 +16,6 @@ class UserModel(Document):
     google_id: str
     email_id: EmailStr
     name: str
+    picture: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime | None = None

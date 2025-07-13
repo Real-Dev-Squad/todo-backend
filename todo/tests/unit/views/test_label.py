@@ -4,6 +4,7 @@ from rest_framework import status
 from unittest.mock import patch, Mock
 from bson.objectid import ObjectId
 from rest_framework.response import Response
+from django.conf import settings
 
 from todo.dto.responses.get_labels_response import GetLabelsResponse
 from todo.dto.label_dto import LabelDTO
@@ -26,8 +27,8 @@ class AuthenticatedTestCase(APISimpleTestCase):
         }
         tokens = generate_token_pair(user_data)
 
-        self.client.cookies["todo-access"] = tokens["access_token"]
-        self.client.cookies["todo-refresh"] = tokens["refresh_token"]
+        self.client.cookies[settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME")] = tokens["access_token"]
+        self.client.cookies[settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME")] = tokens["refresh_token"]
 
 
 @patch("todo.middlewares.jwt_auth.JWTAuthenticationMiddleware._try_authentication", return_value=True)

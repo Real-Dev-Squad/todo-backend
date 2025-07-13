@@ -1,6 +1,7 @@
 from unittest import TestCase
 from unittest.mock import Mock, patch
 from django.http import HttpRequest, JsonResponse
+from django.conf import settings
 from rest_framework import status
 import json
 from todo.middlewares.jwt_auth import (
@@ -30,7 +31,9 @@ class JWTAuthenticationMiddlewareTests(TestCase):
     def test_authentication_success(self, mock_auth):
         """Test successful authentication"""
         mock_auth.return_value = True
-        self.request.COOKIES = {"todo-access": "valid_token"}
+        self.request.COOKIES = {
+            settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"): "valid_token"
+        }
         response = self.middleware(self.request)
         mock_auth.assert_called_once_with(self.request)
         self.get_response.assert_called_once_with(self.request)
@@ -40,28 +43,30 @@ class JWTAuthenticationMiddlewareTests(TestCase):
     def test_access_token_validation_success(self, mock_validate):
         """Test successful access token validation"""
         mock_validate.return_value = {"user_id": "123", "token_type": "access"}
-        self.request.COOKIES = {"todo-access": "valid_token"}
-        
-        response = self.middleware(self.request)
-        
+        self.request.COOKIES = {
+            settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"): "valid_token"
+        }
         self.assertEqual(self.request.user_id, "123")
         self.get_response.assert_called_once_with(self.request)
 
     @patch("todo.middlewares.jwt_auth.validate_access_token")
     @patch("todo.middlewares.jwt_auth.validate_refresh_token")
     @patch("todo.middlewares.jwt_auth.generate_access_token")
-    def test_refresh_token_success(self, mock_generate, mock_validate_refresh, mock_validate_access):
+    def test_refresh_token_success(
+        self, mock_generate, mock_validate_refresh, mock_validate_access
+    ):
         """Test successful token refresh when access token is expired"""
         from todo.exceptions.auth_exceptions import TokenExpiredError
-        
+
         mock_validate_access.side_effect = TokenExpiredError("Token expired")
         mock_validate_refresh.return_value = {"user_id": "123", "token_type": "refresh"}
         mock_generate.return_value = "new_access_token"
-        
-        self.request.COOKIES = {"todo-access": "expired_token", "todo-refresh": "valid_refresh_token"}
-        
-        response = self.middleware(self.request)
-        
+
+        self.request.COOKIES = {
+            settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"): "expired_token",
+            settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME"): "valid_refresh_token",
+        }
+
         self.assertEqual(self.request.user_id, "123")
         self.assertEqual(self.request._new_access_token, "new_access_token")
         self.get_response.assert_called_once_with(self.request)

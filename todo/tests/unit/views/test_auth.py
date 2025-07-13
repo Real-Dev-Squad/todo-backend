@@ -3,6 +3,7 @@ from rest_framework.reverse import reverse
 from rest_framework import status
 from unittest.mock import patch, Mock, PropertyMock
 from bson.objectid import ObjectId
+from django.conf import settings
 
 from todo.views.auth import GoogleCallbackView
 from todo.utils.jwt_utils import generate_token_pair
@@ -168,8 +169,8 @@ class GoogleCallbackViewTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertIn("success=true", response.url)
-        self.assertIn("todo-access", response.cookies)
-        self.assertIn("todo-refresh", response.cookies)
+        self.assertIn(settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"), response.cookies)
+        self.assertIn(settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME"), response.cookies)
         self.assertNotIn("oauth_state", self.client.session)
 
     @patch("todo.services.google_oauth_service.GoogleOAuthService.handle_callback")
@@ -201,16 +202,16 @@ class GoogleLogoutViewTests(APITestCase):
             "name": google_auth_user_payload["name"],
         }
         tokens = generate_token_pair(user_data)
-        self.client.cookies["todo-access"] = tokens["access_token"]
-        self.client.cookies["todo-refresh"] = tokens["refresh_token"]
+        self.client.cookies[settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME")] = tokens["access_token"]
+        self.client.cookies[settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME")] = tokens["refresh_token"]
 
         response = self.client.post(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["data"]["success"], True)
         self.assertEqual(response.data["message"], AppMessages.GOOGLE_LOGOUT_SUCCESS)
-        self.assertEqual(response.cookies.get("todo-access").value, "")
-        self.assertEqual(response.cookies.get("todo-refresh").value, "")
+        self.assertEqual(response.cookies.get(settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME")).value, "")
+        self.assertEqual(response.cookies.get(settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME")).value, "")
 
     def test_logout_clears_session(self):
         """Test that logout clears session data"""
@@ -246,8 +247,8 @@ class UserViewProfileTrueTests(APITestCase):
             "name": "Test User",
         }
         tokens = generate_token_pair(self.user_data)
-        self.client.cookies["todo-access"] = tokens["access_token"]
-        self.client.cookies["todo-refresh"] = tokens["refresh_token"]
+        self.client.cookies[settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME")] = tokens["access_token"]
+        self.client.cookies[settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME")] = tokens["refresh_token"]
 
     @patch("todo.services.user_service.UserService.get_user_by_id")
     def test_requires_profile_true(self, mock_get_user):

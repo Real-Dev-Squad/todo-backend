@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from bson import ObjectId
 from django.test import TransactionTestCase, override_settings
+from django.conf import settings
 from pymongo import MongoClient
 from todo.models.user import UserModel
 from todo.tests.testcontainers.shared_mongo import get_shared_mongo_container
@@ -65,8 +66,8 @@ class AuthenticatedMongoTestCase(BaseMongoTestCase):
 
     def _set_auth_cookies(self):
         tokens = generate_token_pair(self.user_data)
-        self.client.cookies["todo-access"] = tokens["access_token"]
-        self.client.cookies["todo-refresh"] = tokens["refresh_token"]
+        self.client.cookies[settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME")] = tokens["access_token"]
+        self.client.cookies[settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME")] = tokens["refresh_token"]
 
     def get_user_model(self) -> UserModel:
         return UserModel(

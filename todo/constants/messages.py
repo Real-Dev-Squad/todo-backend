@@ -71,6 +71,7 @@ class ValidationErrors:
     MISSING_GOOGLE_ID = "Google ID is required"
     MISSING_EMAIL = "Email is required"
     MISSING_NAME = "Name is required"
+    MISSING_PICTURE = "Picture is required"
     SEARCH_QUERY_EMPTY = "Search query cannot be empty"
 
 

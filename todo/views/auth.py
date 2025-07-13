@@ -41,8 +41,20 @@ class GoogleLoginView(APIView):
     )
     def get(self, request: Request):
         redirect_url = request.query_params.get("redirectURL")
+        format_param = request.query_params.get("format")
         auth_url, state = GoogleOAuthService.get_authorization_url(redirect_url)
         request.session["oauth_state"] = state
+
+        # Check if JSON response is requested
+        if format_param == "json" or request.content_type == "application/json" or request.META.get("HTTP_ACCEPT") == "application/json":
+            return Response({
+                "statusCode": status.HTTP_200_OK,
+                "message": "Google OAuth URL generated successfully",
+                "data": {
+                    "authUrl": auth_url,
+                    "state": state,
+                }
+            })
 
         return HttpResponseRedirect(auth_url)
 
@@ -149,33 +161,6 @@ class GoogleCallbackView(APIView):
 
 
 class LogoutView(APIView):
-    @extend_schema(
-        operation_id="google_logout",
-        summary="Logout user",
-        description="Logout the user by clearing authentication cookies",
-        tags=["auth"],
-        parameters=[
-            OpenApiParameter(
-                name="redirectURL",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                description="URL to redirect after logout",
-                required=False,
-            ),
-            OpenApiParameter(
-                name="format",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                description="Response format: 'json' for JSON response, otherwise redirects",
-                required=False,
-            ),
-        ],
-        responses={
-            200: OpenApiResponse(description="Logout successful"),
-            302: OpenApiResponse(description="Redirect to specified URL or home page"),
-        },
-    )
-    
     @extend_schema(
         operation_id="google_logout_post",
         summary="Logout user (POST)",

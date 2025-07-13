@@ -57,6 +57,7 @@ class AuthenticatedMongoTestCase(BaseMongoTestCase):
                 "google_id": self.user_data["google_id"],
                 "email_id": self.user_data["email"],
                 "name": self.user_data["name"],
+                "picture": self.user_data["picture"],
                 "createdAt": datetime.now(timezone.utc),
                 "updatedAt": datetime.now(timezone.utc),
             }
@@ -64,8 +65,8 @@ class AuthenticatedMongoTestCase(BaseMongoTestCase):
 
     def _set_auth_cookies(self):
         tokens = generate_token_pair(self.user_data)
-        self.client.cookies["ext-access"] = tokens["access_token"]
-        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
+        self.client.cookies["todo-access"] = tokens["access_token"]
+        self.client.cookies["todo-refresh"] = tokens["refresh_token"]
 
     def get_user_model(self) -> UserModel:
         return UserModel(
@@ -73,6 +74,7 @@ class AuthenticatedMongoTestCase(BaseMongoTestCase):
             google_id=self.user_data["google_id"],
             email_id=self.user_data["email"],
             name=self.user_data["name"],
+            picture=self.user_data["picture"],
             createdAt=datetime.now(timezone.utc),
             updatedAt=datetime.now(timezone.utc),
         )

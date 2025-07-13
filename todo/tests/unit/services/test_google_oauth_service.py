@@ -14,7 +14,6 @@ class GoogleOAuthServiceTests(TestCase):
                 "CLIENT_ID": "test-client-id",
                 "CLIENT_SECRET": "test-client-secret",
                 "REDIRECT_URI": "http://localhost:3000/auth/callback",
-                "SCOPES": ["email", "profile"],
             }
         }
         self.valid_user_info = {"id": "123456789", "email": "test@example.com", "name": "Test User"}
@@ -33,7 +32,7 @@ class GoogleOAuthServiceTests(TestCase):
             "client_id": self.mock_settings["GOOGLE_OAUTH"]["CLIENT_ID"],
             "redirect_uri": self.mock_settings["GOOGLE_OAUTH"]["REDIRECT_URI"],
             "response_type": "code",
-            "scope": " ".join(self.mock_settings["GOOGLE_OAUTH"]["SCOPES"]),
+            "scope": "openid email profile",
             "access_type": "offline",
             "prompt": "consent",
             "state": state,

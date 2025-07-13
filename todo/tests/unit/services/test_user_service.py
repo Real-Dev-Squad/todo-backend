@@ -11,7 +11,7 @@ from todo.constants.messages import ValidationErrors, RepositoryErrors
 
 class UserServiceTests(TestCase):
     def setUp(self) -> None:
-        self.valid_google_user_data = {"google_id": "123456789", "email": "test@example.com", "name": "Test User"}
+        self.valid_google_user_data = {"google_id": "123456789", "email": "test@example.com", "name": "Test User", "picture": "https://example.com/picture.jpg"}
         self.user_model = UserModel(**users_db_data[0])
 
     @patch("todo.services.user_service.UserRepository")

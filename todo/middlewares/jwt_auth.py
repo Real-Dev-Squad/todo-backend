@@ -88,7 +88,7 @@ class JWTAuthenticationMiddleware:
     def _try_refresh(self, request) -> bool:
         """Try to refresh access token"""
         try:
-            refresh_token = (settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME"),)
+            refresh_token = request.COOKIES.get(settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME"))
             if not refresh_token:
                 return False
             payload = validate_refresh_token(refresh_token)

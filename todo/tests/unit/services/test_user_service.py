@@ -4,14 +4,19 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from todo.services.user_service import UserService
 from todo.models.user import UserModel
-from todo.exceptions.google_auth_exceptions import GoogleUserNotFoundException, GoogleAPIException
+from todo.exceptions.auth_exceptions import UserNotFoundException, APIException
 from todo.tests.fixtures.user import users_db_data
 from todo.constants.messages import ValidationErrors, RepositoryErrors
 
 
 class UserServiceTests(TestCase):
     def setUp(self) -> None:
-        self.valid_google_user_data = {"google_id": "123456789", "email": "test@example.com", "name": "Test User"}
+        self.valid_google_user_data = {
+            "google_id": "123456789",
+            "email": "test@example.com",
+            "name": "Test User",
+            "picture": "https://example.com/picture.jpg",
+        }
         self.user_model = UserModel(**users_db_data[0])
 
     @patch("todo.services.user_service.UserRepository")
@@ -37,7 +42,7 @@ class UserServiceTests(TestCase):
     def test_create_or_update_user_repository_error(self, mock_repository):
         mock_repository.create_or_update.side_effect = Exception("Database error")
 
-        with self.assertRaises(GoogleAPIException) as context:
+        with self.assertRaises(APIException) as context:
             UserService.create_or_update_user(self.valid_google_user_data)
         self.assertIn(RepositoryErrors.USER_CREATE_UPDATE_FAILED.format("Database error"), str(context.exception))
 
@@ -54,7 +59,7 @@ class UserServiceTests(TestCase):
     def test_get_user_by_id_not_found(self, mock_repository):
         mock_repository.get_by_id.return_value = None
 
-        with self.assertRaises(GoogleUserNotFoundException):
+        with self.assertRaises(UserNotFoundException):
             UserService.get_user_by_id("123")
         mock_repository.get_by_id.assert_called_once_with("123")
 

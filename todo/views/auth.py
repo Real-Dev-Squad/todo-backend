@@ -8,7 +8,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiRespon
 from drf_spectacular.types import OpenApiTypes
 from todo.services.google_oauth_service import GoogleOAuthService
 from todo.services.user_service import UserService
-from todo.utils.google_jwt_utils import generate_google_token_pair
+from todo.utils.jwt_utils import generate_token_pair
 from todo.constants.messages import AppMessages
 
 
@@ -96,37 +96,32 @@ class GoogleCallbackView(APIView):
         state = request.query_params.get("state")
         error = request.query_params.get("error")
 
+        todo_ui_config = settings.SERVICES.get("TODO_UI", {})
+        frontend_callback = f"{todo_ui_config.get('URL', '')}/{todo_ui_config.get('REDIRECT_PATH', '')}"
+
         if error:
-            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error={error}")
 
         if not code:
-            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error=missing_code")
 
         if not state:
-            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error=missing_state")
 
         stored_state = request.session.get("oauth_state")
         if not stored_state or stored_state != state:
-            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error=invalid_state")
 
         try:
             google_data = GoogleOAuthService.handle_callback(code)
             user = UserService.create_or_update_user(google_data)
-
-            tokens = generate_google_token_pair(
+            tokens = generate_token_pair(
                 {
                     "user_id": str(user.id),
-                    "google_id": user.google_id,
-                    "email": user.email_id,
                     "name": user.name,
                 }
             )
 
-            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             response = HttpResponseRedirect(f"{frontend_callback}?success=true")
 
             self._set_auth_cookies(response, tokens)
@@ -135,56 +130,34 @@ class GoogleCallbackView(APIView):
             return response
 
         except Exception:
-            frontend_callback = f"{settings.FRONTEND_URL}/auth/callback"
             return HttpResponseRedirect(f"{frontend_callback}?error=auth_failed")
 
     def _get_cookie_config(self):
         return {
             "path": "/",
-            "domain": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
-            "secure": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SECURE", False),
-            "httponly": True,
-            "samesite": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SAMESITE", "Lax"),
+            "domain": settings.COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
+            "secure": settings.COOKIE_SETTINGS.get("COOKIE_SECURE"),
+            "httponly": settings.COOKIE_SETTINGS.get("COOKIE_HTTPONLY"),
+            "samesite": settings.COOKIE_SETTINGS.get("COOKIE_SAMESITE"),
         }
 
     def _set_auth_cookies(self, response, tokens):
         config = self._get_cookie_config()
-        response.set_cookie("ext-access", tokens["access_token"], max_age=tokens["expires_in"], **config)
         response.set_cookie(
-            "ext-refresh", tokens["refresh_token"], max_age=settings.GOOGLE_JWT["REFRESH_TOKEN_LIFETIME"], **config
+            settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"),
+            tokens["access_token"],
+            max_age=tokens["expires_in"],
+            **config,
+        )
+        response.set_cookie(
+            settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME"),
+            tokens["refresh_token"],
+            max_age=settings.JWT_CONFIG.get("REFRESH_TOKEN_LIFETIME"),
+            **config,
         )
 
 
-class GoogleLogoutView(APIView):
-    @extend_schema(
-        operation_id="google_logout",
-        summary="Logout user",
-        description="Logout the user by clearing authentication cookies",
-        tags=["auth"],
-        parameters=[
-            OpenApiParameter(
-                name="redirectURL",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                description="URL to redirect after logout",
-                required=False,
-            ),
-            OpenApiParameter(
-                name="format",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.QUERY,
-                description="Response format: 'json' for JSON response, otherwise redirects",
-                required=False,
-            ),
-        ],
-        responses={
-            200: OpenApiResponse(description="Logout successful"),
-            302: OpenApiResponse(description="Redirect to specified URL or home page"),
-        },
-    )
-    def get(self, request: Request):
-        return self._handle_logout(request)
-
+class LogoutView(APIView):
     @extend_schema(
         operation_id="google_logout_post",
         summary="Logout user (POST)",
@@ -211,25 +184,17 @@ class GoogleLogoutView(APIView):
         self._clear_auth_cookies(response)
         return response
 
-    def _get_cookie_config(self):
-        return {
-            "path": "/",
-            "domain": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
-            "secure": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SECURE", False),
-            "httponly": True,
-            "samesite": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_SAMESITE", "Lax"),
-        }
-
     def _clear_auth_cookies(self, response):
         delete_config = {
             "path": "/",
-            "domain": settings.GOOGLE_COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
+            "domain": settings.COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
         }
-        response.delete_cookie("ext-access", **delete_config)
-        response.delete_cookie("ext-refresh", **delete_config)
+
+        response.delete_cookie(settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"), **delete_config)
+        response.delete_cookie(settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME"), **delete_config)
 
         session_delete_config = {
             "path": getattr(settings, "SESSION_COOKIE_PATH", "/"),
-            "domain": getattr(settings, "SESSION_COOKIE_DOMAIN", None),
+            "domain": getattr(settings, "SESSION_COOKIE_DOMAIN"),
         }
         response.delete_cookie("sessionid", **session_delete_config)

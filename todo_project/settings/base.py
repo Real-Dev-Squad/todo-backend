@@ -180,7 +180,7 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": "/v1/",
     "SWAGGER_UI_SETTINGS": {
-        "url": os.getenv("SWAGGER_UI_URL", "/api/schema"),
+        "url": os.getenv("SWAGGER_UI_PATH", "/api/schema"),
     },
     "SERVERS": [
         {

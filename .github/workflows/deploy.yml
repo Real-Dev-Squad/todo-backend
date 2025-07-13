@@ -75,4 +75,5 @@ jobs:
               -e TODO_UI_BASE_URL="${{ vars.TODO_UI_BASE_URL }}" \
               -e TODO_UI_REDIRECT_PATH="${{ vars.TODO_UI_REDIRECT_PATH }}" \
               -e CORS_ALLOWED_ORIGINS="${{ vars.CORS_ALLOWED_ORIGINS }}" \
+              -e SWAGGER_UI_PATH="${{ vars.SWAGGER_UI_PATH }}" \
               ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}

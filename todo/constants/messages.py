@@ -77,6 +77,7 @@ class ValidationErrors:
     MISSING_PICTURE = "Picture is required"
     SEARCH_QUERY_EMPTY = "Search query cannot be empty"
     TASK_ID_STRING_REQUIRED = "Task ID must be a string."
+    INVALID_IS_ACTIVE_VALUE = "Invalid value for is_active"
 
 
 # Auth messages

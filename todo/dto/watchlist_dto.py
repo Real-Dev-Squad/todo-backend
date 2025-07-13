@@ -27,3 +27,7 @@ class CreateWatchlistDTO(BaseModel):
     createdBy: str | None = None
     updatedAt: datetime | None = None
     updatedBy: str | None = None
+
+
+class UpdateWatchlistDTO(BaseModel):
+    isActive: bool

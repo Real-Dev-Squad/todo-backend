@@ -1,9 +1,11 @@
+from datetime import datetime, timezone
 from typing import List, Tuple
 from typing import Optional
 
 from todo.repositories.common.mongo_repository import MongoRepository
 from todo.models.watchlist import WatchlistModel
 from todo.dto.watchlist_dto import WatchlistDTO
+from bson import ObjectId
 
 
 class WatchlistRepository(MongoRepository):
@@ -74,3 +76,24 @@ class WatchlistRepository(MongoRepository):
         tasks = [WatchlistDTO(**doc) for doc in result.get("data", [])]
 
         return count, tasks
+
+    @classmethod
+    def update(cls, task_Id: ObjectId, isActive: bool, user_id: ObjectId) -> dict:
+        """
+        Update the watchlist status of a task.
+        """
+        watchlist_collection = cls.get_collection()
+        update_result = watchlist_collection.update_one(
+            {"userId": str(user_id), "taskId": str(task_Id)},
+            {
+                "$set": {
+                    "isActive": isActive,
+                    "updatedAt": datetime.now(timezone.utc),
+                    "updatedBy": user_id,
+                }
+            },
+        )
+
+        if update_result.modified_count == 0:
+            return None
+        return update_result

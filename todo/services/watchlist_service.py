@@ -7,7 +7,7 @@ import math
 from todo.dto.responses.paginated_response import LinksData
 from todo.dto.watchlist_dto import CreateWatchlistDTO, WatchlistDTO
 from todo.dto.responses.create_watchlist_response import CreateWatchlistResponse
-from todo.dto.responses.get_watclist_task_response import GetWatchlistTasksResponse
+from todo.dto.responses.get_watchlist_task_response import GetWatchlistTasksResponse
 from todo.models.watchlist import WatchlistModel
 from todo.repositories.watchlist_repository import WatchlistRepository
 from todo.repositories.task_repository import TaskRepository
@@ -30,7 +30,7 @@ class WatchlistService:
         user_id: str,
     ) -> GetWatchlistTasksResponse:
         try:
-            [count, tasks] = WatchlistRepository.get_watchlisted_tasks(page, limit, user_id)
+            count, tasks = WatchlistRepository.get_watchlisted_tasks(page, limit, user_id)
 
             if not tasks:
                 return GetWatchlistTasksResponse(tasks=[], links=None)

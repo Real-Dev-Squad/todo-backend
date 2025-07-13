@@ -85,26 +85,18 @@ class GoogleOAuthService:
     def _get_user_info(cls, access_token: str) -> dict:
         try:
             headers = {"Authorization": f"Bearer {access_token}"}
-            response = requests.get(
-                cls.GOOGLE_USER_INFO_URL, headers=headers, timeout=30
-            )
+            response = requests.get(cls.GOOGLE_USER_INFO_URL, headers=headers, timeout=30)
 
             if response.status_code != 200:
-                raise APIException(
-                    ApiErrors.USER_INFO_FETCH_FAILED.format("HTTP error")
-                )
+                raise APIException(ApiErrors.USER_INFO_FETCH_FAILED.format("HTTP error"))
 
             user_info = response.json()
 
             required_fields = ["id", "email", "name"]
-            missing_fields = [
-                field for field in required_fields if field not in user_info
-            ]
+            missing_fields = [field for field in required_fields if field not in user_info]
 
             if missing_fields:
-                raise APIException(
-                    ApiErrors.MISSING_USER_INFO_FIELDS.format(", ".join(missing_fields))
-                )
+                raise APIException(ApiErrors.MISSING_USER_INFO_FIELDS.format(", ".join(missing_fields)))
 
             return user_info
 

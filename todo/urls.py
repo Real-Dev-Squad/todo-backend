@@ -5,17 +5,13 @@ from todo.views.user import UsersView
 from todo.views.auth import (
     GoogleLoginView,
     GoogleCallbackView,
-    LogoutView,
 )
 from todo.views.role import RoleListView, RoleDetailView
 from todo.views.label import LabelListView
 from todo.views.team import TeamListView
 from todo.views.auth import (
-    GoogleLoginView,
-    GoogleCallbackView,
     GoogleLogoutView,
 )
-from todo.views.user import UsersView
 from todo.views.watchlist import WatchlistListView
 
 urlpatterns = [

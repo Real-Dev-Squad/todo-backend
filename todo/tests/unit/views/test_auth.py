@@ -265,15 +265,16 @@ class UserViewProfileTrueTests(APITestCase):
     @patch("todo.services.user_service.UserService.get_user_by_id")
     def test_returns_user_info(self, mock_get_user):
         from todo.models.user import UserModel
+
         mock_user = UserModel(
             id=ObjectId(self.user_data["user_id"]),
             google_id=self.user_data["google_id"],
             email_id=self.user_data["email"],
             name=self.user_data["name"],
-            picture="https://example.com/picture.jpg"
+            picture="https://example.com/picture.jpg",
         )
         mock_get_user.return_value = mock_user
-        
+
         response = self.client.get(self.url + "?profile=true")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["data"]["userId"], self.user_data["user_id"])

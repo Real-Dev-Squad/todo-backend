@@ -14,9 +14,7 @@ SECRET_KEY = os.getenv(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = (
-    os.getenv("ALLOWED_HOSTS", "").split(",") if os.getenv("ALLOWED_HOSTS") else []
-)
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",") if os.getenv("ALLOWED_HOSTS") else []
 
 MONGODB_URI = os.getenv("MONGODB_URI")
 DB_NAME = os.getenv("DB_NAME")
@@ -109,9 +107,7 @@ GOOGLE_OAUTH = {
     "REDIRECT_URI": os.getenv("GOOGLE_OAUTH_REDIRECT_URI"),
 }
 
-TESTING = (
-    "test" in sys.argv or "pytest" in sys.modules or os.getenv("TESTING") == "True"
-)
+TESTING = "test" in sys.argv or "pytest" in sys.modules or os.getenv("TESTING") == "True"
 
 if TESTING:
     # Test JWT configuration (HS256 - simpler for tests)

@@ -209,7 +209,9 @@ SPECTACULAR_SETTINGS = {
 
 STATIC_URL = "/static/"
 
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS").split(",") if os.getenv("CORS_ALLOWED_ORIGINS") else []
+cors_origins = os.getenv("CORS_ALLOWED_ORIGINS")
+CORS_ALLOWED_ORIGINS = cors_origins.split(",") if cors_origins else []
+
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_HEADERS = [
     "accept",

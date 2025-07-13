@@ -67,9 +67,7 @@ class JWTAuthenticationMiddleware:
 
     def _try_authentication(self, request) -> bool:
         try:
-            access_token = request.COOKIES.get(
-                settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME")
-            )
+            access_token = request.COOKIES.get(settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"))
             if access_token:
                 try:
                     payload = validate_access_token(access_token)
@@ -138,19 +136,13 @@ class JWTAuthenticationMiddleware:
         }
 
     def _is_public_path(self, path: str) -> bool:
-        return any(
-            path.startswith(public_path) for public_path in settings.PUBLIC_PATHS
-        )
+        return any(path.startswith(public_path) for public_path in settings.PUBLIC_PATHS)
 
     def _handle_auth_error(self, exception):
         error_response = ApiErrorResponse(
             statusCode=status.HTTP_401_UNAUTHORIZED,
             message=str(exception),
-            errors=[
-                ApiErrorDetail(
-                    title=ApiErrors.AUTHENTICATION_FAILED, detail=str(exception)
-                )
-            ],
+            errors=[ApiErrorDetail(title=ApiErrors.AUTHENTICATION_FAILED, detail=str(exception))],
         )
         return JsonResponse(
             data=error_response.model_dump(mode="json", exclude_none=True),

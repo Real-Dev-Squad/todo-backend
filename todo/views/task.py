@@ -66,9 +66,7 @@ class TaskListView(APIView):
                 page=query.validated_data["page"],
                 limit=query.validated_data["limit"],
             )
-            return Response(
-                data=response.model_dump(mode="json"), status=status.HTTP_200_OK
-            )
+            return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
 
         user = get_current_user_info(request)
         if query.validated_data["profile"]:
@@ -89,9 +87,7 @@ class TaskListView(APIView):
             order=query.validated_data.get("order"),
             user_id=user["user_id"],
         )
-        return Response(
-            data=response.model_dump(mode="json"), status=status.HTTP_200_OK
-        )
+        return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
 
     @extend_schema(
         operation_id="create_task",
@@ -126,9 +122,7 @@ class TaskListView(APIView):
             dto = CreateTaskDTO(**serializer.validated_data, createdBy=user["user_id"])
             response: CreateTaskResponse = TaskService.create_task(dto)
 
-            return Response(
-                data=response.model_dump(mode="json"), status=status.HTTP_201_CREATED
-            )
+            return Response(data=response.model_dump(mode="json"), status=status.HTTP_201_CREATED)
 
         except ValueError as e:
             if isinstance(e.args[0], ApiErrorResponse):
@@ -141,15 +135,7 @@ class TaskListView(APIView):
             fallback_response = ApiErrorResponse(
                 statusCode=500,
                 message=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
-                errors=[
-                    {
-                        "detail": (
-                            str(e)
-                            if settings.DEBUG
-                            else ApiErrors.INTERNAL_SERVER_ERROR
-                        )
-                    }
-                ],
+                errors=[{"detail": (str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR)}],
             )
             return Response(
                 data=fallback_response.model_dump(mode="json"),
@@ -177,9 +163,7 @@ class TaskListView(APIView):
                     )
                 )
 
-        error_response = ApiErrorResponse(
-            statusCode=400, message=ApiErrors.VALIDATION_ERROR, errors=formatted_errors
-        )
+        error_response = ApiErrorResponse(statusCode=400, message=ApiErrors.VALIDATION_ERROR, errors=formatted_errors)
 
         return Response(
             data=error_response.model_dump(mode="json"),
@@ -213,9 +197,7 @@ class TaskDetailView(APIView):
         """
         task_dto = TaskService.get_task_by_id(task_id)
         response_data = GetTaskByIdResponse(data=task_dto)
-        return Response(
-            data=response_data.model_dump(mode="json"), status=status.HTTP_200_OK
-        )
+        return Response(data=response_data.model_dump(mode="json"), status=status.HTTP_200_OK)
 
     @extend_schema(
         operation_id="delete_task",
@@ -297,10 +279,6 @@ class TaskDetailView(APIView):
                 user_id=user["user_id"],
             )
         else:
-            raise ValidationError(
-                {"action": ValidationErrors.UNSUPPORTED_ACTION.format(action)}
-            )
+            raise ValidationError({"action": ValidationErrors.UNSUPPORTED_ACTION.format(action)})
 
-        return Response(
-            data=updated_task_dto.model_dump(mode="json"), status=status.HTTP_200_OK
-        )
+        return Response(data=updated_task_dto.model_dump(mode="json"), status=status.HTTP_200_OK)

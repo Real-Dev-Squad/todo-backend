@@ -97,9 +97,7 @@ class GoogleCallbackView(APIView):
         error = request.query_params.get("error")
 
         todo_ui_config = settings.SERVICES.get("TODO_UI", {})
-        frontend_callback = (
-            f"{todo_ui_config.get('URL', '')}/{todo_ui_config.get('REDIRECT_PATH', '')}"
-        )
+        frontend_callback = f"{todo_ui_config.get('URL', '')}/{todo_ui_config.get('REDIRECT_PATH', '')}"
 
         if error:
             return HttpResponseRedirect(f"{frontend_callback}?error={error}")
@@ -192,12 +190,8 @@ class LogoutView(APIView):
             "domain": settings.COOKIE_SETTINGS.get("COOKIE_DOMAIN"),
         }
 
-        response.delete_cookie(
-            settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"), **delete_config
-        )
-        response.delete_cookie(
-            settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME"), **delete_config
-        )
+        response.delete_cookie(settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"), **delete_config)
+        response.delete_cookie(settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME"), **delete_config)
 
         session_delete_config = {
             "path": getattr(settings, "SESSION_COOKIE_PATH", "/"),

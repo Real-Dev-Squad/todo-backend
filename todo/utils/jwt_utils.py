@@ -14,9 +14,7 @@ from todo.constants.messages import AuthErrorMessages
 def generate_access_token(user_data: dict) -> str:
     try:
         now = datetime.now(timezone.utc)
-        expiry = now + timedelta(
-            seconds=settings.JWT_CONFIG.get("ACCESS_TOKEN_LIFETIME")
-        )
+        expiry = now + timedelta(seconds=settings.JWT_CONFIG.get("ACCESS_TOKEN_LIFETIME"))
 
         payload = {
             "iss": "todo-app-auth",
@@ -41,9 +39,7 @@ def generate_access_token(user_data: dict) -> str:
 def generate_refresh_token(user_data: dict) -> str:
     try:
         now = datetime.now(timezone.utc)
-        expiry = now + timedelta(
-            seconds=settings.JWT_CONFIG.get("REFRESH_TOKEN_LIFETIME")
-        )
+        expiry = now + timedelta(seconds=settings.JWT_CONFIG.get("REFRESH_TOKEN_LIFETIME"))
 
         payload = {
             "iss": "todo-app-auth",

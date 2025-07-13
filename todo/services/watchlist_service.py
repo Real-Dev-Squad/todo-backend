@@ -1,8 +1,13 @@
 from datetime import datetime, timezone
 from django.conf import settings
+from django.urls import reverse_lazy
+from urllib.parse import urlencode
+import math
 
-from todo.dto.watchlist_dto import CreateWatchlistDTO
+from todo.dto.responses.paginated_response import LinksData
+from todo.dto.watchlist_dto import CreateWatchlistDTO, WatchlistDTO
 from todo.dto.responses.create_watchlist_response import CreateWatchlistResponse
+from todo.dto.responses.get_watchlist_task_response import GetWatchlistTasksResponse
 from todo.models.watchlist import WatchlistModel
 from todo.repositories.watchlist_repository import WatchlistRepository
 from todo.repositories.task_repository import TaskRepository
@@ -10,7 +15,47 @@ from todo.constants.messages import ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 
 
+class PaginationConfig:
+    DEFAULT_PAGE: int = 1
+    DEFAULT_LIMIT: int = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"]
+    MAX_LIMIT: int = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["MAX_PAGE_LIMIT"]
+
+
 class WatchlistService:
+    @classmethod
+    def get_watchlisted_tasks(
+        cls,
+        page: int,
+        limit: int,
+        user_id: str,
+    ) -> GetWatchlistTasksResponse:
+        try:
+            count, tasks = WatchlistRepository.get_watchlisted_tasks(page, limit, user_id)
+
+            if not tasks:
+                return GetWatchlistTasksResponse(tasks=[], links=None)
+
+            watchlisted_task_dtos = [cls.prepare_watchlisted_task_dto(task) for task in tasks]
+
+            links = cls._build_pagination_links(page, limit, count)
+
+            return GetWatchlistTasksResponse(tasks=watchlisted_task_dtos, links=links)
+
+        except Exception as e:
+            raise ValueError(
+                ApiErrorResponse(
+                    statusCode=500,
+                    message=ApiErrors.SERVER_ERROR,
+                    errors=[
+                        ApiErrorDetail(
+                            source={ApiErrorSource.PARAMETER: "server"},
+                            title=ApiErrors.UNEXPECTED_ERROR,
+                            detail=str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR,
+                        )
+                    ],
+                )
+            )
+
     @classmethod
     def add_task(cls, dto: CreateWatchlistDTO) -> CreateWatchlistResponse:
         try:
@@ -77,3 +122,43 @@ class WatchlistService:
                     ],
                 )
             )
+
+    @classmethod
+    def prepare_watchlisted_task_dto(cls, watchlist_model: WatchlistDTO) -> WatchlistDTO:
+        return WatchlistDTO(
+            taskId=str(watchlist_model.taskId),
+            displayId=watchlist_model.displayId,
+            title=watchlist_model.title,
+            description=watchlist_model.description,
+            isAcknowledged=watchlist_model.isAcknowledged,
+            isDeleted=watchlist_model.isDeleted,
+            labels=watchlist_model.labels,
+            dueAt=watchlist_model.dueAt,
+            status=watchlist_model.status,
+            priority=watchlist_model.priority,
+            createdAt=watchlist_model.createdAt,
+            createdBy=watchlist_model.createdBy,
+            watchlistId=watchlist_model.watchlistId,
+        )
+
+    @classmethod
+    def _build_pagination_links(cls, page: int, limit: int, total_count: int) -> LinksData:
+        """Build pagination links with sort parameters"""
+
+        total_pages = math.ceil(total_count / limit)
+        next_link = None
+        prev_link = None
+
+        if page < total_pages:
+            next_link = cls.build_page_url(page + 1, limit)
+
+        if page > 1:
+            prev_link = cls.build_page_url(page - 1, limit)
+
+        return LinksData(next=next_link, prev=prev_link)
+
+    @classmethod
+    def build_page_url(cls, page: int, limit: int) -> str:
+        base_url = reverse_lazy("watchlist")
+        query_params = urlencode({"page": page, "limit": limit})
+        return f"{base_url}?{query_params}"

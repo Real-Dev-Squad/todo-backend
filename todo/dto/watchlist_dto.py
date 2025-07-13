@@ -1,11 +1,22 @@
 from datetime import datetime
-from pydantic import BaseModel, Field
-from .task_dto import TaskDTO
+from pydantic import BaseModel
+from typing import Optional
 
 
-class WatchlistDTO(TaskDTO):
+class WatchlistDTO(BaseModel):
+    taskId: str
+    displayId: str
+    title: str
+    description: Optional[str] = None
+    priority: Optional[int] = None
+    status: Optional[str] = None
+    isAcknowledged: Optional[bool] = None
+    isDeleted: Optional[bool] = None
+    labels: list = []
+    dueAt: Optional[datetime] = None
+    createdAt: datetime
+    createdBy: str
     watchlistId: str
-    taskId: str = Field(alias="id")
 
 
 class CreateWatchlistDTO(BaseModel):

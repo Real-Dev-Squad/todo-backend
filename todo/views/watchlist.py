@@ -7,12 +7,29 @@ from todo.middlewares.jwt_auth import get_current_user_info
 from todo.constants.messages import ApiErrors
 from todo.services.watchlist_service import WatchlistService
 from todo.serializers.create_watchlist_serializer import CreateWatchlistSerializer
+from todo.serializers.get_watchlist_tasks_serializer import GetWatchlistTaskQueryParamsSerializer
 from todo.dto.responses.error_response import ApiErrorResponse
 from todo.dto.watchlist_dto import CreateWatchlistDTO
 from todo.dto.responses.create_watchlist_response import CreateWatchlistResponse
 
 
 class WatchlistListView(APIView):
+    def get(self, request: Request):
+        """
+        Retrieve a paginated list of tasks that are added to watchlist.
+        """
+        query = GetWatchlistTaskQueryParamsSerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+
+        user = get_current_user_info(request)
+
+        response = WatchlistService.get_watchlisted_tasks(
+            page=query.validated_data["page"],
+            limit=query.validated_data["limit"],
+            user_id=user["user_id"],
+        )
+        return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
+
     def post(self, request: Request):
         """
         Add a task to the watchlist.

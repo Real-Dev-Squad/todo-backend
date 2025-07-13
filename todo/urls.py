@@ -21,8 +21,8 @@ urlpatterns = [
     path("health", HealthView.as_view(), name="health"),
     path("labels", LabelListView.as_view(), name="labels"),
     path("watchlist/tasks", WatchlistListView.as_view(), name="watchlist"),
-    path("auth/google/login/", GoogleLoginView.as_view(), name="google_login"),
-    path("auth/google/callback/", GoogleCallbackView.as_view(), name="google_callback"),
-    path("auth/logout/", LogoutView.as_view(), name="google_logout"),
+    path("auth/google/login", GoogleLoginView.as_view(), name="google_login"),
+    path("auth/google/callback", GoogleCallbackView.as_view(), name="google_callback"),
+    path("auth/logout", LogoutView.as_view(), name="google_logout"),
     path("users", UsersView.as_view(), name="users"),
 ]

@@ -2,7 +2,6 @@ from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.exceptions import AuthenticationFailed
 
 from todo.middlewares.jwt_auth import get_current_user_info
 from todo.constants.messages import ApiErrors
@@ -36,8 +35,6 @@ class WatchlistListView(APIView):
         Add a task to the watchlist.
         """
         user = get_current_user_info(request)
-        if not user:
-            raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
 
         serializer = CreateWatchlistSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

@@ -6,6 +6,7 @@ class AppMessages:
     GOOGLE_LOGOUT_SUCCESS = "Successfully logged out"
     TOKEN_REFRESHED = "Access token refreshed successfully"
     USERS_SEARCHED_SUCCESS = "Users searched successfully"
+    WATCHLIST_CREATED = "Task added to watchlist successfully"
 
 
 # Repository error messages
@@ -17,6 +18,7 @@ class RepositoryErrors:
     USER_OPERATION_FAILED = "User operation failed"
     USER_CREATE_UPDATE_FAILED = "User create/update failed: {0}"
     USER_SEARCH_FAILED = "User search failed: {0}"
+    WATCHLIST_CREATION_FAILED = "Failed to add task to watchlist: {0}"
 
 
 # API error messages
@@ -49,6 +51,7 @@ class ApiErrors:
     USER_NOT_FOUND = "User with ID {0} not found."
     USER_NOT_FOUND_GENERIC = "User not found."
     SEARCH_QUERY_EMPTY = "Search query cannot be empty"
+    TASK_ALREADY_IN_WATCHLIST = "Task is already in the watchlist"
 
 
 # Validation error messages
@@ -73,6 +76,7 @@ class ValidationErrors:
     MISSING_NAME = "Name is required"
     MISSING_PICTURE = "Picture is required"
     SEARCH_QUERY_EMPTY = "Search query cannot be empty"
+    TASK_ID_STRING_REQUIRED = "Task ID must be a string."
 
 
 # Auth messages

@@ -1,11 +1,11 @@
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from .task_dto import TaskDTO
 
 
 class WatchlistDTO(TaskDTO):
     watchlistId: str
-    taskId: str = Field(alias="id")
+    taskId: str
 
 
 class CreateWatchlistDTO(BaseModel):

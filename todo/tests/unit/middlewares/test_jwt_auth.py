@@ -46,6 +46,7 @@ class JWTAuthenticationMiddlewareTests(TestCase):
         self.request.COOKIES = {
             settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"): "valid_token"
         }
+        self.middleware(self.request)
         self.assertEqual(self.request.user_id, "123")
         self.get_response.assert_called_once_with(self.request)
 
@@ -66,7 +67,7 @@ class JWTAuthenticationMiddlewareTests(TestCase):
             settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"): "expired_token",
             settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME"): "valid_refresh_token",
         }
-
+        self.middleware(self.request)
         self.assertEqual(self.request.user_id, "123")
         self.assertEqual(self.request._new_access_token, "new_access_token")
         self.get_response.assert_called_once_with(self.request)

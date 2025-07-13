@@ -18,5 +18,4 @@ class WatchlistRepository(MongoRepository):
         doc.pop("_id", None)
         insert_result = cls.get_collection().insert_one(doc)
         watchlist_model.id = str(insert_result.inserted_id)
-        print(24, watchlist_model)
         return watchlist_model

@@ -5,14 +5,16 @@ from urllib.parse import urlencode
 import math
 
 from todo.dto.responses.paginated_response import LinksData
-from todo.dto.watchlist_dto import CreateWatchlistDTO, WatchlistDTO
+from todo.dto.watchlist_dto import CreateWatchlistDTO, UpdateWatchlistDTO, WatchlistDTO
 from todo.dto.responses.create_watchlist_response import CreateWatchlistResponse
 from todo.dto.responses.get_watchlist_task_response import GetWatchlistTasksResponse
+from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.watchlist import WatchlistModel
 from todo.repositories.watchlist_repository import WatchlistRepository
 from todo.repositories.task_repository import TaskRepository
 from todo.constants.messages import ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
+from bson import ObjectId
 
 
 class PaginationConfig:
@@ -122,6 +124,16 @@ class WatchlistService:
                     ],
                 )
             )
+
+    @classmethod
+    def update_task(cls, taskId: ObjectId, dto: UpdateWatchlistDTO, userId: ObjectId) -> CreateWatchlistResponse:
+        task = TaskRepository.get_by_id(taskId)
+        if not task:
+            raise TaskNotFoundException(taskId)
+
+        updated_watchlist = WatchlistRepository.update(taskId, dto["isActive"], userId)
+        if not updated_watchlist:
+            raise TaskNotFoundException(taskId)
 
     @classmethod
     def prepare_watchlisted_task_dto(cls, watchlist_model: WatchlistDTO) -> WatchlistDTO:

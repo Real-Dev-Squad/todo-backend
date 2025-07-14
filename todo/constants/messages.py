@@ -34,6 +34,8 @@ class ApiErrors:
     UNEXPECTED_ERROR_OCCURRED = "An unexpected error occurred"
     TASK_NOT_FOUND = "Task with ID {0} not found."
     TASK_NOT_FOUND_GENERIC = "Task not found."
+    TASK_NOT_FOUND_TITLE = "Task Not Found"
+    INVALID_TASK_ID = "Invalid task ID format"
     RESOURCE_NOT_FOUND_TITLE = "Resource Not Found"
     GOOGLE_AUTH_FAILED = "Google authentication failed"
     GOOGLE_API_ERROR = "Google API error"

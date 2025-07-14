@@ -11,9 +11,9 @@ from todo.dto.responses.get_watchlist_task_response import GetWatchlistTasksResp
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.watchlist import WatchlistModel
 from todo.repositories.watchlist_repository import WatchlistRepository
-from todo.repositories.task_repository import TaskRepository
 from todo.constants.messages import ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
+from todo.utils.task_validation_utils import validate_task_exists
 from bson import ObjectId
 
 
@@ -61,7 +61,8 @@ class WatchlistService:
     @classmethod
     def add_task(cls, dto: CreateWatchlistDTO) -> CreateWatchlistResponse:
         try:
-            TaskRepository.get_by_id(dto.taskId)
+            # Validate that task exists using common function
+            validate_task_exists(dto.taskId)
 
             existing = WatchlistRepository.get_by_user_and_task(dto.userId, dto.taskId)
             if existing:
@@ -127,9 +128,7 @@ class WatchlistService:
 
     @classmethod
     def update_task(cls, taskId: ObjectId, dto: UpdateWatchlistDTO, userId: ObjectId) -> CreateWatchlistResponse:
-        task = TaskRepository.get_by_id(taskId)
-        if not task:
-            raise TaskNotFoundException(taskId)
+        validate_task_exists(str(taskId))
 
         updated_watchlist = WatchlistRepository.update(taskId, dto["isActive"], userId)
         if not updated_watchlist:

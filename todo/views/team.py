@@ -11,6 +11,9 @@ from todo.dto.responses.create_team_response import CreateTeamResponse
 from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.constants.messages import ApiErrors
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
+from drf_spectacular.types import OpenApiTypes
+from todo.dto.team_dto import TeamDTO
 
 
 class TeamListView(APIView):
@@ -90,3 +93,46 @@ class TeamListView(APIView):
         error_response = ApiErrorResponse(statusCode=400, message=ApiErrors.VALIDATION_ERROR, errors=formatted_errors)
 
         return Response(data=error_response.model_dump(mode="json"), status=status.HTTP_400_BAD_REQUEST)
+
+
+class TeamDetailView(APIView):
+    @extend_schema(
+        operation_id="get_team_by_id",
+        summary="Get team by ID",
+        description="Retrieve a single team by its unique identifier",
+        tags=["teams"],
+        parameters=[
+            OpenApiParameter(
+                name="team_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the team",
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(description="Team retrieved successfully"),
+            404: OpenApiResponse(description="Team not found"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+    )
+    def get(self, request: Request, team_id: str):
+        """
+        Retrieve a single team by ID.
+        """
+        try:
+            team_dto: TeamDTO = TeamService.get_team_by_id(team_id)
+            return Response(data=team_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
+        except ValueError as e:
+            fallback_response = ApiErrorResponse(
+                statusCode=404,
+                message=str(e),
+                errors=[{"detail": str(e)}],
+            )
+            return Response(data=fallback_response.model_dump(mode="json"), status=404)
+        except Exception as e:
+            fallback_response = ApiErrorResponse(
+                statusCode=500,
+                message=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
+                errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}],
+            )
+            return Response(data=fallback_response.model_dump(mode="json"), status=500)

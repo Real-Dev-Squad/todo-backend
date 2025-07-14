@@ -2,17 +2,22 @@ services:
   django-app:
     build: .
     container_name: todo-django-app
-    command: python manage.py runserver 0.0.0.0:8000
+    command: python -Xfrozen_modules=off manage.py runserver_debug 0.0.0.0:8000 --debug-port 5678
     environment:
       MONGODB_URI: mongodb://db:27017
       DB_NAME: todo-app
+      PYTHONUNBUFFERED: 1
+      PYDEVD_DISABLE_FILE_VALIDATION: 1
     volumes:
       - .:/app
     ports:
       - "8000:8000"
+      - "5678:5678"  # Debug port
     depends_on:
       - db
       - mongo-init
+    stdin_open: true
+    tty: true
 
   db:
     image: mongo:latest

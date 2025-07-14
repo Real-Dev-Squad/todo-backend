@@ -131,6 +131,7 @@ class TeamDetailView(APIView):
             member = request.query_params.get("member", "false").lower() == "true"
             if member:
                 from todo.repositories.team_repository import UserTeamDetailsRepository
+
                 user_ids = UserTeamDetailsRepository.get_users_by_team_id(team_id)
                 users = UserService.get_users_by_ids(user_ids)
                 return Response(data=[user.model_dump(mode="json") for user in users], status=status.HTTP_200_OK)

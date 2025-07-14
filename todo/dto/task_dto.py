@@ -24,6 +24,7 @@ class TaskDTO(BaseModel):
     startedAt: datetime | None = None
     dueAt: datetime | None = None
     deferredDetails: DeferredDetailsDTO | None = None
+    in_watchlist: bool = False
     createdAt: datetime
     updatedAt: datetime | None = None
     createdBy: UserDTO

@@ -6,6 +6,11 @@ services:
     environment:
       MONGODB_URI: mongodb://db:27017
       DB_NAME: todo-app
+      POSTGRES_DB: todo_app
+      POSTGRES_USER: todo_user
+      POSTGRES_PASSWORD: todo_password
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
     volumes:
       - .:/app
     ports:
@@ -13,6 +18,8 @@ services:
     depends_on:
       - db
       - mongo-init
+      - postgres
+      - postgres-init
 
   db:
     image: mongo:latest
@@ -51,6 +58,24 @@ services:
       "
     restart: "no"
  
+  postgres:
+    image: postgres:15
+    container_name: todo-postgres
+    environment:
+      POSTGRES_DB: todo_app
+      POSTGRES_USER: todo_user
+      POSTGRES_PASSWORD: todo_password
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U todo_user -d todo_app"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   mongo-express:
     image: mongo-express
     container_name: todo-mongo-express
@@ -62,3 +87,6 @@ services:
     depends_on:
       - db
       - mongo-init
+
+volumes:
+  postgres_data:

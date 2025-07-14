@@ -14,7 +14,7 @@ from todo.dto.watchlist_dto import CreateWatchlistDTO
 from todo.dto.responses.create_watchlist_response import CreateWatchlistResponse
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
-from todo.dto.responses.get_watchlist_tasks_response import GetWatchlistTasksResponse
+from todo.dto.responses.get_watchlist_task_response import GetWatchlistTasksResponse
 
 
 class WatchlistListView(APIView):

@@ -42,6 +42,18 @@ class TeamListView(APIView):
                 data=fallback_response.model_dump(mode="json"), status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @extend_schema(
+        operation_id="create_team",
+        summary="Create a new team",
+        description="Create a new team with the provided details. The creator is always added as a member, even if not in member_ids or as POC.",
+        tags=["teams"],
+        request=CreateTeamSerializer,
+        responses={
+            201: OpenApiResponse(response=CreateTeamResponse, description="Team created successfully"),
+            400: OpenApiResponse(description="Bad request - validation error"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+    )
     def post(self, request: Request):
         """
         Create a new team.

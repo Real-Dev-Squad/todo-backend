@@ -24,7 +24,7 @@ class TestTaskValidationUtils(TestCase):
 
         with self.assertRaises(ValueError) as context:
             validate_task_exists(invalid_task_id)
-        
+
         error_response = context.exception.args[0]
         self.assertIsInstance(error_response, ApiErrorResponse)
         self.assertEqual(error_response.statusCode, 400)

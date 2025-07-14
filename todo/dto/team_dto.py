@@ -1,7 +1,7 @@
 from pydantic import BaseModel, validator
 from typing import List, Optional
 from datetime import datetime
-from todo.repositories.user_repository import UserRepository
+from todo.repositories.postgres_user_repository import UserRepository
 
 
 class CreateTeamDTO(BaseModel):

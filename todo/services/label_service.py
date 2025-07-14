@@ -4,9 +4,9 @@ from django.urls import reverse_lazy
 from urllib.parse import urlencode
 
 from todo.dto.responses.paginated_response import LinksData
-from todo.repositories.label_repository import LabelRepository
+from todo.repositories.postgres_label_repository import LabelRepository
 from todo.dto.responses.get_labels_response import GetLabelsResponse
-from todo.models.label import LabelModel
+from todo.models import Label
 from todo.dto.label_dto import LabelDTO
 from todo.constants.messages import ApiErrors
 
@@ -83,7 +83,7 @@ class LabelService:
         return f"{base_url}?{query_params}"
 
     @classmethod
-    def prepare_label_dto(cls, label_model: LabelModel) -> LabelDTO:
+    def prepare_label_dto(cls, label_model: Label) -> LabelDTO:
         from todo.dto.user_dto import UserDTO
 
         created_by_dto = None

@@ -1,5 +1,5 @@
-from todo.models.user import UserModel
-from todo.repositories.user_repository import UserRepository
+from todo.models import User
+from todo.repositories.postgres_user_repository import UserRepository
 from todo.constants.messages import ValidationErrors, RepositoryErrors
 from todo.exceptions.auth_exceptions import (
     UserNotFoundException,
@@ -11,7 +11,7 @@ from typing import List, Tuple
 
 class UserService:
     @classmethod
-    def create_or_update_user(cls, google_user_data: dict) -> UserModel:
+    def create_or_update_user(cls, google_user_data: dict) -> User:
         try:
             cls._validate_google_user_data(google_user_data)
             return UserRepository.create_or_update(google_user_data)
@@ -21,14 +21,14 @@ class UserService:
             raise APIException(RepositoryErrors.USER_CREATE_UPDATE_FAILED.format(str(e))) from e
 
     @classmethod
-    def get_user_by_id(cls, user_id: str) -> UserModel:
+    def get_user_by_id(cls, user_id: str) -> User:
         user = UserRepository.get_by_id(user_id)
         if not user:
             raise UserNotFoundException()
         return user
 
     @classmethod
-    def search_users(cls, query: str, page: int = 1, limit: int = 10) -> Tuple[List[UserModel], int]:
+    def search_users(cls, query: str, page: int = 1, limit: int = 10) -> Tuple[List[User], int]:
         """
         Search users by name or email using fuzzy search
         """

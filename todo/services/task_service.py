@@ -15,13 +15,13 @@ from todo.dto.responses.create_task_response import CreateTaskResponse
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.dto.responses.paginated_response import LinksData
 from todo.exceptions.user_exceptions import UserNotFoundException
-from todo.models.task import TaskModel, DeferredDetailsModel
-from todo.models.assignee_task_details import AssigneeTaskDetailsModel
+from todo.models import Task
+from todo.models import AssigneeTaskDetails
 from todo.models.common.pyobjectid import PyObjectId
-from todo.repositories.task_repository import TaskRepository
-from todo.repositories.label_repository import LabelRepository
-from todo.repositories.assignee_task_details_repository import AssigneeTaskDetailsRepository
-from todo.repositories.team_repository import TeamRepository
+from todo.repositories.postgres_task_repository import TaskRepository
+from todo.repositories.postgres_label_repository import LabelRepository
+from todo.repositories.postgres_assignee_task_details_repository import AssigneeTaskDetailsRepository
+from todo.repositories.postgres_team_repository import TeamRepository
 from todo.constants.task import (
     TaskStatus,
     TaskPriority,
@@ -36,7 +36,7 @@ from todo.exceptions.task_exceptions import (
 )
 from bson.errors import InvalidId as BsonInvalidId
 
-from todo.repositories.user_repository import UserRepository
+from todo.repositories.postgres_user_repository import UserRepository
 import math
 
 
@@ -117,13 +117,11 @@ class TaskService:
         return f"{base_url}?{query_params}"
 
     @classmethod
-    def prepare_task_dto(cls, task_model: TaskModel) -> TaskDTO:
+    def prepare_task_dto(cls, task_model: Task) -> TaskDTO:
         label_dtos = cls._prepare_label_dtos(task_model.labels) if task_model.labels else []
-        created_by = cls.prepare_user_dto(task_model.createdBy) if task_model.createdBy else None
-        updated_by = cls.prepare_user_dto(task_model.updatedBy) if task_model.updatedBy else None
-        deferred_details = (
-            cls.prepare_deferred_details_dto(task_model.deferredDetails) if task_model.deferredDetails else None
-        )
+        created_by = cls.prepare_user_dto(task_model.created_by) if task_model.created_by else None
+        updated_by = cls.prepare_user_dto(task_model.updated_by) if task_model.updated_by else None
+        deferred_details = cls.prepare_deferred_details_dto(task_model)
 
         assignee_details = AssigneeTaskDetailsRepository.get_by_task_id(str(task_model.id))
         assignee_dto = cls._prepare_assignee_dto(assignee_details) if assignee_details else None
@@ -167,7 +165,7 @@ class TaskService:
         ]
 
     @classmethod
-    def _prepare_assignee_dto(cls, assignee_details: AssigneeTaskDetailsModel) -> AssigneeInfoDTO:
+    def _prepare_assignee_dto(cls, assignee_details: AssigneeTaskDetails) -> AssigneeInfoDTO:
         """Prepare assignee DTO from assignee task details."""
         assignee_id = str(assignee_details.assignee_id)
 
@@ -191,15 +189,15 @@ class TaskService:
         )
 
     @classmethod
-    def prepare_deferred_details_dto(cls, deferred_details_model: DeferredDetailsModel) -> DeferredDetailsDTO | None:
-        if not deferred_details_model:
+    def prepare_deferred_details_dto(cls, task: Task) -> DeferredDetailsDTO | None:
+        if not task.deferred_at or not task.deferred_till or not task.deferred_by:
             return None
 
-        deferred_by_user = cls.prepare_user_dto(deferred_details_model.deferredBy)
+        deferred_by_user = cls.prepare_user_dto(task.deferred_by)
 
         return DeferredDetailsDTO(
-            deferredAt=deferred_details_model.deferredAt,
-            deferredTill=deferred_details_model.deferredTill,
+            deferredAt=task.deferred_at,
+            deferredTill=task.deferred_till,
             deferredBy=deferred_by_user,
         )
 
@@ -336,15 +334,11 @@ class TaskService:
                     source={ApiErrorSource.PARAMETER: "deferredTill"},
                 )
 
-        deferred_details = DeferredDetailsModel(
-            deferredAt=datetime.now(timezone.utc),
-            deferredTill=deferred_till,
-            deferredBy=user_id,
-        )
-
         update_payload = {
-            "deferredDetails": deferred_details.model_dump(),
-            "updatedBy": user_id,
+            "deferred_at": datetime.now(timezone.utc),
+            "deferred_till": deferred_till,
+            "deferred_by": user_id,
+            "updated_by": user_id,
         }
 
         updated_task = TaskRepository.update(task_id, update_payload)
@@ -392,7 +386,7 @@ class TaskService:
                     )
                 )
 
-        task = TaskModel(
+        task = Task(
             id=None,
             title=dto.title,
             description=dto.description,
@@ -412,7 +406,7 @@ class TaskService:
 
             # Create assignee relationship if assignee is provided
             if dto.assignee:
-                assignee_relationship = AssigneeTaskDetailsModel(
+                assignee_relationship = AssigneeTaskDetails(
                     assignee_id=PyObjectId(dto.assignee["assignee_id"]),
                     task_id=created_task.id,
                     relation_type=dto.assignee["relation_type"],

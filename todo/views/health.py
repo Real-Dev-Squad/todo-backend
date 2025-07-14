@@ -2,11 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from todo.constants.health import AppHealthStatus, ComponentHealthStatus
-from todo_project.db.config import DatabaseManager
-from todo_project.db.postgres_config import PostgreSQLDatabaseManager
-
-database_manager = DatabaseManager()
-postgres_manager = PostgreSQLDatabaseManager()
+from django.db import connection
+from django.db.utils import OperationalError
 
 
 class HealthView(APIView):
@@ -21,25 +18,24 @@ class HealthView(APIView):
         },
     )
     def get(self, request):
-        global database_manager, postgres_manager
+        # Check PostgreSQL health using Django's connection
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                result = cursor.fetchone()
+                is_postgres_healthy = result and result[0] == 1
+        except OperationalError:
+            is_postgres_healthy = False
         
-        # Check MongoDB health
-        is_mongo_healthy = database_manager.check_database_health()
-        mongo_status = ComponentHealthStatus.UP.name if is_mongo_healthy else ComponentHealthStatus.DOWN.name
-        
-        # Check PostgreSQL health
-        is_postgres_healthy = postgres_manager.check_database_health()
         postgres_status = ComponentHealthStatus.UP.name if is_postgres_healthy else ComponentHealthStatus.DOWN.name
         
-        # Overall health is UP if both databases are healthy
-        # For now, we'll consider the app healthy if either database is healthy during migration
-        overall_healthy = is_mongo_healthy or is_postgres_healthy
+        # Overall health is UP if PostgreSQL is healthy
+        overall_healthy = is_postgres_healthy
         overall_status = AppHealthStatus.UP if overall_healthy else AppHealthStatus.DOWN
         
         response = {
             "status": overall_status.name,
             "components": {
-                "mongodb": {"status": mongo_status},
                 "postgres": {"status": postgres_status},
             },
         }

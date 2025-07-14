@@ -1,9 +1,9 @@
 from todo.dto.team_dto import CreateTeamDTO, TeamDTO
 from todo.dto.responses.create_team_response import CreateTeamResponse
 from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
-from todo.models.team import TeamModel, UserTeamDetailsModel
+from todo.models import Team, UserTeamDetails
 from todo.models.common.pyobjectid import PyObjectId
-from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
+from todo.repositories.postgres_team_repository import TeamRepository, UserTeamDetailsRepository
 from todo.constants.messages import AppMessages
 from todo.utils.invite_code_utils import generate_invite_code
 
@@ -34,7 +34,7 @@ class TeamService:
             invite_code = generate_invite_code(dto.name)
 
             # Create team
-            team = TeamModel(
+            team = Team(
                 name=dto.name,
                 description=dto.description if dto.description else None,
                 poc_id=PyObjectId(dto.poc_id) if dto.poc_id else None,
@@ -50,7 +50,7 @@ class TeamService:
 
             # Add members to the team
             for member_id in member_ids:
-                user_team = UserTeamDetailsModel(
+                user_team = UserTeamDetails(
                     user_id=PyObjectId(member_id),
                     team_id=created_team.id,
                     role_id=DEFAULT_ROLE_ID,
@@ -61,7 +61,7 @@ class TeamService:
 
             # Add POC to the team if specified and not already in members
             if dto.poc_id and dto.poc_id not in member_ids:
-                user_team = UserTeamDetailsModel(
+                user_team = UserTeamDetails(
                     user_id=PyObjectId(dto.poc_id),
                     team_id=created_team.id,
                     role_id=DEFAULT_ROLE_ID,

@@ -1,8 +1,8 @@
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
 
-from todo.models.role import RoleModel
-from todo.repositories.role_repository import RoleRepository
+from todo.models import Role
+from todo.repositories.postgres_role_repository import RoleRepository
 from todo.constants.role import RoleScope
 from todo.dto.role_dto import RoleDTO
 from todo.exceptions.role_exceptions import (
@@ -41,7 +41,7 @@ class RoleService:
     ) -> RoleDTO:
         """Create a new role."""
         try:
-            role_model = RoleModel(
+            role_model = Role(
                 name=name,
                 description=description,
                 scope=RoleScope(scope),

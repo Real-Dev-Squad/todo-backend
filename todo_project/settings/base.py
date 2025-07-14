@@ -16,9 +16,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",") if os.getenv("ALLOWED_HOSTS") else []
 
-MONGODB_URI = os.getenv("MONGODB_URI")
-DB_NAME = os.getenv("DB_NAME")
-
 # PostgreSQL Configuration
 POSTGRES_CONFIG = {
     'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
@@ -158,10 +155,6 @@ SERVICES = {
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    },
-    "postgres": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv('POSTGRES_DB', 'todo_app'),
         "USER": os.getenv('POSTGRES_USER', 'todo_user'),

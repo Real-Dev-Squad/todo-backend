@@ -9,9 +9,9 @@ from todo.dto.watchlist_dto import CreateWatchlistDTO, UpdateWatchlistDTO, Watch
 from todo.dto.responses.create_watchlist_response import CreateWatchlistResponse
 from todo.dto.responses.get_watchlist_task_response import GetWatchlistTasksResponse
 from todo.exceptions.task_exceptions import TaskNotFoundException
-from todo.models.watchlist import WatchlistModel
-from todo.repositories.watchlist_repository import WatchlistRepository
-from todo.repositories.task_repository import TaskRepository
+from todo.models import Watchlist
+from todo.repositories.postgres_watchlist_repository import WatchlistRepository
+from todo.repositories.postgres_task_repository import TaskRepository
 from todo.constants.messages import ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from bson import ObjectId
@@ -79,7 +79,7 @@ class WatchlistService:
                     )
                 )
 
-            watchlist_model = WatchlistModel(
+            watchlist_model = Watchlist(
                 taskId=dto.taskId,
                 userId=dto.userId,
                 createdBy=dto.createdBy,

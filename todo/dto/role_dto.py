@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel
 
-from todo.models.role import RoleModel
+from todo.models import Role
 
 
 class RoleDTO(BaseModel):
@@ -23,12 +23,12 @@ class RoleDTO(BaseModel):
     model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
 
     @classmethod
-    def from_model(cls, role_model: RoleModel) -> "RoleDTO":
+    def from_model(cls, role_model: Role) -> "RoleDTO":
         """
-        Convert RoleModel to RoleDTO
+        Convert Role to RoleDTO
 
         Args:
-            role_model: The RoleModel instance to convert
+            role_model: The Role instance to convert
 
         Returns:
             RoleDTO: The converted data transfer object

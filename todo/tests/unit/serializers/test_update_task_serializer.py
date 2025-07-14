@@ -239,3 +239,9 @@ class UpdateTaskSerializerTests(TestCase):
 
         for msg in expected_error_messages:
             self.assertIn(msg, label_errors)
+
+    def test_rejects_invalid_assignee(self):
+        data = {"assignee": {"assignee_id": "324324"}}
+        serializer = UpdateTaskSerializer(data=data, partial=True)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("assignee", serializer.errors)

@@ -633,6 +633,43 @@ def test_update_task_success_full_payload(
         self.assertIsNone(update_payload_sent_to_repo["priority"])
         self.assertIsNone(update_payload_sent_to_repo["status"])
 
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskRepository.update")
+    @patch("todo.services.task_service.TaskRepository._get_assigned_task_ids_for_user")
+    def test_update_task_permission_denied_if_not_creator_or_assignee(
+        self, mock_get_assigned, mock_update, mock_get_by_id
+    ):
+        task_id = self.task_id_str
+        user_id = "not_creator_or_assignee"
+        task_model = self.default_task_model.model_copy(deep=True)
+        task_model.createdBy = "some_other_user"
+        mock_get_by_id.return_value = task_model
+        mock_get_assigned.return_value = []
+        validated_data = {"title": "new title"}
+        with self.assertRaises(PermissionError) as context:
+            TaskService.update_task(task_id, validated_data, user_id)
+        self.assertEqual(str(context.exception), ApiErrors.UNAUTHORIZED_TITLE)
+        mock_get_by_id.assert_called_once_with(task_id)
+        mock_get_assigned.assert_called_once_with(user_id)
+        mock_update.assert_not_called()
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskRepository.update")
+    @patch("todo.services.task_service.TaskRepository._get_assigned_task_ids_for_user")
+    def test_update_task_permission_allowed_if_assignee(self, mock_get_assigned, mock_update, mock_get_by_id):
+        task_id = self.task_id_str
+        user_id = "assignee_user"
+        task_model = self.default_task_model.model_copy(deep=True)
+        task_model.createdBy = "some_other_user"
+        mock_get_by_id.return_value = task_model
+        mock_get_assigned.return_value = [task_model.id]
+        mock_update.return_value = task_model
+        validated_data = {"title": "new title"}
+        TaskService.update_task(task_id, validated_data, user_id)
+        mock_get_by_id.assert_called_once_with(task_id)
+        mock_get_assigned.assert_called_once_with(user_id)
+        mock_update.assert_called_once()
+
 
 class TaskServiceDeferTests(TestCase):
     def setUp(self):
@@ -745,3 +782,44 @@ class TaskServiceDeferTests(TestCase):
         self.assertEqual(str(context.exception), ValidationErrors.CANNOT_DEFER_A_DONE_TASK)
         mock_repo_get_by_id.assert_called_once_with(self.task_id)
         mock_repo_update.assert_not_called()
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskRepository.update")
+    @patch("todo.services.task_service.TaskRepository._get_assigned_task_ids_for_user")
+    def test_defer_task_permission_denied_if_not_creator_or_assignee(
+        self, mock_get_assigned, mock_update, mock_get_by_id
+    ):
+        task_id = self.task_id
+        user_id = "not_creator_or_assignee"
+        task_model = self.task_model
+        task_model.createdBy = "some_other_user"
+        mock_get_by_id.return_value = task_model
+        mock_get_assigned.return_value = []
+        deferred_till = self.current_time + timedelta(days=5)
+        with self.assertRaises(PermissionError) as context:
+            TaskService.defer_task(task_id, deferred_till, user_id)
+        self.assertEqual(str(context.exception), ApiErrors.UNAUTHORIZED_TITLE)
+        mock_get_by_id.assert_called_once_with(task_id)
+        mock_get_assigned.assert_called_once_with(user_id)
+        mock_update.assert_not_called()
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskRepository._get_assigned_task_ids_for_user")
+    @patch("todo.services.task_service.TaskRepository.delete_by_id")
+    def test_delete_task_permission_denied_if_not_creator_or_assignee(
+        self, mock_delete_by_id, mock_get_assigned, mock_get_by_id
+    ):
+        task_id = str(ObjectId())
+        user_id = "not_creator_or_assignee"
+        task_model = MagicMock()
+        task_model.createdBy = "some_other_user"
+        task_model.id = ObjectId(task_id)
+        mock_get_by_id.return_value = task_model
+        mock_get_assigned.return_value = []
+        mock_delete_by_id.side_effect = PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+        with self.assertRaises(PermissionError) as context:
+            TaskService.delete_task(task_id, user_id)
+        self.assertEqual(str(context.exception), ApiErrors.UNAUTHORIZED_TITLE)
+        mock_get_by_id.assert_not_called()
+        mock_get_assigned.assert_not_called()
+        mock_delete_by_id.assert_called_once_with(task_id, user_id)

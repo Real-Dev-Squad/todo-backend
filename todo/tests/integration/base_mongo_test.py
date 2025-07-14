@@ -45,8 +45,12 @@ class AuthenticatedMongoTestCase(BaseMongoTestCase):
         self._create_test_user()
         self._set_auth_cookies()
 
-    def _create_test_user(self):
-        self.user_id = ObjectId()
+    def _create_test_user(self, userId=None):
+        if userId is None:
+            self.user_id = ObjectId()
+        else:
+            self.user_id = userId
+
         self.user_data = {
             **google_auth_user_payload,
             "user_id": str(self.user_id),

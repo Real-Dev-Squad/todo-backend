@@ -69,3 +69,16 @@ class TaskDeleteAPIIntegrationTest(AuthenticatedMongoTestCase):
         self.assertEqual(data["errors"][0]["source"]["path"], "task_id")
         self.assertEqual(data["errors"][0]["title"], ApiErrors.VALIDATION_ERROR)
         self.assertEqual(data["errors"][0]["detail"], ValidationErrors.INVALID_TASK_ID_FORMAT)
+
+    def test_delete_task_unauthorized(self):
+        other_user_id = ObjectId()
+
+        self._create_test_user(other_user_id)
+        self._set_auth_cookies()
+        url = reverse("task_detail", args=[self.existing_task_id])
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, HTTPStatus.FORBIDDEN)
+        data = response.json()
+        self.assertEqual(data["message"], ApiErrors.UNAUTHORIZED_TITLE)
+        self.assertEqual(data["errors"][0]["title"], ApiErrors.UNAUTHORIZED_TITLE)

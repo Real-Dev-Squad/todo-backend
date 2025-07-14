@@ -108,14 +108,11 @@ class UserTeamDetailsRepository(MongoRepository):
         Get all user info (user_id, name, email) for a specific team.
         """
         from todo.repositories.user_repository import UserRepository
+
         user_ids = cls.get_users_by_team_id(team_id)
         user_infos = []
         for user_id in user_ids:
             user = UserRepository.get_by_id(user_id)
             if user:
-                user_infos.append({
-                    "user_id": user_id,
-                    "name": user.name,
-                    "email": user.email_id
-                })
+                user_infos.append({"user_id": user_id, "name": user.name, "email": user.email_id})
         return user_infos

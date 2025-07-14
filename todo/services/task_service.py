@@ -130,11 +130,11 @@ class TaskService:
         assignee_dto = cls._prepare_assignee_dto(assignee_details) if assignee_details else None
 
         # Check if task is in user's watchlist
-        in_watchlist = False
+        in_watchlist = None
         if user_id:
             watchlist_entry = WatchlistRepository.get_by_user_and_task(user_id, str(task_model.id))
-            if watchlist_entry and getattr(watchlist_entry, "isActive", True):
-                in_watchlist = True
+            if watchlist_entry:
+                in_watchlist = watchlist_entry.isActive
 
         return TaskDTO(
             id=str(task_model.id),

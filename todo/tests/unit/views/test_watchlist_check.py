@@ -13,11 +13,11 @@ class WatchlistCheckViewTests(AuthenticatedMongoTestCase):
         self.task_id = str(ObjectId())
 
     def test_check_task_not_in_watchlist(self):
-        """Test that a task not in watchlist returns false."""
+        """Test that a task not in watchlist returns null."""
         response = self.client.get(f"{self.url}?task_id={self.task_id}")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["in_watchlist"], False)
+        self.assertIsNone(response.data["in_watchlist"])
 
     def test_check_task_in_watchlist(self):
         """Test that a task in watchlist returns true."""

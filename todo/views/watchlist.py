@@ -148,7 +148,7 @@ class WatchlistCheckView(APIView):
     @extend_schema(
         operation_id="check_task_in_watchlist",
         summary="Check if a task is in the user's watchlist",
-        description="Returns true if the given task_id is in the authenticated user's watchlist, false otherwise.",
+        description="Returns the watchlist status for the given task_id: true if actively watched, false if in watchlist but inactive, or null if not in watchlist.",
         tags=["watchlist"],
         parameters=[
             OpenApiParameter(
@@ -160,7 +160,7 @@ class WatchlistCheckView(APIView):
             ),
         ],
         responses={
-            200: OpenApiResponse(response=None, description="Returns { 'in_watchlist': true/false }"),
+            200: OpenApiResponse(response=None, description="Returns { 'in_watchlist': true/false/null }"),
             400: OpenApiResponse(response=ApiErrorResponse, description="Bad request - validation error"),
             401: OpenApiResponse(response=ApiErrorResponse, description="Unauthorized"),
         },
@@ -172,8 +172,8 @@ class WatchlistCheckView(APIView):
             return Response({"message": "task_id is required"}, status=status.HTTP_400_BAD_REQUEST)
         if not ObjectId.is_valid(task_id):
             return Response({"message": "Invalid task_id"}, status=status.HTTP_400_BAD_REQUEST)
-        in_watchlist = False
+        in_watchlist = None
         watchlist_entry = WatchlistRepository.get_by_user_and_task(user["user_id"], task_id)
-        if watchlist_entry and getattr(watchlist_entry, "isActive", True):
-            in_watchlist = True
+        if watchlist_entry:
+            in_watchlist = watchlist_entry.isActive
         return Response({"in_watchlist": in_watchlist}, status=status.HTTP_200_OK)

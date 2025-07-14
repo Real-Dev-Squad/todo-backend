@@ -13,9 +13,41 @@ from todo.dto.responses.error_response import ApiErrorResponse
 from todo.dto.watchlist_dto import CreateWatchlistDTO
 from todo.dto.responses.create_watchlist_response import CreateWatchlistResponse
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
+from drf_spectacular.types import OpenApiTypes
+from todo.dto.responses.get_watchlist_task_response import GetWatchlistTasksResponse
 
 
 class WatchlistListView(APIView):
+    @extend_schema(
+        operation_id="get_watchlist_tasks",
+        summary="Get paginated list of watchlisted tasks",
+        description="Retrieve a paginated list of tasks that are added to the authenticated user's watchlist.",
+        tags=["watchlist"],
+        parameters=[
+            OpenApiParameter(
+                name="page",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description="Page number for pagination (default: 1)",
+                required=False,
+            ),
+            OpenApiParameter(
+                name="limit",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description="Number of tasks per page (default: 10, max: 100)",
+                required=False,
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=GetWatchlistTasksResponse,
+                description="Paginated list of watchlisted tasks returned successfully",
+            ),
+            400: OpenApiResponse(response=ApiErrorResponse, description="Bad request - validation error"),
+            500: OpenApiResponse(response=ApiErrorResponse, description="Internal server error"),
+        },
+    )
     def get(self, request: Request):
         """
         Retrieve a paginated list of tasks that are added to watchlist.
@@ -32,6 +64,20 @@ class WatchlistListView(APIView):
         )
         return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
 
+    @extend_schema(
+        operation_id="add_task_to_watchlist",
+        summary="Add a task to the watchlist",
+        description="Add a task to the authenticated user's watchlist.",
+        tags=["watchlist"],
+        request=CreateWatchlistSerializer,
+        responses={
+            201: OpenApiResponse(response=CreateWatchlistResponse, description="Task added to watchlist successfully"),
+            400: OpenApiResponse(
+                response=ApiErrorResponse, description="Bad request - validation error or already in watchlist"
+            ),
+            500: OpenApiResponse(response=ApiErrorResponse, description="Internal server error"),
+        },
+    )
     def post(self, request: Request):
         """
         Add a task to the watchlist.
@@ -65,22 +111,23 @@ class WatchlistDetailView(APIView):
     @extend_schema(
         operation_id="update_watchlist_task",
         summary="Update watchlist status of a task",
-        description="Update the isActive status of a task in the user's watchlist.",
+        description="Update the isActive status of a task in the authenticated user's watchlist. This allows users to activate or deactivate watching a specific task.",
         tags=["watchlist"],
         parameters=[
             OpenApiParameter(
                 name="task_id",
-                type=str,
+                type=OpenApiTypes.STR,
                 location=OpenApiParameter.PATH,
-                description="Unique identifier of the task to update in the watchlist.",
+                description="Unique identifier of the task to update in the watchlist",
+                required=True,
             ),
         ],
         request=UpdateWatchlistSerializer,
         responses={
-            200: OpenApiResponse(description="Watchlist task updated successfully"),
-            400: OpenApiResponse(description="Bad request"),
-            404: OpenApiResponse(description="Task not found in watchlist"),
-            500: OpenApiResponse(description="Internal server error"),
+            200: OpenApiResponse(description="Watchlist task status updated successfully"),
+            400: OpenApiResponse(response=ApiErrorResponse, description="Bad request - validation error"),
+            404: OpenApiResponse(response=ApiErrorResponse, description="Task not found in watchlist"),
+            500: OpenApiResponse(response=ApiErrorResponse, description="Internal server error"),
         },
     )
     def patch(self, request: Request, task_id: str):

@@ -13,18 +13,18 @@ class TestTaskValidationUtils:
         """Test successful task validation when task exists"""
         task_id = str(ObjectId())
         mock_task = MagicMock(spec=TaskModel)
-        
-        with patch('todo.utils.task_validation_utils.TaskRepository.get_by_id', return_value=mock_task):
+
+        with patch("todo.utils.task_validation_utils.TaskRepository.get_by_id", return_value=mock_task):
             result = validate_task_exists(task_id)
             assert result == mock_task
 
     def test_validate_task_exists_invalid_object_id(self):
         """Test validation fails with invalid ObjectId format"""
         invalid_task_id = "invalid-id"
-        
+
         with pytest.raises(ValueError) as exc_info:
             validate_task_exists(invalid_task_id)
-        
+
         error_response = exc_info.value.args[0]
         assert isinstance(error_response, ApiErrorResponse)
         assert error_response.statusCode == 400
@@ -33,12 +33,12 @@ class TestTaskValidationUtils:
     def test_validate_task_exists_task_not_found(self):
         """Test validation fails when task doesn't exist"""
         task_id = str(ObjectId())
-        
-        with patch('todo.utils.task_validation_utils.TaskRepository.get_by_id', return_value=None):
+
+        with patch("todo.utils.task_validation_utils.TaskRepository.get_by_id", return_value=None):
             with pytest.raises(ValueError) as exc_info:
                 validate_task_exists(task_id)
-        
+
         error_response = exc_info.value.args[0]
         assert isinstance(error_response, ApiErrorResponse)
         assert error_response.statusCode == 404
-        assert error_response.message == ApiErrors.TASK_NOT_FOUND.format(task_id) 
+        assert error_response.message == ApiErrors.TASK_NOT_FOUND.format(task_id)

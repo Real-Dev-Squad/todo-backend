@@ -128,7 +128,6 @@ class WatchlistService:
 
     @classmethod
     def update_task(cls, taskId: ObjectId, dto: UpdateWatchlistDTO, userId: ObjectId) -> CreateWatchlistResponse:
-      
         validate_task_exists(str(taskId))
 
         updated_watchlist = WatchlistRepository.update(taskId, dto["isActive"], userId)

@@ -9,13 +9,13 @@ from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, 
 def validate_task_exists(task_id: str) -> TaskModel:
     """
     Common function to validate if a task exists in the task collection.
-    
+
     Args:
         task_id (str): The task ID to validate
-        
+
     Returns:
         TaskModel: The task model if found
-        
+
     Raises:
         ValueError: If task doesn't exist, with ApiErrorResponse
     """
@@ -36,7 +36,7 @@ def validate_task_exists(task_id: str) -> TaskModel:
                 ],
             )
         )
-    
+
     task = TaskRepository.get_by_id(task_id)
     if not task:
         raise ValueError(
@@ -52,5 +52,5 @@ def validate_task_exists(task_id: str) -> TaskModel:
                 ],
             )
         )
-    
-    return task 
+
+    return task

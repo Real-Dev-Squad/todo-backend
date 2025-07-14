@@ -1,6 +1,5 @@
 from django.core.management.base import BaseCommand
-from bson import ObjectId
-from todo.models.team import TeamModel, UserTeamDetailsModel
+from todo.models.team import UserTeamDetailsModel
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
 from todo.models.common.pyobjectid import PyObjectId
 

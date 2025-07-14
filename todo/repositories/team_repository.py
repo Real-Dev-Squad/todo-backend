@@ -97,8 +97,8 @@ class UserTeamDetailsRepository(MongoRepository):
         """
         collection = cls.get_collection()
         try:
-            user_teams_data = collection.find({"team_id": ObjectId(team_id), "is_active": True})
-            return [str(data["user_id"]) for data in user_teams_data]
+            user_teams_data = list(collection.find({"team_id": team_id, "is_active": True}))
+            return [data["user_id"] for data in user_teams_data]
         except Exception:
             return []
 

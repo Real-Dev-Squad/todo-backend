@@ -140,16 +140,15 @@ class TeamDetailView(APIView):
         Retrieve a single team by ID, or users in the team if ?member=true.
         """
         try:
+            team_dto: TeamDTO = TeamService.get_team_by_id(team_id)
             member = request.query_params.get("member", "false").lower() == "true"
             if member:
                 from todo.repositories.team_repository import UserTeamDetailsRepository
 
                 user_ids = UserTeamDetailsRepository.get_users_by_team_id(team_id)
                 users = UserService.get_users_by_ids(user_ids)
-                return Response(data=[user.model_dump(mode="json") for user in users], status=status.HTTP_200_OK)
-            else:
-                team_dto: TeamDTO = TeamService.get_team_by_id(team_id)
-                return Response(data=team_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
+                team_dto.users = users if member else None
+            return Response(data=team_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
         except ValueError as e:
             fallback_response = ApiErrorResponse(
                 statusCode=404,

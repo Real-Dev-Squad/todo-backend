@@ -14,7 +14,12 @@ class WatchlistRepository(MongoRepository):
     @classmethod
     def get_by_user_and_task(cls, user_id: str, task_id: str) -> Optional[WatchlistModel]:
         doc = cls.get_collection().find_one({"userId": user_id, "taskId": task_id})
-        return WatchlistModel(**doc) if doc else None
+        if doc:
+            # Convert ObjectId fields to strings for the model
+            if "updatedBy" in doc and doc["updatedBy"]:
+                doc["updatedBy"] = str(doc["updatedBy"])
+            return WatchlistModel(**doc)
+        return None
 
     @classmethod
     def create(cls, watchlist_model: WatchlistModel) -> WatchlistModel:

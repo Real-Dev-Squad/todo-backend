@@ -14,6 +14,7 @@ from todo.constants.messages import ApiErrors
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 from todo.dto.team_dto import TeamDTO
+from todo.services.user_service import UserService
 
 
 class TeamListView(APIView):
@@ -99,7 +100,7 @@ class TeamDetailView(APIView):
     @extend_schema(
         operation_id="get_team_by_id",
         summary="Get team by ID",
-        description="Retrieve a single team by its unique identifier",
+        description="Retrieve a single team by its unique identifier. Optionally, set ?member=true to get users belonging to this team.",
         tags=["teams"],
         parameters=[
             OpenApiParameter(
@@ -108,20 +109,34 @@ class TeamDetailView(APIView):
                 location=OpenApiParameter.PATH,
                 description="Unique identifier of the team",
             ),
+            OpenApiParameter(
+                name="member",
+                type=OpenApiTypes.BOOL,
+                location=OpenApiParameter.QUERY,
+                description="If true, returns users that belong to this team instead of team details.",
+                required=False,
+            ),
         ],
         responses={
-            200: OpenApiResponse(description="Team retrieved successfully"),
+            200: OpenApiResponse(description="Team or team members retrieved successfully"),
             404: OpenApiResponse(description="Team not found"),
             500: OpenApiResponse(description="Internal server error"),
         },
     )
     def get(self, request: Request, team_id: str):
         """
-        Retrieve a single team by ID.
+        Retrieve a single team by ID, or users in the team if ?member=true.
         """
         try:
-            team_dto: TeamDTO = TeamService.get_team_by_id(team_id)
-            return Response(data=team_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
+            member = request.query_params.get("member", "false").lower() == "true"
+            if member:
+                from todo.repositories.team_repository import UserTeamDetailsRepository
+                user_ids = UserTeamDetailsRepository.get_users_by_team_id(team_id)
+                users = UserService.get_users_by_ids(user_ids)
+                return Response(data=[user.model_dump(mode="json") for user in users], status=status.HTTP_200_OK)
+            else:
+                team_dto: TeamDTO = TeamService.get_team_by_id(team_id)
+                return Response(data=team_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
         except ValueError as e:
             fallback_response = ApiErrorResponse(
                 statusCode=404,

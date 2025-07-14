@@ -7,6 +7,7 @@ from todo.exceptions.auth_exceptions import (
 )
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from typing import List, Tuple
+from todo.dto.user_dto import UserDTO
 
 
 class UserService:
@@ -34,6 +35,21 @@ class UserService:
         """
         cls._validate_search_params(query, page, limit)
         return UserRepository.search_users(query, page, limit)
+
+    @classmethod
+    def get_users_by_ids(cls, user_ids: list[str]) -> list[UserDTO]:
+        users = []
+        for user_id in user_ids:
+            user = UserRepository.get_by_id(user_id)
+            if user:
+                users.append(UserDTO(
+                    id=str(user.id),
+                    name=user.name,
+                    email_id=user.email_id,
+                    created_at=user.created_at,
+                    updated_at=user.updated_at,
+                ))
+        return users
 
     @classmethod
     def _validate_google_user_data(cls, google_user_data: dict) -> None:

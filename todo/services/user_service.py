@@ -42,13 +42,15 @@ class UserService:
         for user_id in user_ids:
             user = UserRepository.get_by_id(user_id)
             if user:
-                users.append(UserDTO(
-                    id=str(user.id),
-                    name=user.name,
-                    email_id=user.email_id,
-                    created_at=user.created_at,
-                    updated_at=user.updated_at,
-                ))
+                users.append(
+                    UserDTO(
+                        id=str(user.id),
+                        name=user.name,
+                        email_id=user.email_id,
+                        created_at=user.created_at,
+                        updated_at=user.updated_at,
+                    )
+                )
         return users
 
     @classmethod

@@ -2,6 +2,7 @@ import debugpy
 import socket
 from django.core.management.commands.runserver import Command as RunServerCommand
 
+
 class Command(RunServerCommand):
     help = "Run the Django development server with debugpy for VS Code debugging"
 

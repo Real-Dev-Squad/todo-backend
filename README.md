@@ -105,3 +105,47 @@
     ```
     ruff check --fix
     ```
+
+## Debug Mode with VS Code
+
+### Prerequisites
+- VS Code with Python extension installed
+- Docker and docker-compose
+
+### Debug Setup
+
+1. **Start the application with debug mode:**
+   ```
+   python manage.py runserver_debug 0.0.0.0:8000
+   ```
+
+2. **Available debug options:**
+   ```bash
+   # Basic debug mode (default debug port 5678)
+   python manage.py runserver_debug 0.0.0.0:8000
+   
+   # Custom debug port
+   python manage.py runserver_debug 0.0.0.0:8000 --debug-port 5679
+   
+   # Wait for debugger before starting (useful for debugging startup code)
+   python manage.py runserver_debug 0.0.0.0:8000 --wait-for-client
+   ```
+
+3. **Attach VS Code debugger:**
+   - Press `F5` or go to `Run > Start Debugging`
+   - Select `Python: Remote Attach (Django in Docker)` from the dropdown
+   - Set breakpoints in your Python code
+   - Make requests to trigger the breakpoints
+
+### Debug Features
+- **Debug server port**: 5678 (configurable)
+- **Path mapping**: Local code mapped to container paths
+- **Django mode**: Special Django debugging features enabled
+- **Hot reload**: Code changes reflected immediately
+- **Variable inspection**: Full debugging capabilities in VS Code
+
+### Troubleshooting
+- If port 5678 is in use, specify a different port with `--debug-port`
+- Ensure VS Code Python extension is installed
+- Check that breakpoints are set in the correct files
+- Verify the debug server shows "Debug server listening on port 5678"

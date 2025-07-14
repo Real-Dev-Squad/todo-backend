@@ -30,7 +30,12 @@ class TaskAssignmentRepository(MongoRepository):
         """
         collection = cls.get_collection()
         try:
+            # Try with ObjectId first
             task_assignment_data = collection.find_one({"task_id": ObjectId(task_id), "is_active": True})
+            if not task_assignment_data:
+                # Try with string if ObjectId doesn't work
+                task_assignment_data = collection.find_one({"task_id": task_id, "is_active": True})
+            
             if task_assignment_data:
                 return TaskAssignmentModel(**task_assignment_data)
             return None
@@ -44,9 +49,15 @@ class TaskAssignmentRepository(MongoRepository):
         """
         collection = cls.get_collection()
         try:
+            # Try with ObjectId first
             task_assignments_data = collection.find(
                 {"assignee_id": ObjectId(assignee_id), "user_type": user_type, "is_active": True}
             )
+            if not list(task_assignments_data):
+                # Try with string if ObjectId doesn't work
+                task_assignments_data = collection.find(
+                    {"assignee_id": assignee_id, "user_type": user_type, "is_active": True}
+                )
             return [TaskAssignmentModel(**data) for data in task_assignments_data]
         except Exception:
             return []
@@ -60,9 +71,20 @@ class TaskAssignmentRepository(MongoRepository):
         """
         collection = cls.get_collection()
         try:
-            # Deactivate current assignment if exists
+            # Deactivate current assignment if exists (try both ObjectId and string)
             collection.update_many(
                 {"task_id": ObjectId(task_id), "is_active": True},
+                {
+                    "$set": {
+                        "is_active": False,
+                        "updated_by": ObjectId(user_id),
+                        "updated_at": datetime.now(timezone.utc),
+                    }
+                },
+            )
+            # Also try with string
+            collection.update_many(
+                {"task_id": task_id, "is_active": True},
                 {
                     "$set": {
                         "is_active": False,
@@ -92,6 +114,7 @@ class TaskAssignmentRepository(MongoRepository):
         """
         collection = cls.get_collection()
         try:
+            # Try with ObjectId first
             result = collection.update_one(
                 {"task_id": ObjectId(task_id), "is_active": True},
                 {
@@ -102,6 +125,18 @@ class TaskAssignmentRepository(MongoRepository):
                     }
                 },
             )
+            if result.modified_count == 0:
+                # Try with string if ObjectId doesn't work
+                result = collection.update_one(
+                    {"task_id": task_id, "is_active": True},
+                    {
+                        "$set": {
+                            "is_active": False,
+                            "updated_by": ObjectId(user_id),
+                            "updated_at": datetime.now(timezone.utc),
+                        }
+                    },
+                )
             return result.modified_count > 0
         except Exception:
             return False

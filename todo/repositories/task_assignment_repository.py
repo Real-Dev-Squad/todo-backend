@@ -35,7 +35,7 @@ class TaskAssignmentRepository(MongoRepository):
             if not task_assignment_data:
                 # Try with string if ObjectId doesn't work
                 task_assignment_data = collection.find_one({"task_id": task_id, "is_active": True})
-            
+
             if task_assignment_data:
                 return TaskAssignmentModel(**task_assignment_data)
             return None

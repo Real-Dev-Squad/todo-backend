@@ -23,13 +23,14 @@ from todo.dto.responses.error_response import (
 )
 from todo.constants.messages import ApiErrors
 from todo.constants.messages import ValidationErrors
+from todo.dto.responses.get_tasks_response import GetTasksResponse
 
 
 class TaskListView(APIView):
     @extend_schema(
         operation_id="get_tasks",
         summary="Get paginated list of tasks",
-        description="Retrieve a paginated list of tasks with optional filtering and sorting",
+        description="Retrieve a paginated list of tasks with optional filtering and sorting. Each task now includes an 'in_watchlist' boolean property indicating if it is in the authenticated user's watchlist.",
         tags=["tasks"],
         parameters=[
             OpenApiParameter(
@@ -46,7 +47,7 @@ class TaskListView(APIView):
             ),
         ],
         responses={
-            200: OpenApiResponse(description="Successful response"),
+            200: OpenApiResponse(response=GetTasksResponse, description="Successful response"),
             400: OpenApiResponse(description="Bad request"),
             500: OpenApiResponse(description="Internal server error"),
         },

@@ -37,6 +37,7 @@ from todo.exceptions.task_exceptions import (
 from bson.errors import InvalidId as BsonInvalidId
 
 from todo.repositories.user_repository import UserRepository
+from todo.repositories.watchlist_repository import WatchlistRepository
 import math
 
 
@@ -69,7 +70,7 @@ class TaskService:
             if not tasks:
                 return GetTasksResponse(tasks=[], links=None)
 
-            task_dtos = [cls.prepare_task_dto(task) for task in tasks]
+            task_dtos = [cls.prepare_task_dto(task, user_id) for task in tasks]
 
             links = cls._build_pagination_links(page, limit, total_count, sort_by, order)
 
@@ -117,7 +118,7 @@ class TaskService:
         return f"{base_url}?{query_params}"
 
     @classmethod
-    def prepare_task_dto(cls, task_model: TaskModel) -> TaskDTO:
+    def prepare_task_dto(cls, task_model: TaskModel, user_id: str = None) -> TaskDTO:
         label_dtos = cls._prepare_label_dtos(task_model.labels) if task_model.labels else []
         created_by = cls.prepare_user_dto(task_model.createdBy) if task_model.createdBy else None
         updated_by = cls.prepare_user_dto(task_model.updatedBy) if task_model.updatedBy else None
@@ -127,6 +128,13 @@ class TaskService:
 
         assignee_details = AssigneeTaskDetailsRepository.get_by_task_id(str(task_model.id))
         assignee_dto = cls._prepare_assignee_dto(assignee_details) if assignee_details else None
+
+        # Check if task is in user's watchlist
+        in_watchlist = False
+        if user_id:
+            watchlist_entry = WatchlistRepository.get_by_user_and_task(user_id, str(task_model.id))
+            if watchlist_entry and getattr(watchlist_entry, "isActive", True):
+                in_watchlist = True
 
         return TaskDTO(
             id=str(task_model.id),
@@ -141,6 +149,7 @@ class TaskService:
             status=task_model.status,
             priority=task_model.priority,
             deferredDetails=deferred_details,
+            in_watchlist=in_watchlist,
             createdAt=task_model.createdAt,
             updatedAt=task_model.updatedAt,
             createdBy=created_by,
@@ -216,7 +225,7 @@ class TaskService:
             task_model = TaskRepository.get_by_id(task_id)
             if not task_model:
                 raise TaskNotFoundException(task_id)
-            return cls.prepare_task_dto(task_model)
+            return cls.prepare_task_dto(task_model, user_id=None)
         except BsonInvalidId as exc:
             raise exc
 
@@ -291,7 +300,7 @@ class TaskService:
             )
 
         if not update_payload:
-            return cls.prepare_task_dto(current_task)
+            return cls.prepare_task_dto(current_task, user_id)
 
         update_payload["updatedBy"] = user_id
         updated_task = TaskRepository.update(task_id, update_payload)
@@ -299,7 +308,7 @@ class TaskService:
         if not updated_task:
             raise TaskNotFoundException(task_id)
 
-        return cls.prepare_task_dto(updated_task)
+        return cls.prepare_task_dto(updated_task, user_id)
 
     @classmethod
     def defer_task(cls, task_id: str, deferred_till: datetime, user_id: str) -> TaskDTO:
@@ -351,7 +360,7 @@ class TaskService:
         if not updated_task:
             raise TaskNotFoundException(task_id)
 
-        return cls.prepare_task_dto(updated_task)
+        return cls.prepare_task_dto(updated_task, user_id)
 
     @classmethod
     def create_task(cls, dto: CreateTaskDTO) -> CreateTaskResponse:
@@ -421,7 +430,7 @@ class TaskService:
                 )
                 AssigneeTaskDetailsRepository.create(assignee_relationship)
 
-            task_dto = cls.prepare_task_dto(created_task)
+            task_dto = cls.prepare_task_dto(created_task, dto.createdBy)
             return CreateTaskResponse(data=task_dto)
         except ValueError as e:
             if isinstance(e.args[0], ApiErrorResponse):
@@ -470,5 +479,5 @@ class TaskService:
         if not tasks:
             return GetTasksResponse(tasks=[], links=None)
 
-        task_dtos = [cls.prepare_task_dto(task) for task in tasks]
+        task_dtos = [cls.prepare_task_dto(task, user_id) for task in tasks]
         return GetTasksResponse(tasks=task_dtos, links=None)

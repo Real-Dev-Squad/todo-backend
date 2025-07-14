@@ -126,3 +126,20 @@ class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
         response_data = response.json()
         self.assertEqual(response_data["errors"][0]["source"]["parameter"], "deferredTill")
         self.assertIn("required", response_data["errors"][0]["detail"])
+
+    def test_defer_task_unauthorized(self):
+        now = datetime.now(timezone.utc)
+        due_at = now + timedelta(days=MINIMUM_DEFERRAL_NOTICE_DAYS + 30)
+        task_id = self._insert_task(due_at=due_at)
+        deferred_till = now + timedelta(days=10)
+        url = reverse("task_detail", args=[task_id]) + "?action=defer"
+        other_user_id = ObjectId()
+        self._create_test_user(other_user_id)
+        self._set_auth_cookies()
+
+        response = self.client.patch(url, data={"deferredTill": deferred_till.isoformat()}, format="json")
+        self.assertEqual(response.status_code, HTTPStatus.FORBIDDEN)
+        response_data = response.json()
+        self.assertEqual(response_data["message"], ApiErrors.UNAUTHORIZED_TITLE)
+        err = response_data["errors"][0]
+        self.assertEqual(err["title"], ApiErrors.UNAUTHORIZED_TITLE)

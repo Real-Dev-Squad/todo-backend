@@ -53,4 +53,4 @@ class TaskAssignmentResponseDTO(BaseModel):
     created_by: str
     updated_by: Optional[str] = None
     created_at: datetime
-    updated_at: Optional[datetime] = None 
+    updated_at: Optional[datetime] = None

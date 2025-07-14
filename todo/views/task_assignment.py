@@ -2,11 +2,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.request import Request
-from rest_framework.exceptions import AuthenticationFailed, ValidationError
+from rest_framework.exceptions import AuthenticationFailed
 from django.conf import settings
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
-from bson import ObjectId
 
 from todo.middlewares.jwt_auth import get_current_user_info
 from todo.serializers.create_task_assignment_serializer import CreateTaskAssignmentSerializer
@@ -28,36 +27,28 @@ class TaskAssignmentView(APIView):
         request=CreateTaskAssignmentSerializer,
         responses={
             201: OpenApiResponse(
-                response=CreateTaskAssignmentResponse,
-                description="Task assignment created successfully"
+                response=CreateTaskAssignmentResponse, description="Task assignment created successfully"
             ),
             400: OpenApiResponse(
-                response=ApiErrorResponse,
-                description="Bad request - validation error or assignee not found"
+                response=ApiErrorResponse, description="Bad request - validation error or assignee not found"
             ),
-            404: OpenApiResponse(
-                response=ApiErrorResponse,
-                description="Task not found"
-            ),
-            500: OpenApiResponse(
-                response=ApiErrorResponse,
-                description="Internal server error"
-            ),
+            404: OpenApiResponse(response=ApiErrorResponse, description="Task not found"),
+            500: OpenApiResponse(response=ApiErrorResponse, description="Internal server error"),
         },
     )
     def post(self, request: Request):
         """
         Assign a task to a user or team.
-        
+
         This endpoint allows you to assign a task to either a user or a team.
         The system will validate that:
         - The task exists in the database
         - The assignee (user or team) exists in the database
         - If a task already has an assignment, it will be updated
-        
+
         Args:
             request: HTTP request containing task assignment data
-            
+
         Returns:
             Response: HTTP response with created assignment data or error details
         """
@@ -67,64 +58,34 @@ class TaskAssignmentView(APIView):
 
         serializer = CreateTaskAssignmentSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(
-                data={"errors": serializer.errors},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response(data={"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             dto = CreateTaskAssignmentDTO(**serializer.validated_data)
-            response: CreateTaskAssignmentResponse = TaskAssignmentService.create_task_assignment(
-                dto, user["user_id"]
-            )
+            response: CreateTaskAssignmentResponse = TaskAssignmentService.create_task_assignment(dto, user["user_id"])
 
-            return Response(
-                data=response.model_dump(mode="json"),
-                status=status.HTTP_201_CREATED
-            )
+            return Response(data=response.model_dump(mode="json"), status=status.HTTP_201_CREATED)
 
         except TaskNotFoundException as e:
-            error_response = ApiErrorResponse(
-                statusCode=404,
-                message="Task not found",
-                errors=[{"detail": str(e)}]
-            )
-            return Response(
-                data=error_response.model_dump(mode="json"),
-                status=status.HTTP_404_NOT_FOUND
-            )
+            error_response = ApiErrorResponse(statusCode=404, message="Task not found", errors=[{"detail": str(e)}])
+            return Response(data=error_response.model_dump(mode="json"), status=status.HTTP_404_NOT_FOUND)
 
         except UserNotFoundException as e:
-            error_response = ApiErrorResponse(
-                statusCode=400,
-                message="Assignee not found",
-                errors=[{"detail": str(e)}]
-            )
-            return Response(
-                data=error_response.model_dump(mode="json"),
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            error_response = ApiErrorResponse(statusCode=400, message="Assignee not found", errors=[{"detail": str(e)}])
+            return Response(data=error_response.model_dump(mode="json"), status=status.HTTP_400_BAD_REQUEST)
 
         except ValueError as e:
-            error_response = ApiErrorResponse(
-                statusCode=400,
-                message="Validation error",
-                errors=[{"detail": str(e)}]
-            )
-            return Response(
-                data=error_response.model_dump(mode="json"),
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            error_response = ApiErrorResponse(statusCode=400, message="Validation error", errors=[{"detail": str(e)}])
+            return Response(data=error_response.model_dump(mode="json"), status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
             fallback_response = ApiErrorResponse(
                 statusCode=500,
                 message=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
-                errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}]
+                errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}],
             )
             return Response(
-                data=fallback_response.model_dump(mode="json"),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                data=fallback_response.model_dump(mode="json"), status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 
@@ -145,27 +106,20 @@ class TaskAssignmentDetailView(APIView):
         ],
         responses={
             200: OpenApiResponse(
-                response=CreateTaskAssignmentResponse,
-                description="Task assignment retrieved successfully"
+                response=CreateTaskAssignmentResponse, description="Task assignment retrieved successfully"
             ),
-            404: OpenApiResponse(
-                response=ApiErrorResponse,
-                description="Task assignment not found"
-            ),
-            500: OpenApiResponse(
-                response=ApiErrorResponse,
-                description="Internal server error"
-            ),
+            404: OpenApiResponse(response=ApiErrorResponse, description="Task assignment not found"),
+            500: OpenApiResponse(response=ApiErrorResponse, description="Internal server error"),
         },
     )
     def get(self, request: Request, task_id: str):
         """
         Get task assignment by task ID.
-        
+
         Args:
             request: HTTP request
             task_id: ID of the task to get assignment for
-            
+
         Returns:
             Response: HTTP response with assignment data or error details
         """
@@ -175,27 +129,20 @@ class TaskAssignmentDetailView(APIView):
                 error_response = ApiErrorResponse(
                     statusCode=404,
                     message="Task assignment not found",
-                    errors=[{"detail": f"No assignment found for task {task_id}"}]
+                    errors=[{"detail": f"No assignment found for task {task_id}"}],
                 )
-                return Response(
-                    data=error_response.model_dump(mode="json"),
-                    status=status.HTTP_404_NOT_FOUND
-                )
+                return Response(data=error_response.model_dump(mode="json"), status=status.HTTP_404_NOT_FOUND)
 
-            return Response(
-                data=assignment.model_dump(mode="json"),
-                status=status.HTTP_200_OK
-            )
+            return Response(data=assignment.model_dump(mode="json"), status=status.HTTP_200_OK)
 
         except Exception as e:
             fallback_response = ApiErrorResponse(
                 statusCode=500,
                 message=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
-                errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}]
+                errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}],
             )
             return Response(
-                data=fallback_response.model_dump(mode="json"),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                data=fallback_response.model_dump(mode="json"), status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     @extend_schema(
@@ -214,24 +161,18 @@ class TaskAssignmentDetailView(APIView):
         ],
         responses={
             204: OpenApiResponse(description="Task assignment deleted successfully"),
-            404: OpenApiResponse(
-                response=ApiErrorResponse,
-                description="Task assignment not found"
-            ),
-            500: OpenApiResponse(
-                response=ApiErrorResponse,
-                description="Internal server error"
-            ),
+            404: OpenApiResponse(response=ApiErrorResponse, description="Task assignment not found"),
+            500: OpenApiResponse(response=ApiErrorResponse, description="Internal server error"),
         },
     )
     def delete(self, request: Request, task_id: str):
         """
         Delete task assignment by task ID.
-        
+
         Args:
             request: HTTP request
             task_id: ID of the task to delete assignment for
-            
+
         Returns:
             Response: HTTP response with success or error details
         """
@@ -245,12 +186,9 @@ class TaskAssignmentDetailView(APIView):
                 error_response = ApiErrorResponse(
                     statusCode=404,
                     message="Task assignment not found",
-                    errors=[{"detail": f"No assignment found for task {task_id}"}]
+                    errors=[{"detail": f"No assignment found for task {task_id}"}],
                 )
-                return Response(
-                    data=error_response.model_dump(mode="json"),
-                    status=status.HTTP_404_NOT_FOUND
-                )
+                return Response(data=error_response.model_dump(mode="json"), status=status.HTTP_404_NOT_FOUND)
 
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -258,9 +196,8 @@ class TaskAssignmentDetailView(APIView):
             fallback_response = ApiErrorResponse(
                 statusCode=500,
                 message=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
-                errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}]
+                errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}],
             )
             return Response(
-                data=fallback_response.model_dump(mode="json"),
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            ) 
+                data=fallback_response.model_dump(mode="json"), status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

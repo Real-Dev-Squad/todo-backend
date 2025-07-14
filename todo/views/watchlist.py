@@ -15,7 +15,6 @@ from todo.dto.responses.create_watchlist_response import CreateWatchlistResponse
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 from todo.dto.responses.get_watchlist_task_response import GetWatchlistTasksResponse
-from drf_spectacular.utils import extend_schema_view
 from todo.repositories.watchlist_repository import WatchlistRepository
 
 
@@ -161,10 +160,7 @@ class WatchlistCheckView(APIView):
             ),
         ],
         responses={
-            200: OpenApiResponse(
-                response=None,
-                description="Returns { 'in_watchlist': true/false }"
-            ),
+            200: OpenApiResponse(response=None, description="Returns { 'in_watchlist': true/false }"),
             400: OpenApiResponse(response=ApiErrorResponse, description="Bad request - validation error"),
             401: OpenApiResponse(response=ApiErrorResponse, description="Unauthorized"),
         },

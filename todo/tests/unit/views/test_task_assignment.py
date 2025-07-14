@@ -1,5 +1,4 @@
-from unittest.mock import patch, MagicMock
-from rest_framework.test import APIClient
+from unittest.mock import patch
 from rest_framework import status
 from bson import ObjectId
 from datetime import datetime, timezone
@@ -19,14 +18,10 @@ class TaskAssignmentViewTests(AuthenticatedMongoTestCase):
         self.valid_user_assignment_payload = {
             "task_id": self.task_id,
             "assignee_id": str(self.user_id),
-            "user_type": "user"
+            "user_type": "user",
         }
 
-        self.valid_team_assignment_payload = {
-            "task_id": self.task_id,
-            "assignee_id": self.team_id,
-            "user_type": "team"
-        }
+        self.valid_team_assignment_payload = {"task_id": self.task_id, "assignee_id": self.team_id, "user_type": "team"}
 
     @patch("todo.services.task_assignment_service.TaskAssignmentService.create_task_assignment")
     def test_create_user_assignment_success(self, mock_create_assignment):
@@ -77,11 +72,7 @@ class TaskAssignmentViewTests(AuthenticatedMongoTestCase):
         mock_create_assignment.assert_called_once()
 
     def test_create_assignment_invalid_user_type(self):
-        invalid_payload = {
-            "task_id": self.task_id,
-            "assignee_id": str(self.user_id),
-            "user_type": "invalid_type"
-        }
+        invalid_payload = {"task_id": self.task_id, "assignee_id": str(self.user_id), "user_type": "invalid_type"}
 
         response = self.client.post(self.url, data=invalid_payload, format="json")
 
@@ -89,11 +80,7 @@ class TaskAssignmentViewTests(AuthenticatedMongoTestCase):
         self.assertIn("errors", response.data)
 
     def test_create_assignment_invalid_task_id(self):
-        invalid_payload = {
-            "task_id": "invalid_id",
-            "assignee_id": str(self.user_id),
-            "user_type": "user"
-        }
+        invalid_payload = {"task_id": "invalid_id", "assignee_id": str(self.user_id), "user_type": "user"}
 
         response = self.client.post(self.url, data=invalid_payload, format="json")
 
@@ -169,4 +156,4 @@ class TaskAssignmentDetailViewTests(AuthenticatedMongoTestCase):
         response = self.client.delete(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertIn("message", response.data) 
+        self.assertIn("message", response.data)

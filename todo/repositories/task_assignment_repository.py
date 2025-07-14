@@ -104,4 +104,4 @@ class TaskAssignmentRepository(MongoRepository):
             )
             return result.modified_count > 0
         except Exception:
-            return False 
+            return False

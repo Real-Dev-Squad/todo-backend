@@ -36,4 +36,4 @@ class TaskAssignmentModel(Document):
     def validate_user_type(cls, v):
         if v not in ["user", "team"]:
             raise ValueError("user_type must be either 'user' or 'team'")
-        return v 
+        return v

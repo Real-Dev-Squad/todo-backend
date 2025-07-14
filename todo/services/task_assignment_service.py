@@ -1,16 +1,13 @@
-from datetime import datetime, timezone
 from typing import Optional
 
 from todo.dto.task_assignment_dto import CreateTaskAssignmentDTO, TaskAssignmentResponseDTO
 from todo.dto.responses.create_task_assignment_response import CreateTaskAssignmentResponse
-from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.models.task_assignment import TaskAssignmentModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_assignment_repository import TaskAssignmentRepository
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.user_repository import UserRepository
 from todo.repositories.team_repository import TeamRepository
-from todo.constants.messages import ApiErrors, ValidationErrors
 from todo.exceptions.user_exceptions import UserNotFoundException
 from todo.exceptions.task_exceptions import TaskNotFoundException
 
@@ -49,7 +46,7 @@ class TaskAssignmentService:
             )
             if not updated_assignment:
                 raise ValueError("Failed to update task assignment")
-            
+
             assignment = updated_assignment
         else:
             # Create new assignment
@@ -60,7 +57,7 @@ class TaskAssignmentService:
                 created_by=PyObjectId(user_id),
                 updated_by=None,
             )
-            
+
             assignment = TaskAssignmentRepository.create(task_assignment)
 
         # Prepare response
@@ -116,4 +113,4 @@ class TaskAssignmentService:
         """
         Delete task assignment by task ID.
         """
-        return TaskAssignmentRepository.delete_assignment(task_id, user_id) 
+        return TaskAssignmentRepository.delete_assignment(task_id, user_id)

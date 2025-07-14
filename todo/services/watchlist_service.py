@@ -11,7 +11,6 @@ from todo.dto.responses.get_watchlist_task_response import GetWatchlistTasksResp
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.watchlist import WatchlistModel
 from todo.repositories.watchlist_repository import WatchlistRepository
-from todo.repositories.task_repository import TaskRepository
 from todo.constants.messages import ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.utils.task_validation_utils import validate_task_exists

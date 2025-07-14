@@ -1,9 +1,7 @@
-from typing import Optional
 from bson import ObjectId
 
 from todo.repositories.task_repository import TaskRepository
 from todo.models.task import TaskModel
-from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.constants.messages import ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 

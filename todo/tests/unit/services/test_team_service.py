@@ -101,13 +101,18 @@ class TeamServiceTests(TestCase):
     def test_creator_always_added_as_member(self, mock_user_get_by_id, mock_create_many, mock_team_create):
         """Test that the creator is always added as a member when creating a team"""
         # Patch user lookup to always return a mock user
-        mock_user = type("User", (), {"id": None, "name": "Test User", "email_id": "test@example.com", "created_at": None, "updated_at": None})()
+        mock_user = type(
+            "User",
+            (),
+            {"id": None, "name": "Test User", "email_id": "test@example.com", "created_at": None, "updated_at": None},
+        )()
         mock_user_get_by_id.return_value = mock_user
         # Creator is not in member_ids or as POC
         creator_id = "507f1f77bcf86cd799439099"
         member_ids = ["507f1f77bcf86cd799439011"]
         poc_id = "507f1f77bcf86cd799439012"
         from todo.dto.team_dto import CreateTeamDTO
+
         dto = CreateTeamDTO(
             name="Team With Creator",
             description="desc",

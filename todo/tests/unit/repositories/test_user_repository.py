@@ -8,6 +8,7 @@ from todo.models.common.pyobjectid import PyObjectId
 from todo.exceptions.auth_exceptions import UserNotFoundException, APIException
 from todo.tests.fixtures.user import users_db_data
 from todo.constants.messages import RepositoryErrors
+from todo.repositories.team_repository import UserTeamDetailsRepository
 
 
 class UserRepositoryTests(TestCase):
@@ -92,3 +93,27 @@ class UserRepositoryTests(TestCase):
         self.assertIn("updated_at", update_doc["$set"])
         self.assertIn("$setOnInsert", update_doc)
         self.assertIn("created_at", update_doc["$setOnInsert"])
+
+
+class UserTeamDetailsRepositoryTests(TestCase):
+    @patch("todo.repositories.user_repository.UserRepository.get_by_id")
+    @patch("todo.repositories.team_repository.UserTeamDetailsRepository.get_users_by_team_id")
+    def test_get_user_infos_by_team_id(self, mock_get_users_by_team_id, mock_get_by_id):
+        team_id = str(ObjectId())
+        user_ids = [str(ObjectId()), str(ObjectId())]
+        mock_get_users_by_team_id.return_value = user_ids
+        user1 = MagicMock()
+        user1.name = "Alice"
+        user1.email_id = "alice@example.com"
+        user2 = MagicMock()
+        user2.name = "Bob"
+        user2.email_id = "bob@example.com"
+        mock_get_by_id.side_effect = [user1, user2]
+
+        result = UserTeamDetailsRepository.get_user_infos_by_team_id(team_id)
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["name"], "Alice")
+        self.assertEqual(result[0]["email"], "alice@example.com")
+        self.assertEqual(result[1]["name"], "Bob")
+        self.assertEqual(result[1]["email"], "bob@example.com")

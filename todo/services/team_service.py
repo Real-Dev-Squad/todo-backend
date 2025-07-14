@@ -54,6 +54,7 @@ class TeamService:
                     user_id=PyObjectId(member_id),
                     team_id=created_team.id,
                     role_id=DEFAULT_ROLE_ID,
+                    is_active=True,
                     created_by=PyObjectId(created_by_user_id),
                     updated_by=PyObjectId(created_by_user_id),
                 )
@@ -65,6 +66,7 @@ class TeamService:
                     user_id=PyObjectId(dto.poc_id),
                     team_id=created_team.id,
                     role_id=DEFAULT_ROLE_ID,
+                    is_active=True,
                     created_by=PyObjectId(created_by_user_id),
                     updated_by=PyObjectId(created_by_user_id),
                 )
@@ -76,6 +78,7 @@ class TeamService:
                     user_id=PyObjectId(created_by_user_id),
                     team_id=created_team.id,
                     role_id=DEFAULT_ROLE_ID,
+                    is_active=True,
                     created_by=PyObjectId(created_by_user_id),
                     updated_by=PyObjectId(created_by_user_id),
                 )

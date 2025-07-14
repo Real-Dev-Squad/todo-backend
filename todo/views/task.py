@@ -30,7 +30,7 @@ class TaskListView(APIView):
     @extend_schema(
         operation_id="get_tasks",
         summary="Get paginated list of tasks",
-        description="Retrieve a paginated list of tasks with optional filtering and sorting. Each task now includes an 'in_watchlist' boolean property indicating if it is in the authenticated user's watchlist.",
+        description="Retrieve a paginated list of tasks with optional filtering and sorting. Each task now includes an 'in_watchlist' property indicating the watchlist status: true if actively watched, false if in watchlist but inactive, or null if not in watchlist.",
         tags=["tasks"],
         parameters=[
             OpenApiParameter(

@@ -5,11 +5,12 @@ from todo.views.user import UsersView
 from todo.views.auth import GoogleLoginView, GoogleCallbackView, LogoutView
 from todo.views.role import RoleListView, RoleDetailView
 from todo.views.label import LabelListView
-from todo.views.team import TeamListView
+from todo.views.team import TeamListView, TeamDetailView
 from todo.views.watchlist import WatchlistListView, WatchlistDetailView
 
 urlpatterns = [
     path("teams", TeamListView.as_view(), name="teams"),
+    path("teams/<str:team_id>", TeamDetailView.as_view(), name="team_detail"),
     path("tasks", TaskListView.as_view(), name="tasks"),
     path("tasks/<str:task_id>", TaskDetailView.as_view(), name="task_detail"),
     path("roles", RoleListView.as_view(), name="roles"),

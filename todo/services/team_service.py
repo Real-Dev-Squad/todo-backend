@@ -138,3 +138,32 @@ class TeamService:
 
         except Exception as e:
             raise ValueError(f"Failed to get user teams: {str(e)}")
+
+    @classmethod
+    def get_team_by_id(cls, team_id: str) -> TeamDTO:
+        """
+        Get a team by its ID.
+
+        Args:
+            team_id: ID of the team to retrieve
+
+        Returns:
+            TeamDTO with the team details
+
+        Raises:
+            ValueError: If the team is not found
+        """
+        team = TeamRepository.get_by_id(team_id)
+        if not team:
+            raise ValueError(f"Team with id {team_id} not found")
+        return TeamDTO(
+            id=str(team.id),
+            name=team.name,
+            description=team.description,
+            poc_id=str(team.poc_id) if team.poc_id else None,
+            invite_code=team.invite_code,
+            created_by=str(team.created_by),
+            updated_by=str(team.updated_by),
+            created_at=team.created_at,
+            updated_at=team.updated_at,
+        )

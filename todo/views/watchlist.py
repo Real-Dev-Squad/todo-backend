@@ -15,6 +15,8 @@ from todo.dto.responses.create_watchlist_response import CreateWatchlistResponse
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 from todo.dto.responses.get_watchlist_task_response import GetWatchlistTasksResponse
+from drf_spectacular.utils import extend_schema_view
+from todo.repositories.watchlist_repository import WatchlistRepository
 
 
 class WatchlistListView(APIView):
@@ -141,3 +143,41 @@ class WatchlistDetailView(APIView):
 
         WatchlistService.update_task(task_id, serializer.validated_data, ObjectId(user["user_id"]))
         return Response(status=status.HTTP_200_OK)
+
+
+class WatchlistCheckView(APIView):
+    @extend_schema(
+        operation_id="check_task_in_watchlist",
+        summary="Check if a task is in the user's watchlist",
+        description="Returns true if the given task_id is in the authenticated user's watchlist, false otherwise.",
+        tags=["watchlist"],
+        parameters=[
+            OpenApiParameter(
+                name="task_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="Task ID to check",
+                required=True,
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=None,
+                description="Returns { 'in_watchlist': true/false }"
+            ),
+            400: OpenApiResponse(response=ApiErrorResponse, description="Bad request - validation error"),
+            401: OpenApiResponse(response=ApiErrorResponse, description="Unauthorized"),
+        },
+    )
+    def get(self, request: Request):
+        user = get_current_user_info(request)
+        task_id = request.query_params.get("task_id")
+        if not task_id:
+            return Response({"message": "task_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not ObjectId.is_valid(task_id):
+            return Response({"message": "Invalid task_id"}, status=status.HTTP_400_BAD_REQUEST)
+        in_watchlist = False
+        watchlist_entry = WatchlistRepository.get_by_user_and_task(user["user_id"], task_id)
+        if watchlist_entry and getattr(watchlist_entry, "isActive", True):
+            in_watchlist = True
+        return Response({"in_watchlist": in_watchlist}, status=status.HTTP_200_OK)

@@ -230,7 +230,7 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         mock_create.assert_called_once()
         created_task_model_arg = mock_create.call_args[0][0]
         self.assertIsNone(created_task_model_arg.deferredDetails)
-        mock_prepare_dto.assert_called_once_with(mock_task_model)
+        mock_prepare_dto.assert_called_once_with(mock_task_model, str(self.user_id))
         self.assertEqual(result.data, mock_task_dto)
 
     @patch("todo.services.task_service.TaskRepository.get_by_id")
@@ -246,7 +246,7 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         result_dto = TaskService.get_task_by_id(task_id)
 
         mock_repo_get_by_id.assert_called_once_with(task_id)
-        mock_prepare_task_dto.assert_called_once_with(mock_task_model)
+        mock_prepare_task_dto.assert_called_once_with(mock_task_model, user_id=None)
         self.assertEqual(result_dto, mock_dto)
 
     @patch("todo.services.task_service.TaskRepository.get_by_id")
@@ -704,7 +704,7 @@ class TaskServiceDeferTests(TestCase):
         self.assertEqual(result_dto, mock_dto)
         mock_repo_get_by_id.assert_called_once_with(self.task_id)
         mock_repo_update.assert_called_once()
-        mock_prepare_dto.assert_called_once_with(mock_updated_task)
+        mock_prepare_dto.assert_called_once_with(mock_updated_task, "system_user")
 
         update_call_args = mock_repo_update.call_args[0]
         self.assertEqual(update_call_args[0], self.task_id)

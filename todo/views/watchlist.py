@@ -40,7 +40,10 @@ class WatchlistListView(APIView):
             ),
         ],
         responses={
-            200: OpenApiResponse(response=GetWatchlistTasksResponse, description="Paginated list of watchlisted tasks returned successfully"),
+            200: OpenApiResponse(
+                response=GetWatchlistTasksResponse,
+                description="Paginated list of watchlisted tasks returned successfully",
+            ),
             400: OpenApiResponse(response=ApiErrorResponse, description="Bad request - validation error"),
             500: OpenApiResponse(response=ApiErrorResponse, description="Internal server error"),
         },
@@ -69,7 +72,9 @@ class WatchlistListView(APIView):
         request=CreateWatchlistSerializer,
         responses={
             201: OpenApiResponse(response=CreateWatchlistResponse, description="Task added to watchlist successfully"),
-            400: OpenApiResponse(response=ApiErrorResponse, description="Bad request - validation error or already in watchlist"),
+            400: OpenApiResponse(
+                response=ApiErrorResponse, description="Bad request - validation error or already in watchlist"
+            ),
             500: OpenApiResponse(response=ApiErrorResponse, description="Internal server error"),
         },
     )

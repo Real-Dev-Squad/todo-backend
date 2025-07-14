@@ -704,7 +704,7 @@ class TaskServiceDeferTests(TestCase):
         self.assertEqual(result_dto, mock_dto)
         mock_repo_get_by_id.assert_called_once_with(self.task_id)
         mock_repo_update.assert_called_once()
-        mock_prepare_dto.assert_called_once_with(mock_updated_task, 'system_user')
+        mock_prepare_dto.assert_called_once_with(mock_updated_task, "system_user")
 
         update_call_args = mock_repo_update.call_args[0]
         self.assertEqual(update_call_args[0], self.task_id)

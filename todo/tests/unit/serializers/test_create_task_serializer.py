@@ -35,3 +35,10 @@ class CreateTaskSerializerTest(TestCase):
         serializer = CreateTaskSerializer(data=data)
         self.assertFalse(serializer.is_valid())
         self.assertIn("status", serializer.errors)
+
+    def test_serializer_rejects_invalid_assignee(self):
+        data = self.valid_data.copy()
+        data["assignee"] = {"assignee_id": "1234"}
+        serializer = CreateTaskSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("assignee", serializer.errors)

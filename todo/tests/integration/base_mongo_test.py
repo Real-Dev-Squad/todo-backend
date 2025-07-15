@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
 from bson import ObjectId
 from django.test import TransactionTestCase, override_settings
+from django.conf import settings
 from pymongo import MongoClient
 from todo.models.user import UserModel
 from todo.tests.testcontainers.shared_mongo import get_shared_mongo_container
-from todo.utils.google_jwt_utils import generate_google_token_pair
+from todo.utils.jwt_utils import generate_token_pair
 from todo_project.db.config import DatabaseManager
 from rest_framework.test import APIClient
 from todo.tests.fixtures.user import google_auth_user_payload
@@ -44,8 +45,12 @@ class AuthenticatedMongoTestCase(BaseMongoTestCase):
         self._create_test_user()
         self._set_auth_cookies()
 
-    def _create_test_user(self):
-        self.user_id = ObjectId()
+    def _create_test_user(self, userId=None):
+        if userId is None:
+            self.user_id = ObjectId()
+        else:
+            self.user_id = userId
+
         self.user_data = {
             **google_auth_user_payload,
             "user_id": str(self.user_id),
@@ -57,15 +62,16 @@ class AuthenticatedMongoTestCase(BaseMongoTestCase):
                 "google_id": self.user_data["google_id"],
                 "email_id": self.user_data["email"],
                 "name": self.user_data["name"],
+                "picture": self.user_data["picture"],
                 "createdAt": datetime.now(timezone.utc),
                 "updatedAt": datetime.now(timezone.utc),
             }
         )
 
     def _set_auth_cookies(self):
-        tokens = generate_google_token_pair(self.user_data)
-        self.client.cookies["ext-access"] = tokens["access_token"]
-        self.client.cookies["ext-refresh"] = tokens["refresh_token"]
+        tokens = generate_token_pair(self.user_data)
+        self.client.cookies[settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME")] = tokens["access_token"]
+        self.client.cookies[settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME")] = tokens["refresh_token"]
 
     def get_user_model(self) -> UserModel:
         return UserModel(
@@ -73,6 +79,7 @@ class AuthenticatedMongoTestCase(BaseMongoTestCase):
             google_id=self.user_data["google_id"],
             email_id=self.user_data["email"],
             name=self.user_data["name"],
+            picture=self.user_data["picture"],
             createdAt=datetime.now(timezone.utc),
             updatedAt=datetime.now(timezone.utc),
         )

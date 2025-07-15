@@ -7,7 +7,7 @@ from todo.models.user import UserModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo_project.db.config import DatabaseManager
 from todo.constants.messages import RepositoryErrors
-from todo.exceptions.google_auth_exceptions import GoogleUserNotFoundException, GoogleAPIException
+from todo.exceptions.auth_exceptions import UserNotFoundException, APIException
 
 
 class UserRepository:
@@ -23,7 +23,7 @@ class UserRepository:
             doc = collection.find_one({"_id": object_id})
             return UserModel(**doc) if doc else None
         except Exception as e:
-            raise GoogleUserNotFoundException() from e
+            raise UserNotFoundException() from e
 
     @classmethod
     def create_or_update(cls, user_data: dict) -> UserModel:
@@ -38,6 +38,7 @@ class UserRepository:
                     "$set": {
                         "email_id": user_data["email"],
                         "name": user_data["name"],
+                        "picture": user_data.get("picture"),
                         "updated_at": now,
                     },
                     "$setOnInsert": {"google_id": google_id, "created_at": now},
@@ -47,14 +48,14 @@ class UserRepository:
             )
 
             if not result:
-                raise GoogleAPIException(RepositoryErrors.USER_OPERATION_FAILED)
+                raise APIException(RepositoryErrors.USER_OPERATION_FAILED)
 
             return UserModel(**result)
 
         except Exception as e:
-            if isinstance(e, GoogleAPIException):
+            if isinstance(e, APIException):
                 raise
-            raise GoogleAPIException(RepositoryErrors.USER_CREATE_UPDATE_FAILED.format(str(e)))
+            raise APIException(RepositoryErrors.USER_CREATE_UPDATE_FAILED.format(str(e)))
 
     @classmethod
     def search_users(cls, query: str, page: int = 1, limit: int = 10) -> tuple[List[UserModel], int]:

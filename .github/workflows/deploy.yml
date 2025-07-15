@@ -54,6 +54,7 @@ jobs:
               --name ${{ github.event.repository.name }}-${{ vars.ENV }} \
               --network=${{ vars.DOCKER_NETWORK }} \
               -e ENV="${{ vars.ENV }}" \
+              -e SECRET_KEY="${{ secrets.SECRET_KEY }}" \
               -e DB_NAME="${{ secrets.DB_NAME }}" \
               -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
               -e ALLOWED_HOSTS="${{ vars.ALLOWED_HOSTS }}" \
@@ -62,5 +63,17 @@ jobs:
               -e GOOGLE_OAUTH_REDIRECT_URI="${{ vars.GOOGLE_OAUTH_REDIRECT_URI }}" \
               -e PUBLIC_KEY="${{ secrets.PUBLIC_KEY }}" \
               -e PRIVATE_KEY="${{ secrets.PRIVATE_KEY }}" \
-              -e FRONTEND_URL="${{ vars.FRONTEND_URL }}" \
+              -e ACCESS_LIFETIME="${{ vars.ACCESS_LIFETIME }}" \
+              -e REFRESH_LIFETIME="${{ vars.REFRESH_LIFETIME }}" \
+              -e ACCESS_TOKEN_COOKIE_NAME="${{ vars.ACCESS_TOKEN_COOKIE_NAME }}" \
+              -e REFRESH_TOKEN_COOKIE_NAME="${{ vars.REFRESH_TOKEN_COOKIE_NAME }}" \
+              -e COOKIE_DOMAIN="${{ vars.COOKIE_DOMAIN }}" \
+              -e COOKIE_SECURE="${{ vars.COOKIE_SECURE }}" \
+              -e COOKIE_HTTPONLY="${{ vars.COOKIE_HTTPONLY }}" \
+              -e COOKIE_SAMESITE="${{ vars.COOKIE_SAMESITE }}" \
+              -e TODO_BACKEND_BASE_URL="${{ vars.TODO_BACKEND_BASE_URL }}" \
+              -e TODO_UI_BASE_URL="${{ vars.TODO_UI_BASE_URL }}" \
+              -e TODO_UI_REDIRECT_PATH="${{ vars.TODO_UI_REDIRECT_PATH }}" \
+              -e CORS_ALLOWED_ORIGINS="${{ vars.CORS_ALLOWED_ORIGINS }}" \
+              -e SWAGGER_UI_PATH="${{ vars.SWAGGER_UI_PATH }}" \
               ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}

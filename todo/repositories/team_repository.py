@@ -85,23 +85,34 @@ class UserTeamDetailsRepository(MongoRepository):
         """
         collection = cls.get_collection()
         try:
-            user_teams_data = collection.find({"user_id": ObjectId(user_id), "is_active": True})
+            user_teams_data = collection.find({"user_id": user_id, "is_active": True})
             return [UserTeamDetailsModel(**data) for data in user_teams_data]
         except Exception:
             return []
 
     @classmethod
-    def get_by_user_and_team(cls, user_id: str, team_id: str) -> Optional[UserTeamDetailsModel]:
+    def get_users_by_team_id(cls, team_id: str) -> list[str]:
         """
-        Get user-team relationship for a specific user and team.
+        Get all user IDs for a specific team.
         """
         collection = cls.get_collection()
         try:
-            user_team_data = collection.find_one(
-                {"user_id": ObjectId(user_id), "team_id": ObjectId(team_id), "is_active": True}
-            )
-            if user_team_data:
-                return UserTeamDetailsModel(**user_team_data)
-            return None
+            user_teams_data = list(collection.find({"team_id": team_id, "is_active": True}))
+            return [data["user_id"] for data in user_teams_data]
         except Exception:
-            return None
+            return []
+
+    @classmethod
+    def get_user_infos_by_team_id(cls, team_id: str) -> list[dict]:
+        """
+        Get all user info (user_id, name, email) for a specific team.
+        """
+        from todo.repositories.user_repository import UserRepository
+
+        user_ids = cls.get_users_by_team_id(team_id)
+        user_infos = []
+        for user_id in user_ids:
+            user = UserRepository.get_by_id(user_id)
+            if user:
+                user_infos.append({"user_id": user_id, "name": user.name, "email": user.email_id})
+        return user_infos

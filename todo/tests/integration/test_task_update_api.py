@@ -87,3 +87,22 @@ class TaskUpdateAPIIntegrationTest(AuthenticatedMongoTestCase):
         self.assertEqual(err["title"], ApiErrors.VALIDATION_ERROR)
         self.assertEqual(err["detail"], ValidationErrors.INVALID_TASK_ID_FORMAT)
         self.assertEqual(err["source"]["path"], "task_id")
+
+    def test_update_task_unauthorized(self):
+        other_user_id = ObjectId()
+        self._create_test_user(other_user_id)
+        self._set_auth_cookies()
+        url = reverse("task_detail", args=[self.valid_id])
+        payload = {
+            "title": "Updated Task Title",
+            "description": "Updated via integration-test.",
+            "priority": "LOW",
+            "status": "IN_PROGRESS",
+            "isAcknowledged": False,
+        }
+        res = self.client.patch(url, data=payload, format="json")
+        self.assertEqual(res.status_code, HTTPStatus.FORBIDDEN)
+        body = res.json()
+        self.assertEqual(body["message"], ApiErrors.UNAUTHORIZED_TITLE)
+        err = body["errors"][0]
+        self.assertEqual(err["title"], ApiErrors.UNAUTHORIZED_TITLE)

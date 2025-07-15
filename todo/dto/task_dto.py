@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 from bson import ObjectId
 from pydantic import BaseModel, field_validator
 
@@ -24,6 +24,7 @@ class TaskDTO(BaseModel):
     startedAt: datetime | None = None
     dueAt: datetime | None = None
     deferredDetails: DeferredDetailsDTO | None = None
+    in_watchlist: Optional[bool] = None
     createdAt: datetime
     updatedAt: datetime | None = None
     createdBy: UserDTO

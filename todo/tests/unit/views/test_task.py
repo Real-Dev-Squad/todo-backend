@@ -489,6 +489,7 @@ class TaskDetailViewPatchTests(AuthenticatedMongoTestCase):
             dueAt=datetime.fromisoformat(
                 self.future_date.replace("Z", "+00:00") if "Z" in self.future_date else self.future_date
             ),
+            in_watchlist=None,
             createdAt=datetime.now(timezone.utc) - timedelta(days=2),
             updatedAt=datetime.now(timezone.utc),
             createdBy=UserDTO(id="system_creator", name="SYSTEM"),
@@ -713,7 +714,7 @@ class TaskDetailViewPatchTests(AuthenticatedMongoTestCase):
         response = self.client.patch(url_with_action, data=request_data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, deferred_task_dto.model_dump(mode="json", exclude_none=True))
+        self.assertEqual(response.data, deferred_task_dto.model_dump(mode="json"))
         mock_defer_serializer_class.assert_called_once_with(data=request_data)
         mock_service_defer_task.assert_called_once_with(
             task_id=self.task_id_str,

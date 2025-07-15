@@ -36,11 +36,22 @@
     ```
     python -m pip install -r requirements.txt
     ```
-6. Create a `.env` file in the root directory, and copy the content from the `.env.example` file to it
+6. Create a `.env` file for environment variables:
+    - Copy the example environment file:
+        ```
+        cp .env.example .env
+        ```
+    - Edit the `.env` file and update the values according to your setup:
+        - `SECRET_KEY`: Generate a unique secret key for Django
+        - `MONGODB_URI`: MongoDB connection string (default: `mongodb://localhost:27017`)
+        - `DB_NAME`: Your database name
+        - `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET`: OAuth credentials for Google authentication
+        - `PRIVATE_KEY` and `PUBLIC_KEY`: Generate RSA key pairs for JWT token signing
+        - Other settings can be left as default for local development
 7. Install [docker](https://docs.docker.com/get-docker/) and [docker compose](https://docs.docker.com/compose/install/)
 8. Start MongoDB using docker
     ```
-    docker-compose up -d db
+    docker compose up -d db
     ```
 9. Start the development server by running the command
     ```
@@ -62,7 +73,7 @@
 1. Install [docker](https://docs.docker.com/get-docker/) and [docker compose](https://docs.docker.com/compose/install/)
 2. Start Django application and MongoDB using docker
     ```
-    docker-compose up -d
+    docker compose up -d
     ```
 3. Go to http://127.0.0.1:8000/v1/health API to make sure the server it up. You should see this response
     ```
@@ -94,3 +105,47 @@
     ```
     ruff check --fix
     ```
+
+## Debug Mode with VS Code
+
+### Prerequisites
+- VS Code with Python extension installed
+- Docker and docker-compose
+
+### Debug Setup
+
+1. **Start the application with debug mode:**
+   ```
+   python manage.py runserver_debug 0.0.0.0:8000
+   ```
+
+2. **Available debug options:**
+   ```bash
+   # Basic debug mode (default debug port 5678)
+   python manage.py runserver_debug 0.0.0.0:8000
+   
+   # Custom debug port
+   python manage.py runserver_debug 0.0.0.0:8000 --debug-port 5679
+   
+   # Wait for debugger before starting (useful for debugging startup code)
+   python manage.py runserver_debug 0.0.0.0:8000 --wait-for-client
+   ```
+
+3. **Attach VS Code debugger:**
+   - Press `F5` or go to `Run > Start Debugging`
+   - Select `Python: Remote Attach (Django in Docker)` from the dropdown
+   - Set breakpoints in your Python code
+   - Make requests to trigger the breakpoints
+
+### Debug Features
+- **Debug server port**: 5678 (configurable)
+- **Path mapping**: Local code mapped to container paths
+- **Django mode**: Special Django debugging features enabled
+- **Hot reload**: Code changes reflected immediately
+- **Variable inspection**: Full debugging capabilities in VS Code
+
+### Troubleshooting
+- If port 5678 is in use, specify a different port with `--debug-port`
+- Ensure VS Code Python extension is installed
+- Check that breakpoints are set in the correct files
+- Verify the debug server shows "Debug server listening on port 5678"

@@ -5,9 +5,10 @@ from bson import ObjectId
 from todo.repositories.user_repository import UserRepository
 from todo.models.user import UserModel
 from todo.models.common.pyobjectid import PyObjectId
-from todo.exceptions.google_auth_exceptions import GoogleUserNotFoundException, GoogleAPIException
+from todo.exceptions.auth_exceptions import UserNotFoundException, APIException
 from todo.tests.fixtures.user import users_db_data
 from todo.constants.messages import RepositoryErrors
+from todo.repositories.team_repository import UserTeamDetailsRepository
 
 
 class UserRepositoryTests(TestCase):
@@ -45,7 +46,7 @@ class UserRepositoryTests(TestCase):
         user_id = str(ObjectId())
         self.mock_collection.find_one.side_effect = Exception("Database error")
 
-        with self.assertRaises(GoogleUserNotFoundException):
+        with self.assertRaises(UserNotFoundException):
             UserRepository.get_by_id(user_id)
 
     @patch("todo.repositories.user_repository.DatabaseManager")
@@ -66,7 +67,7 @@ class UserRepositoryTests(TestCase):
         mock_db_manager.return_value = self.mock_db_manager
         self.mock_collection.find_one_and_update.return_value = None
 
-        with self.assertRaises(GoogleAPIException) as context:
+        with self.assertRaises(APIException) as context:
             UserRepository.create_or_update(self.valid_user_data)
         self.assertIn(RepositoryErrors.USER_OPERATION_FAILED, str(context.exception))
 
@@ -75,7 +76,7 @@ class UserRepositoryTests(TestCase):
         mock_db_manager.return_value = self.mock_db_manager
         self.mock_collection.find_one_and_update.side_effect = Exception("Database error")
 
-        with self.assertRaises(GoogleAPIException) as context:
+        with self.assertRaises(APIException) as context:
             UserRepository.create_or_update(self.valid_user_data)
         self.assertIn(RepositoryErrors.USER_CREATE_UPDATE_FAILED.format("Database error"), str(context.exception))
 
@@ -92,3 +93,27 @@ class UserRepositoryTests(TestCase):
         self.assertIn("updated_at", update_doc["$set"])
         self.assertIn("$setOnInsert", update_doc)
         self.assertIn("created_at", update_doc["$setOnInsert"])
+
+
+class UserTeamDetailsRepositoryTests(TestCase):
+    @patch("todo.repositories.user_repository.UserRepository.get_by_id")
+    @patch("todo.repositories.team_repository.UserTeamDetailsRepository.get_users_by_team_id")
+    def test_get_user_infos_by_team_id(self, mock_get_users_by_team_id, mock_get_by_id):
+        team_id = str(ObjectId())
+        user_ids = [str(ObjectId()), str(ObjectId())]
+        mock_get_users_by_team_id.return_value = user_ids
+        user1 = MagicMock()
+        user1.name = "Alice"
+        user1.email_id = "alice@example.com"
+        user2 = MagicMock()
+        user2.name = "Bob"
+        user2.email_id = "bob@example.com"
+        mock_get_by_id.side_effect = [user1, user2]
+
+        result = UserTeamDetailsRepository.get_user_infos_by_team_id(team_id)
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["name"], "Alice")
+        self.assertEqual(result[0]["email"], "alice@example.com")
+        self.assertEqual(result[1]["name"], "Bob")
+        self.assertEqual(result[1]["email"], "bob@example.com")

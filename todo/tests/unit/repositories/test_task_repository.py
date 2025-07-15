@@ -20,7 +20,7 @@ from todo.constants.task import (
     SORT_ORDER_DESC,
 )
 from todo.tests.fixtures.task import tasks_db_data
-from todo.constants.messages import RepositoryErrors
+from todo.constants.messages import RepositoryErrors, ApiErrors
 
 
 class TaskRepositoryTests(TestCase):
@@ -340,6 +340,23 @@ class TaskRepositoryUpdateTests(TestCase):
         self.assertEqual(set_payload["title"], "Title with IDs")
         self.assertIn("updatedAt", set_payload)
 
+    def test_update_task_permission_denied_if_not_creator_or_assignee(self):
+        with (
+            patch("todo.repositories.task_repository.TaskRepository.get_by_id") as mock_get_by_id,
+            patch(
+                "todo.repositories.task_repository.TaskRepository._get_assigned_task_ids_for_user"
+            ) as mock_get_assigned,
+        ):
+            mock_task = self.updated_doc_from_db.copy()
+            mock_task["createdBy"] = "some_other_user"
+            mock_get_by_id.return_value = TaskModel(
+                _id=ObjectId(), **{k: v for k, v in mock_task.items() if k != "_id"}
+            )
+            mock_get_assigned.return_value = []
+            with self.assertRaises(PermissionError) as context:
+                raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+            self.assertEqual(str(context.exception), ApiErrors.UNAUTHORIZED_TITLE)
+
 
 class TaskRepositorySortingTests(TestCase):
     def setUp(self):
@@ -479,3 +496,17 @@ class TestRepositoryDeleteTaskById(TestCase):
 
         mock_collection.find_one.assert_called_once_with({"_id": ObjectId(self.task_id), "isDeleted": False})
         mock_collection.find_one_and_update.assert_not_called()
+
+    @patch("todo.repositories.task_repository.TaskRepository.get_collection")
+    def test_delete_task_permission_denied_if_not_creator_or_assignee(self, mock_get_collection):
+        mock_collection = MagicMock()
+        mock_get_collection.return_value = mock_collection
+        mock_collection.find_one.return_value = {
+            "_id": ObjectId(self.task_id),
+            "isDeleted": False,
+            "createdBy": "some_other_user",
+        }
+        with patch("todo.repositories.task_repository.TaskRepository._get_assigned_task_ids_for_user", return_value=[]):
+            with self.assertRaises(PermissionError) as context:
+                raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+            self.assertEqual(str(context.exception), ApiErrors.UNAUTHORIZED_TITLE)

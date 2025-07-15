@@ -6,6 +6,7 @@ class AppMessages:
     GOOGLE_LOGOUT_SUCCESS = "Successfully logged out"
     TOKEN_REFRESHED = "Access token refreshed successfully"
     USERS_SEARCHED_SUCCESS = "Users searched successfully"
+    WATCHLIST_CREATED = "Task added to watchlist successfully"
 
 
 # Repository error messages
@@ -17,6 +18,7 @@ class RepositoryErrors:
     USER_OPERATION_FAILED = "User operation failed"
     USER_CREATE_UPDATE_FAILED = "User create/update failed: {0}"
     USER_SEARCH_FAILED = "User search failed: {0}"
+    WATCHLIST_CREATION_FAILED = "Failed to add task to watchlist: {0}"
 
 
 # API error messages
@@ -32,6 +34,8 @@ class ApiErrors:
     UNEXPECTED_ERROR_OCCURRED = "An unexpected error occurred"
     TASK_NOT_FOUND = "Task with ID {0} not found."
     TASK_NOT_FOUND_GENERIC = "Task not found."
+    TASK_NOT_FOUND_TITLE = "Task Not Found"
+    INVALID_TASK_ID = "Invalid task ID format"
     RESOURCE_NOT_FOUND_TITLE = "Resource Not Found"
     GOOGLE_AUTH_FAILED = "Google authentication failed"
     GOOGLE_API_ERROR = "Google API error"
@@ -49,6 +53,7 @@ class ApiErrors:
     USER_NOT_FOUND = "User with ID {0} not found."
     USER_NOT_FOUND_GENERIC = "User not found."
     SEARCH_QUERY_EMPTY = "Search query cannot be empty"
+    TASK_ALREADY_IN_WATCHLIST = "Task is already in the watchlist"
 
 
 # Validation error messages
@@ -71,7 +76,10 @@ class ValidationErrors:
     MISSING_GOOGLE_ID = "Google ID is required"
     MISSING_EMAIL = "Email is required"
     MISSING_NAME = "Name is required"
+    MISSING_PICTURE = "Picture is required"
     SEARCH_QUERY_EMPTY = "Search query cannot be empty"
+    TASK_ID_STRING_REQUIRED = "Task ID must be a string."
+    INVALID_IS_ACTIVE_VALUE = "Invalid value for is_active"
 
 
 # Auth messages
@@ -82,9 +90,9 @@ class AuthErrorMessages:
     AUTHENTICATION_REQUIRED = "Authentication required"
     TOKEN_EXPIRED_TITLE = "Token Expired"
     INVALID_TOKEN_TITLE = "Invalid Token"
-    GOOGLE_TOKEN_EXPIRED = "Google access token has expired"
-    GOOGLE_REFRESH_TOKEN_EXPIRED = "Google refresh token has expired, please login again"
-    GOOGLE_TOKEN_INVALID = "Invalid Google token"
+    TOKEN_EXPIRED = "Access token has expired"
+    REFRESH_TOKEN_EXPIRED = "Refresh token has expired, please login again"
+    TOKEN_INVALID = "Invalid token"
     MISSING_REQUIRED_PARAMETER = "Missing required parameter: {0}"
     NO_ACCESS_TOKEN = "No access token"
     NO_REFRESH_TOKEN = "No refresh token found"

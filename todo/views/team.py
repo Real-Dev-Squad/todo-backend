@@ -6,6 +6,7 @@ from django.conf import settings
 
 from todo.serializers.create_team_serializer import CreateTeamSerializer, JoinTeamByInviteCodeSerializer
 from todo.serializers.update_team_serializer import UpdateTeamSerializer
+from todo.serializers.add_team_member_serializer import AddTeamMemberSerializer
 from todo.services.team_service import TeamService
 from todo.dto.team_dto import CreateTeamDTO
 from todo.dto.update_team_dto import UpdateTeamDTO
@@ -248,3 +249,70 @@ class JoinTeamByInviteCodeView(APIView):
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AddTeamMembersView(APIView):
+    @extend_schema(
+        operation_id="add_team_members",
+        summary="Add members to a team",
+        description="Add new members to a team. Only existing team members can add other members.",
+        tags=["teams"],
+        parameters=[
+            OpenApiParameter(
+                name="team_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the team",
+            ),
+        ],
+        request=AddTeamMemberSerializer,
+        responses={
+            200: OpenApiResponse(response=TeamDTO, description="Team members added successfully"),
+            400: OpenApiResponse(description="Bad request - validation error or user not a team member"),
+            404: OpenApiResponse(description="Team not found"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+    )
+    def post(self, request: Request, team_id: str):
+        """
+        Add members to a team. Only existing team members can add other members.
+        """
+        serializer = AddTeamMemberSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return self._handle_validation_errors(serializer.errors)
+
+        try:
+            member_ids = serializer.validated_data["member_ids"]
+            added_by_user_id = request.user_id
+            response: TeamDTO = TeamService.add_team_members(team_id, member_ids, added_by_user_id)
+
+            return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
+
+        except ValueError as e:
+            if isinstance(e.args[0], ApiErrorResponse):
+                error_response = e.args[0]
+                return Response(data=error_response.model_dump(mode="json"), status=error_response.statusCode)
+
+            fallback_response = ApiErrorResponse(
+                statusCode=400,
+                message=str(e),
+                errors=[{"detail": str(e)}],
+            )
+            return Response(data=fallback_response.model_dump(mode="json"), status=400)
+        except Exception as e:
+            fallback_response = ApiErrorResponse(
+                statusCode=500,
+                message=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
+                errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}],
+            )
+            return Response(data=fallback_response.model_dump(mode="json"), status=500)
+
+    def _handle_validation_errors(self, errors):
+        """Handle validation errors and return appropriate response."""
+        error_response = ApiErrorResponse(
+            statusCode=400,
+            message=ApiErrors.VALIDATION_ERROR,
+            errors=[{"detail": str(error)} for error in errors.values()],
+        )
+        return Response(data=error_response.model_dump(mode="json"), status=400)

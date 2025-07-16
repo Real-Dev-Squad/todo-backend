@@ -7,6 +7,7 @@ from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
 from todo.constants.messages import AppMessages
 from todo.utils.invite_code_utils import generate_invite_code
+from typing import List
 
 DEFAULT_ROLE_ID = "1"
 
@@ -297,3 +298,84 @@ class TeamService:
 
         except Exception as e:
             raise ValueError(f"Failed to update team: {str(e)}")
+
+    @classmethod
+    def add_team_members(cls, team_id: str, member_ids: List[str], added_by_user_id: str) -> TeamDTO:
+        """
+        Add members to a team. Only existing team members can add new members.
+
+        Args:
+            team_id: ID of the team to add members to
+            member_ids: List of user IDs to add to the team
+            added_by_user_id: ID of the user adding the members
+
+        Returns:
+            TeamDTO with the updated team details
+
+        Raises:
+            ValueError: If user is not a team member, team not found, or operation fails
+        """
+        try:
+            # Check if team exists
+            team = TeamRepository.get_by_id(team_id)
+            if not team:
+                raise ValueError(f"Team with id {team_id} not found")
+
+            # Check if the user adding members is already a team member
+            from todo.repositories.team_repository import UserTeamDetailsRepository
+
+            user_teams = UserTeamDetailsRepository.get_by_user_id(added_by_user_id)
+            user_is_member = any(str(user_team.team_id) == team_id and user_team.is_active for user_team in user_teams)
+
+            if not user_is_member:
+                raise ValueError("You must be a member of the team to add other members")
+
+            # Validate that all users exist
+            from todo.repositories.user_repository import UserRepository
+
+            for member_id in member_ids:
+                user = UserRepository.get_by_id(member_id)
+                if not user:
+                    raise ValueError(f"User with id {member_id} not found")
+
+            # Check if any users are already team members
+            existing_members = UserTeamDetailsRepository.get_users_by_team_id(team_id)
+            already_members = [member_id for member_id in member_ids if member_id in existing_members]
+
+            if already_members:
+                raise ValueError(f"Users {', '.join(already_members)} are already team members")
+
+            # Add new members to the team
+            from todo.models.team import UserTeamDetailsModel
+            from todo.models.common.pyobjectid import PyObjectId
+
+            new_user_teams = []
+            for member_id in member_ids:
+                user_team = UserTeamDetailsModel(
+                    user_id=PyObjectId(member_id),
+                    team_id=team.id,
+                    role_id=DEFAULT_ROLE_ID,
+                    is_active=True,
+                    created_by=PyObjectId(added_by_user_id),
+                    updated_by=PyObjectId(added_by_user_id),
+                )
+                new_user_teams.append(user_team)
+
+            if new_user_teams:
+                UserTeamDetailsRepository.create_many(new_user_teams)
+
+            # Return updated team details
+            return TeamDTO(
+                id=str(team.id),
+                name=team.name,
+                description=team.description,
+                poc_id=str(team.poc_id) if team.poc_id else None,
+                invite_code=team.invite_code,
+                created_by=str(team.created_by),
+                updated_by=str(team.updated_by),
+                created_at=team.created_at,
+                updated_at=team.updated_at,
+            )
+
+        except Exception as e:
+            raise ValueError(f"Failed to add team members: {str(e)}")

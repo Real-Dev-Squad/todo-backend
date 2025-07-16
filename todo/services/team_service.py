@@ -1,4 +1,5 @@
 from todo.dto.team_dto import CreateTeamDTO, TeamDTO
+from todo.dto.update_team_dto import UpdateTeamDTO
 from todo.dto.responses.create_team_response import CreateTeamResponse
 from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.models.team import TeamModel, UserTeamDetailsModel
@@ -236,3 +237,63 @@ class TeamService:
             created_at=team.created_at,
             updated_at=team.updated_at,
         )
+
+    @classmethod
+    def update_team(cls, team_id: str, dto: UpdateTeamDTO, updated_by_user_id: str) -> TeamDTO:
+        """
+        Update a team by its ID.
+
+        Args:
+            team_id: ID of the team to update
+            dto: Team update data including name, description, and POC
+            updated_by_user_id: ID of the user updating the team
+
+        Returns:
+            TeamDTO with the updated team details
+
+        Raises:
+            ValueError: If team update fails or team not found
+        """
+        try:
+            # Check if team exists
+            existing_team = TeamRepository.get_by_id(team_id)
+            if not existing_team:
+                raise ValueError(f"Team with id {team_id} not found")
+
+            # Prepare update data
+            update_data = {}
+            if dto.name is not None:
+                update_data["name"] = dto.name
+            if dto.description is not None:
+                update_data["description"] = dto.description
+            if dto.poc_id is not None:
+                update_data["poc_id"] = PyObjectId(dto.poc_id)
+
+            # Update the team
+            updated_team = TeamRepository.update(team_id, update_data, updated_by_user_id)
+            if not updated_team:
+                raise ValueError(f"Failed to update team with id {team_id}")
+
+            # Handle member updates if provided
+            if dto.member_ids is not None:
+                from todo.repositories.team_repository import UserTeamDetailsRepository
+
+                success = UserTeamDetailsRepository.update_team_members(team_id, dto.member_ids, updated_by_user_id)
+                if not success:
+                    raise ValueError(f"Failed to update team members for team with id {team_id}")
+
+            # Convert to DTO
+            return TeamDTO(
+                id=str(updated_team.id),
+                name=updated_team.name,
+                description=updated_team.description,
+                poc_id=str(updated_team.poc_id) if updated_team.poc_id else None,
+                invite_code=updated_team.invite_code,
+                created_by=str(updated_team.created_by),
+                updated_by=str(updated_team.updated_by),
+                created_at=updated_team.created_at,
+                updated_at=updated_team.updated_at,
+            )
+
+        except Exception as e:
+            raise ValueError(f"Failed to update team: {str(e)}")

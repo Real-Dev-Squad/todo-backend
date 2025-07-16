@@ -26,6 +26,23 @@ class UserRepository:
             raise UserNotFoundException() from e
 
     @classmethod
+    def get_by_ids(cls, user_ids: List[str]) -> List[UserModel]:
+        """
+        Get multiple users by their IDs in a single database query.
+        Returns only the users that exist.
+        """
+        try:
+            if not user_ids:
+                return []
+
+            collection = cls._get_collection()
+            object_ids = [PyObjectId(user_id) for user_id in user_ids]
+            cursor = collection.find({"_id": {"$in": object_ids}})
+            return [UserModel(**doc) for doc in cursor]
+        except Exception as e:
+            raise UserNotFoundException() from e
+
+    @classmethod
     def create_or_update(cls, user_data: dict) -> UserModel:
         try:
             collection = cls._get_collection()

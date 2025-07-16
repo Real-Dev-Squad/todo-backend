@@ -408,6 +408,11 @@ paths:
         schema:
           type: integer
         description: Page number for pagination
+      - in: query
+        name: teamId
+        schema:
+          type: string
+        description: 'If provided, filters tasks assigned to this team.'
       tags:
       - tasks
       security:

@@ -773,6 +773,48 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiErrorResponse'
           description: Internal server error
+  /v1/teams/{teamid}/members:
+    post:
+      operationId: add_team_members
+      description: 'Add new members to a team. Only existing team members can add other members.'
+      summary: Add members to a team
+      parameters:
+      - in: path
+        name: teamid
+        schema:
+          type: string
+        required: true
+        description: The ID of the team
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                member_ids:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  description: List of user IDs to add to the team
+              required:
+              - member_ids
+      responses:
+        '200':
+          description: Team members added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamDTO'
+        '400':
+          description: Bad request - validation error or user not a team member
+        '404':
+          description: Team not found
+        '500':
+          description: Internal server error
+      tags:
+      - teams
   /v1/users:
     get:
       operationId: get_users

@@ -372,6 +372,7 @@ class TeamDetailView(APIView):
         """Delete team (requires Owner role)"""
         pass
 
+
 class JoinTeamByInviteCodeView(APIView):
     @extend_schema(
         operation_id="join_team_by_invite_code",
@@ -399,4 +400,3 @@ class JoinTeamByInviteCodeView(APIView):
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-

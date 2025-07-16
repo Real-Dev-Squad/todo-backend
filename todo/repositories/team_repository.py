@@ -70,9 +70,9 @@ class TeamRepository(MongoRepository):
             updated_doc = teams_collection.find_one_and_update(
                 {"_id": ObjectId(team_id), "is_deleted": False},
                 {"$set": update_data},
-                return_document=ReturnDocument.AFTER
+                return_document=ReturnDocument.AFTER,
             )
-            
+
             if updated_doc:
                 return TeamModel(**updated_doc)
             return None

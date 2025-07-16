@@ -34,7 +34,7 @@ class UserRepository:
         try:
             if not user_ids:
                 return []
-            
+
             collection = cls._get_collection()
             object_ids = [PyObjectId(user_id) for user_id in user_ids]
             cursor = collection.find({"_id": {"$in": object_ids}})

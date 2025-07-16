@@ -49,4 +49,4 @@ class TeamDTO(BaseModel):
     updated_by: str
     created_at: datetime
     updated_at: datetime
-    users: Optional[List[UserDTO]] = None
+    users: Optional[list] = None  # list of dicts with addedOn when member=true

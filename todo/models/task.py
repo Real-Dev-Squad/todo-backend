@@ -3,9 +3,7 @@ from typing import ClassVar, List
 from datetime import datetime
 
 from todo.constants.task import TaskPriority, TaskStatus
-from todo.constants.permissions import TaskType
 from todo.models.common.document import Document
-
 from todo.models.common.pyobjectid import PyObjectId
 from todo_project.db.config import DatabaseManager
 
@@ -41,8 +39,6 @@ class TaskModel(Document):
     createdBy: str
     updatedBy: str | None = None
 
-    team_id: PyObjectId | None = None
-    task_type: TaskType = TaskType.PRIVATE
-    assignee: str | None = None
+    private: bool = False
 
     model_config = ConfigDict(ser_enum="value")

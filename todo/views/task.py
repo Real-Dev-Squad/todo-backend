@@ -47,9 +47,9 @@ class TaskListView(APIView):
             ),
         ],
         responses={
-            200: OpenApiResponse(response=GetTasksResponse, description="Successful response"),
+            200: OpenApiResponse(response=GetTasksResponse, description="Success"),
             400: OpenApiResponse(description="Bad request"),
-            500: OpenApiResponse(description="Internal server error"),
+            401: OpenApiResponse(description="Authentication required"),
         },
     )
     def get(self, request: Request):
@@ -92,13 +92,14 @@ class TaskListView(APIView):
 
     @extend_schema(
         operation_id="create_task",
-        summary="Create a new task",
-        description="Create a new task with the provided details",
+        summary="Create new task",
+        description="Create task with privacy controls",
         tags=["tasks"],
         request=CreateTaskSerializer,
         responses={
-            201: OpenApiResponse(description="Task created successfully"),
-            400: OpenApiResponse(description="Bad request"),
+            201: OpenApiResponse(response=CreateTaskResponse, description="Task created"),
+            400: OpenApiResponse(description="Validation error"),
+            401: OpenApiResponse(description="Authentication required"),
             500: OpenApiResponse(description="Internal server error"),
         },
     )
@@ -187,7 +188,8 @@ class TaskDetailView(APIView):
             ),
         ],
         responses={
-            200: OpenApiResponse(description="Task retrieved successfully"),
+            200: OpenApiResponse(response=GetTaskByIdResponse, description="Success"),
+            403: OpenApiResponse(description="Permission denied"),
             404: OpenApiResponse(description="Task not found"),
             500: OpenApiResponse(description="Internal server error"),
         },
@@ -214,7 +216,8 @@ class TaskDetailView(APIView):
             ),
         ],
         responses={
-            204: OpenApiResponse(description="Task deleted successfully"),
+            204: OpenApiResponse(description="Task deleted"),
+            403: OpenApiResponse(description="Permission denied"),
             404: OpenApiResponse(description="Task not found"),
             500: OpenApiResponse(description="Internal server error"),
         },
@@ -242,12 +245,14 @@ class TaskDetailView(APIView):
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
                 description="Action to perform: 'update' or 'defer'",
+                enum=["update", "defer"],
             ),
         ],
         request=UpdateTaskSerializer,
         responses={
-            200: OpenApiResponse(description="Task updated successfully"),
+            200: OpenApiResponse(description="Task updated"),
             400: OpenApiResponse(description="Bad request"),
+            403: OpenApiResponse(description="Permission denied"),
             404: OpenApiResponse(description="Task not found"),
             500: OpenApiResponse(description="Internal server error"),
         },

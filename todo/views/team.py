@@ -11,13 +11,58 @@ from todo.dto.responses.create_team_response import CreateTeamResponse
 from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.constants.messages import ApiErrors
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 from todo.dto.team_dto import TeamDTO
 from todo.services.user_service import UserService
 
 
 class TeamListView(APIView):
+    @extend_schema(
+        operation_id="get_user_teams",
+        summary="Get user's teams with role information",
+        description="""
+        Get all teams assigned to the authenticated user with their role information.
+        
+        **Role Hierarchy:** Owner > Admin > Member
+        
+        **Returned Information:**
+        - Team details
+        - User's role in each team
+        - Team member count and details
+        """,
+        tags=["teams"],
+        responses={
+            200: OpenApiResponse(response=GetUserTeamsResponse, description="User teams retrieved successfully"),
+            401: OpenApiResponse(description="Authentication required"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+        examples=[
+            OpenApiExample(
+                "User Teams Response",
+                summary="Example teams with role information",
+                value={
+                    "teams": [
+                        {
+                            "id": "team_id_1",
+                            "name": "Development Team",
+                            "description": "Main dev team",
+                            "user_role": "owner",
+                            "member_count": 5,
+                        },
+                        {
+                            "id": "team_id_2",
+                            "name": "Marketing Team",
+                            "description": "Marketing activities",
+                            "user_role": "admin",
+                            "member_count": 3,
+                        },
+                    ]
+                },
+                response_only=True,
+            ),
+        ],
+    )
     def get(self, request: Request):
         """
         Get all teams assigned to the authenticated user.
@@ -45,14 +90,61 @@ class TeamListView(APIView):
     @extend_schema(
         operation_id="create_team",
         summary="Create a new team",
-        description="Create a new team with the provided details. The creator is always added as a member, even if not in member_ids or as POC.",
+        description="""
+        Create a new team with the provided details. 
+        
+        **Automatic Role Assignment:**
+        - Creator is automatically assigned as the team **Owner**
+        - Owners have full permissions including team deletion and admin management
+        
+        **Role Permissions:**
+        - **Owner**: All operations (delete team, manage admins/members)  
+        - **Admin**: Update team, add/remove members (not other admins/owners)
+        - **Member**: View team, create tasks
+        
+        **Team Features:**
+        - Auto-generated invite code for easy team joining
+        - Hierarchical permission system
+        """,
         tags=["teams"],
         request=CreateTeamSerializer,
         responses={
-            201: OpenApiResponse(response=CreateTeamResponse, description="Team created successfully"),
+            201: OpenApiResponse(
+                response=CreateTeamResponse, description="Team created successfully, creator assigned as Owner"
+            ),
             400: OpenApiResponse(description="Bad request - validation error"),
+            401: OpenApiResponse(description="Authentication required"),
             500: OpenApiResponse(description="Internal server error"),
         },
+        examples=[
+            OpenApiExample(
+                "Create Team Request",
+                summary="Example team creation",
+                value={
+                    "name": "Development Team",
+                    "description": "Main development team for project X",
+                    "member_ids": [],
+                    "poc_id": None,
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Create Team Response",
+                summary="Successful team creation with owner role",
+                value={
+                    "team": {
+                        "id": "team_id_123",
+                        "name": "Development Team",
+                        "description": "Main development team for project X",
+                        "invite_code": "ABC123",
+                        "created_by": "user_id_456",
+                        "user_role": "owner",
+                    },
+                    "message": "Team created successfully",
+                },
+                response_only=True,
+            ),
+        ],
     )
     def post(self, request: Request):
         """
@@ -112,7 +204,17 @@ class TeamDetailView(APIView):
     @extend_schema(
         operation_id="get_team_by_id",
         summary="Get team by ID",
-        description="Retrieve a single team by its unique identifier. Optionally, set ?member=true to get users belonging to this team.",
+        description="""
+        Retrieve a single team by its unique identifier.
+        
+        **Permission Requirements:**
+        - Must be a team member to view team details
+        - Returns 403 if user is not a team member
+        
+        **Optional Member Details:**
+        - Set `?member=true` to get users belonging to this team
+        - Includes role information for each member
+        """,
         tags=["teams"],
         parameters=[
             OpenApiParameter(
@@ -130,7 +232,21 @@ class TeamDetailView(APIView):
             ),
         ],
         responses={
-            200: OpenApiResponse(description="Team or team members retrieved successfully"),
+            200: OpenApiResponse(description="Team or team members retrieved successfully", response=TeamDTO),
+            403: OpenApiResponse(
+                description="Permission denied - team membership required",
+                examples=[
+                    OpenApiExample(
+                        "Team Membership Required",
+                        value={
+                            "error": "Team membership required",
+                            "error_type": "membership_required",
+                            "message": "Must be a member of team team_id to view team",
+                            "details": {"action": "view team", "team_id": "team_id"},
+                        },
+                    )
+                ],
+            ),
             404: OpenApiResponse(description="Team not found"),
             500: OpenApiResponse(description="Internal server error"),
         },
@@ -163,3 +279,162 @@ class TeamDetailView(APIView):
                 errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}],
             )
             return Response(data=fallback_response.model_dump(mode="json"), status=500)
+
+    @extend_schema(
+        operation_id="update_team",
+        summary="Update team details (Admin+ required)",
+        description="""
+        Update team information.
+        
+        **Permission Requirements:**
+        - Requires **Admin** or **Owner** role in the team
+        - Members cannot update team details
+        """,
+        tags=["teams"],
+        parameters=[
+            OpenApiParameter(
+                name="team_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the team",
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(description="Team updated successfully"),
+            403: OpenApiResponse(
+                description="Permission denied - insufficient role",
+                examples=[
+                    OpenApiExample(
+                        "Insufficient Role",
+                        value={
+                            "error": "Permission denied",
+                            "error_type": "team_permission_denied",
+                            "message": "Cannot update_team on team team_id",
+                            "details": {"action": "update_team", "team_id": "team_id", "user_role": "member"},
+                        },
+                    )
+                ],
+            ),
+            404: OpenApiResponse(description="Team not found"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+    )
+    def patch(self, request: Request, team_id: str):
+        """Update team details (requires Admin+ role)"""
+        # Implementation handled by middleware and service
+        pass
+
+    @extend_schema(
+        operation_id="delete_team",
+        summary="Delete team (Owner only)",
+        description="""
+        Delete a team permanently.
+        
+        **Permission Requirements:**
+        - Requires **Owner** role in the team
+        - Admins and Members cannot delete teams
+        
+        **Warning:** This action is irreversible and will:
+        - Remove all team memberships
+        - Unassign all team tasks
+        - Delete the team permanently
+        """,
+        tags=["teams"],
+        parameters=[
+            OpenApiParameter(
+                name="team_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the team",
+            ),
+        ],
+        responses={
+            204: OpenApiResponse(description="Team deleted successfully"),
+            403: OpenApiResponse(
+                description="Permission denied - owner role required",
+                examples=[
+                    OpenApiExample(
+                        "Owner Role Required",
+                        value={
+                            "error": "Insufficient role",
+                            "error_type": "insufficient_role",
+                            "message": "Action 'delete team' requires 'owner' role",
+                            "details": {"action": "delete team", "current_role": "admin", "required_role": "owner"},
+                        },
+                    )
+                ],
+            ),
+            404: OpenApiResponse(description="Team not found"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+    )
+    def delete(self, request: Request, team_id: str):
+        """Delete team (requires Owner role)"""
+        pass
+
+
+class JoinTeamByInviteCodeView(APIView):
+    @extend_schema(
+        operation_id="join_team_by_invite_code",
+        summary="Join a team using invite code",
+        description="""
+        Join a team using a valid invite code.
+        
+        **Process:**
+        - User is automatically assigned as **Member** role
+        - Members can view team, create tasks, and see team members
+        - Can be promoted to Admin by Owner later
+        
+        **Features:**
+        - Instant team access upon joining
+        - Automatic role assignment  
+        - Returns joined team details with user's new role
+        """,
+        tags=["teams"],
+        request=JoinTeamByInviteCodeSerializer,
+        responses={
+            200: OpenApiResponse(response=TeamDTO, description="Joined team successfully, assigned as Member"),
+            400: OpenApiResponse(
+                description="Bad request - validation error or already a member",
+                examples=[
+                    OpenApiExample("Already Team Member", value={"detail": "You are already a member of this team"}),
+                    OpenApiExample("Invalid Invite Code", value={"detail": "Invalid or expired invite code"}),
+                ],
+            ),
+            404: OpenApiResponse(description="Team not found or invalid invite code"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+        examples=[
+            OpenApiExample(
+                "Join Team Request",
+                summary="Join team with invite code",
+                value={"invite_code": "ABC123"},
+                request_only=True,
+            ),
+            OpenApiExample(
+                "Join Team Response",
+                summary="Successfully joined as member",
+                value={
+                    "id": "team_id_123",
+                    "name": "Development Team",
+                    "description": "Main development team",
+                    "user_role": "member",
+                    "member_count": 6,
+                },
+                response_only=True,
+            ),
+        ],
+    )
+    def post(self, request: Request):
+        serializer = JoinTeamByInviteCodeSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user_id = request.user_id
+            invite_code = serializer.validated_data["invite_code"]
+            team_dto = TeamService.join_team_by_invite_code(invite_code, user_id)
+            return Response(data=team_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

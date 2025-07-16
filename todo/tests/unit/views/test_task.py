@@ -45,7 +45,7 @@ class TaskViewTests(AuthenticatedMongoTestCase):
         response: Response = self.client.get(self.url, self.valid_params)
 
         mock_get_tasks.assert_called_once_with(
-            page=1, limit=10, sort_by="createdAt", order="desc", user_id=str(self.user_id)
+            page=1, limit=10, sort_by="createdAt", order="desc", user_id=str(self.user_id), team_id=None
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         expected_response = mock_get_tasks.return_value.model_dump(mode="json")
@@ -58,7 +58,7 @@ class TaskViewTests(AuthenticatedMongoTestCase):
         response: Response = self.client.get(self.url)
         default_limit = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"]
         mock_get_tasks.assert_called_once_with(
-            page=1, limit=default_limit, sort_by="createdAt", order="desc", user_id=str(self.user_id)
+            page=1, limit=default_limit, sort_by="createdAt", order="desc", user_id=str(self.user_id), team_id=None
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -163,7 +163,7 @@ class TaskViewTest(AuthenticatedMongoTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         default_limit = settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"]
         mock_get_tasks.assert_called_once_with(
-            page=1, limit=default_limit, sort_by="createdAt", order="desc", user_id=str(self.user_id)
+            page=1, limit=default_limit, sort_by="createdAt", order="desc", user_id=str(self.user_id), team_id=None
         )
 
     @patch("todo.services.task_service.TaskService.get_tasks")
@@ -175,7 +175,7 @@ class TaskViewTest(AuthenticatedMongoTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_get_tasks.assert_called_once_with(
-            page=2, limit=15, sort_by="createdAt", order="desc", user_id=str(self.user_id)
+            page=2, limit=15, sort_by="createdAt", order="desc", user_id=str(self.user_id), team_id=None
         )
 
     def test_get_tasks_with_invalid_page(self):
@@ -217,7 +217,7 @@ class TaskViewSortingTests(AuthenticatedMongoTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_get_tasks.assert_called_once_with(
-            page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order="desc", user_id=str(self.user_id)
+            page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order="desc", user_id=str(self.user_id), team_id=None
         )
 
     @patch("todo.services.task_service.TaskService.get_tasks")
@@ -228,7 +228,7 @@ class TaskViewSortingTests(AuthenticatedMongoTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_get_tasks.assert_called_once_with(
-            page=1, limit=20, sort_by=SORT_FIELD_DUE_AT, order=SORT_ORDER_DESC, user_id=str(self.user_id)
+            page=1, limit=20, sort_by=SORT_FIELD_DUE_AT, order=SORT_ORDER_DESC, user_id=str(self.user_id), team_id=None
         )
 
     @patch("todo.services.task_service.TaskService.get_tasks")
@@ -250,7 +250,7 @@ class TaskViewSortingTests(AuthenticatedMongoTestCase):
 
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 mock_get_tasks.assert_called_once_with(
-                    page=1, limit=20, sort_by=sort_field, order=expected_order, user_id=str(self.user_id)
+                    page=1, limit=20, sort_by=sort_field, order=expected_order, user_id=str(self.user_id), team_id=None
                 )
 
     @patch("todo.services.task_service.TaskService.get_tasks")
@@ -267,7 +267,7 @@ class TaskViewSortingTests(AuthenticatedMongoTestCase):
 
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 mock_get_tasks.assert_called_once_with(
-                    page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order=order, user_id=str(self.user_id)
+                    page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order=order, user_id=str(self.user_id), team_id=None
                 )
 
     def test_get_tasks_with_invalid_sort_by(self):
@@ -296,7 +296,7 @@ class TaskViewSortingTests(AuthenticatedMongoTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_get_tasks.assert_called_once_with(
-            page=2, limit=15, sort_by=SORT_FIELD_DUE_AT, order=SORT_ORDER_ASC, user_id=str(self.user_id)
+            page=2, limit=15, sort_by=SORT_FIELD_DUE_AT, order=SORT_ORDER_ASC, user_id=str(self.user_id), team_id=None
         )
 
     @patch("todo.services.task_service.TaskService.get_tasks")
@@ -307,7 +307,7 @@ class TaskViewSortingTests(AuthenticatedMongoTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         mock_get_tasks.assert_called_once_with(
-            page=1, limit=20, sort_by=SORT_FIELD_CREATED_AT, order="desc", user_id=str(self.user_id)
+            page=1, limit=20, sort_by=SORT_FIELD_CREATED_AT, order="desc", user_id=str(self.user_id), team_id=None
         )
 
     def test_get_tasks_edge_case_combinations(self):
@@ -318,7 +318,12 @@ class TaskViewSortingTests(AuthenticatedMongoTestCase):
 
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             mock_get_tasks.assert_called_once_with(
-                page=1, limit=20, sort_by=SORT_FIELD_CREATED_AT, order=SORT_ORDER_ASC, user_id=str(self.user_id)
+                page=1,
+                limit=20,
+                sort_by=SORT_FIELD_CREATED_AT,
+                order=SORT_ORDER_ASC,
+                user_id=str(self.user_id),
+                team_id=None,
             )
 
 

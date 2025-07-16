@@ -128,3 +128,42 @@ class TeamServiceTests(TestCase):
         user_team_objs = mock_create_many.call_args[0][0]
         all_user_ids = [str(obj.user_id) for obj in user_team_objs]
         self.assertIn(creator_id, all_user_ids)
+
+    @patch("todo.services.team_service.TeamRepository.get_by_invite_code")
+    @patch("todo.services.team_service.UserTeamDetailsRepository.get_by_user_id")
+    @patch("todo.services.team_service.UserTeamDetailsRepository.create")
+    def test_join_team_by_invite_code_success(self, mock_create, mock_get_by_user_id, mock_get_by_invite_code):
+        """Test successful join by invite code"""
+        mock_get_by_invite_code.return_value = self.team_model
+        mock_get_by_user_id.return_value = []  # Not a member yet
+        mock_create.return_value = self.user_team_details
+
+        from todo.services.team_service import TeamService
+
+        team_dto = TeamService.join_team_by_invite_code("TEST123", self.user_id)
+        self.assertEqual(team_dto.id, self.team_id)
+        self.assertEqual(team_dto.name, "Test Team")
+        mock_get_by_invite_code.assert_called_once_with("TEST123")
+        mock_create.assert_called_once()
+
+    @patch("todo.services.team_service.TeamRepository.get_by_invite_code")
+    def test_join_team_by_invite_code_invalid_code(self, mock_get_by_invite_code):
+        """Test join by invite code with invalid code"""
+        mock_get_by_invite_code.return_value = None
+        from todo.services.team_service import TeamService
+
+        with self.assertRaises(ValueError) as context:
+            TeamService.join_team_by_invite_code("INVALID", self.user_id)
+        self.assertIn("Invalid invite code", str(context.exception))
+
+    @patch("todo.services.team_service.TeamRepository.get_by_invite_code")
+    @patch("todo.services.team_service.UserTeamDetailsRepository.get_by_user_id")
+    def test_join_team_by_invite_code_already_member(self, mock_get_by_user_id, mock_get_by_invite_code):
+        """Test join by invite code when already a member"""
+        mock_get_by_invite_code.return_value = self.team_model
+        mock_get_by_user_id.return_value = [self.user_team_details]  # Already a member
+        from todo.services.team_service import TeamService
+
+        with self.assertRaises(ValueError) as context:
+            TeamService.join_team_by_invite_code("TEST123", self.user_id)
+        self.assertIn("already a member", str(context.exception))

@@ -26,3 +26,7 @@ class CreateTeamSerializer(serializers.Serializer):
             if not ObjectId.is_valid(member_id):
                 raise serializers.ValidationError(ValidationErrors.INVALID_OBJECT_ID.format(member_id))
         return value
+
+
+class JoinTeamByInviteCodeSerializer(serializers.Serializer):
+    invite_code = serializers.CharField(max_length=100)

@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 from bson import ObjectId
+from pymongo import ReturnDocument
 
 from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.repositories.common.mongo_repository import MongoRepository
@@ -54,7 +55,7 @@ class TeamRepository(MongoRepository):
     @classmethod
     def update(cls, team_id: str, update_data: dict, updated_by_user_id: str) -> Optional[TeamModel]:
         """
-        Update a team by its ID.
+        Update a team by its ID using atomic operation to prevent race conditions.
         """
         teams_collection = cls.get_collection()
         try:
@@ -65,10 +66,15 @@ class TeamRepository(MongoRepository):
             # Remove None values to avoid overwriting with None
             update_data = {k: v for k, v in update_data.items() if v is not None}
 
-            result = teams_collection.update_one({"_id": ObjectId(team_id), "is_deleted": False}, {"$set": update_data})
-
-            if result.modified_count > 0:
-                return cls.get_by_id(team_id)
+            # Use find_one_and_update for atomicity - prevents race conditions
+            updated_doc = teams_collection.find_one_and_update(
+                {"_id": ObjectId(team_id), "is_deleted": False},
+                {"$set": update_data},
+                return_document=ReturnDocument.AFTER
+            )
+            
+            if updated_doc:
+                return TeamModel(**updated_doc)
             return None
         except Exception:
             return None

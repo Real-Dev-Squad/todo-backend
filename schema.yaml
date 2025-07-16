@@ -600,22 +600,71 @@ paths:
   /v1/teams/{team_id}:
     get:
       operationId: get_team_by_id
-      description: Retrieve a single team by its unique identifier. Optionally, set
-        ?member=true to get users belonging to this team.
-      summary: Get team by ID
+      description: 'Retrieve details for a specific team. If ?member=true is provided, the users array will include an addedOn field for each user, indicating when they were added to the team.'
+      summary: Get team details by ID
       parameters:
-      - in: query
-        name: member
-        schema:
-          type: boolean
-        description: If true, returns users that belong to this team instead of team
-          details.
       - in: path
         name: team_id
         schema:
           type: string
-        description: Unique identifier of the team
         required: true
+        description: The ID of the team
+      - in: query
+        name: member
+        schema:
+          type: boolean
+        required: false
+        description: If true, include users array with addedOn field for each user
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  created_by:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        email:
+                          type: string
+                        is_active:
+                          type: boolean
+                        is_verified:
+                          type: boolean
+                        created_at:
+                          type: string
+                          format: date-time
+                        updated_at:
+                          type: string
+                          format: date-time
+                        addedOn:
+                          type: string
+                          format: date-time
+                          description: Date the user was added to the team
+                        tasksAssignedCount:
+                          type: integer
+                          description: Number of tasks assigned to this user that are also assigned to this team
       tags:
       - teams
       security:

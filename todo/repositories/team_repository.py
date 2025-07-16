@@ -130,3 +130,15 @@ class UserTeamDetailsRepository(MongoRepository):
             if user:
                 user_infos.append({"user_id": user_id, "name": user.name, "email": user.email_id})
         return user_infos
+
+    @classmethod
+    def get_users_and_added_on_by_team_id(cls, team_id: str) -> list[dict]:
+        """
+        Get all user IDs and their addedOn (created_at) for a specific team.
+        """
+        collection = cls.get_collection()
+        try:
+            user_teams_data = list(collection.find({"team_id": team_id, "is_active": True}))
+            return [{"user_id": data["user_id"], "added_on": data.get("created_at")} for data in user_teams_data]
+        except Exception:
+            return []

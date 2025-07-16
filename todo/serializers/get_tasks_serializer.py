@@ -35,6 +35,8 @@ class GetTaskQueryParamsSerializer(serializers.Serializer):
         required=False,
     )
 
+    teamId = serializers.CharField(required=False, allow_blank=False, allow_null=True)
+
     def validate(self, attrs):
         validated_data = super().validate(attrs)
 

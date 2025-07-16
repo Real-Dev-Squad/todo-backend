@@ -408,6 +408,11 @@ paths:
         schema:
           type: integer
         description: Page number for pagination
+      - in: query
+        name: teamId
+        schema:
+          type: string
+        description: 'If provided, filters tasks assigned to this team.'
       tags:
       - tasks
       security:
@@ -623,6 +628,48 @@ paths:
         '404':
           description: Team not found
         '500':
+          description: Internal server error
+  /v1/teams/join-by-invite:
+    post:
+      operationId: join_team_by_invite_code
+      description: Join a team using a valid invite code. Returns the joined team details.
+      summary: Join a team by invite code
+      tags:
+        - teams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinTeamByInviteCodeRequest'
+        required: true
+      security:
+        - cookieAuth: []
+        - basicAuth: []
+        - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamDTO'
+          description: Joined team successfully
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Bad request - validation error or already a member
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Team not found or invalid invite code
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
           description: Internal server error
   /v1/users:
     get:
@@ -1699,6 +1746,16 @@ components:
       - watchlistId
       title: WatchlistDTO
       type: object
+    JoinTeamByInviteCodeRequest:
+      type: object
+      properties:
+        invite_code:
+          type: string
+          minLength: 1
+          maxLength: 100
+      required:
+        - invite_code
+      description: Request body for joining a team by invite code.
   securitySchemes:
     basicAuth:
       type: http

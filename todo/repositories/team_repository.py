@@ -41,6 +41,20 @@ class TeamRepository(MongoRepository):
             logger.error(f"Error retrieving team {team_id}: {e}")
             return None
 
+    @classmethod
+    def get_by_invite_code(cls, invite_code: str) -> Optional[TeamModel]:
+        """
+        Get a team by its invite code.
+        """
+        teams_collection = cls.get_collection()
+        try:
+            team_data = teams_collection.find_one({"invite_code": invite_code, "is_deleted": False})
+            if team_data:
+                return TeamModel(**team_data)
+            return None
+        except Exception:
+            return None
+
 
 class UserTeamDetailsRepository(MongoRepository):
     collection_name = UserTeamDetailsModel.collection_name

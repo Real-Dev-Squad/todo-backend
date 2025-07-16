@@ -59,13 +59,13 @@ class TaskService:
         sort_by: str,
         order: str,
         user_id: str,
+        team_id: str = None,
     ) -> GetTasksResponse:
         try:
             cls._validate_pagination_params(page, limit)
 
-            tasks = TaskRepository.list(page, limit, sort_by, order, user_id)
-
-            total_count = TaskRepository.count(user_id)
+            tasks = TaskRepository.list(page, limit, sort_by, order, user_id, team_id=team_id)
+            total_count = TaskRepository.count(user_id, team_id=team_id)
 
             if not tasks:
                 return GetTasksResponse(tasks=[], links=None)

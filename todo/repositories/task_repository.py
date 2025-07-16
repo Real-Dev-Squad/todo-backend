@@ -15,10 +15,19 @@ class TaskRepository(MongoRepository):
     collection_name = TaskModel.collection_name
 
     @classmethod
-    def list(cls, page: int, limit: int, sort_by: str, order: str, user_id: str = None) -> List[TaskModel]:
+    def list(
+        cls, page: int, limit: int, sort_by: str, order: str, user_id: str = None, team_id: str = None
+    ) -> List[TaskModel]:
         tasks_collection = cls.get_collection()
 
-        if user_id:
+        if team_id:
+            # Get all task IDs assigned to this team
+            from todo.repositories.assignee_task_details_repository import AssigneeTaskDetailsRepository
+
+            team_assignments = AssigneeTaskDetailsRepository.get_by_assignee_id(team_id, "team")
+            team_task_ids = [assignment.task_id for assignment in team_assignments]
+            query_filter = {"_id": {"$in": team_task_ids}}
+        elif user_id:
             assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
             query_filter = {"$or": [{"createdBy": user_id}, {"_id": {"$in": assigned_task_ids}}]}
         else:
@@ -59,9 +68,15 @@ class TaskRepository(MongoRepository):
         return direct_task_ids + team_task_ids
 
     @classmethod
-    def count(cls, user_id: str = None) -> int:
+    def count(cls, user_id: str = None, team_id: str = None) -> int:
         tasks_collection = cls.get_collection()
-        if user_id:
+        if team_id:
+            from todo.repositories.assignee_task_details_repository import AssigneeTaskDetailsRepository
+
+            team_assignments = AssigneeTaskDetailsRepository.get_by_assignee_id(team_id, "team")
+            team_task_ids = [assignment.task_id for assignment in team_assignments]
+            query_filter = {"_id": {"$in": team_task_ids}}
+        elif user_id:
             assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
             query_filter = {"$or": [{"createdBy": user_id}, {"_id": {"$in": assigned_task_ids}}]}
         else:

@@ -24,7 +24,7 @@ class TaskSortingIntegrationTest(AuthenticatedMongoTestCase):
         response = self.client.get("/v1/tasks", {"sort_by": "priority", "order": "desc"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_list.assert_called_with(1, 20, SORT_FIELD_PRIORITY, SORT_ORDER_DESC, str(self.user_id))
+        mock_list.assert_called_with(1, 20, SORT_FIELD_PRIORITY, SORT_ORDER_DESC, str(self.user_id), team_id=None)
 
     @patch("todo.repositories.task_repository.TaskRepository.count")
     @patch("todo.repositories.task_repository.TaskRepository.list")
@@ -36,7 +36,7 @@ class TaskSortingIntegrationTest(AuthenticatedMongoTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        mock_list.assert_called_with(1, 20, SORT_FIELD_DUE_AT, SORT_ORDER_ASC, str(self.user_id))
+        mock_list.assert_called_with(1, 20, SORT_FIELD_DUE_AT, SORT_ORDER_ASC, str(self.user_id), team_id=None)
 
     @patch("todo.repositories.task_repository.TaskRepository.count")
     @patch("todo.repositories.task_repository.TaskRepository.list")
@@ -49,7 +49,7 @@ class TaskSortingIntegrationTest(AuthenticatedMongoTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Assignee sorting now falls back to createdAt sorting
-        mock_list.assert_called_once_with(1, 20, SORT_FIELD_ASSIGNEE, SORT_ORDER_ASC, str(self.user_id))
+        mock_list.assert_called_once_with(1, 20, SORT_FIELD_ASSIGNEE, SORT_ORDER_ASC, str(self.user_id), team_id=None)
 
     @patch("todo.repositories.task_repository.TaskRepository.count")
     @patch("todo.repositories.task_repository.TaskRepository.list")
@@ -72,7 +72,7 @@ class TaskSortingIntegrationTest(AuthenticatedMongoTestCase):
                 response = self.client.get("/v1/tasks", {"sort_by": sort_field})
 
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
-                mock_list.assert_called_with(1, 20, sort_field, expected_order, str(self.user_id))
+                mock_list.assert_called_with(1, 20, sort_field, expected_order, str(self.user_id), team_id=None)
 
     @patch("todo.repositories.task_repository.TaskRepository.count")
     @patch("todo.repositories.task_repository.TaskRepository.list")
@@ -84,7 +84,7 @@ class TaskSortingIntegrationTest(AuthenticatedMongoTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        mock_list.assert_called_with(3, 5, SORT_FIELD_CREATED_AT, SORT_ORDER_ASC, str(self.user_id))
+        mock_list.assert_called_with(3, 5, SORT_FIELD_CREATED_AT, SORT_ORDER_ASC, str(self.user_id), team_id=None)
 
     def test_invalid_sort_parameters_integration(self):
         response = self.client.get("/v1/tasks", {"sort_by": "invalid_field"})
@@ -103,7 +103,7 @@ class TaskSortingIntegrationTest(AuthenticatedMongoTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        mock_list.assert_called_with(1, 20, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC, str(self.user_id))
+        mock_list.assert_called_with(1, 20, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC, str(self.user_id), team_id=None)
 
     @patch("todo.services.task_service.reverse_lazy", return_value="/v1/tasks")
     @patch("todo.repositories.task_repository.TaskRepository.count")

@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from todo.views.team import TeamListView
+from todo.views.team import TeamListView, JoinTeamByInviteCodeView
 from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.dto.team_dto import TeamDTO
 from datetime import datetime, timezone
@@ -78,3 +78,59 @@ class TeamListViewTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         response_data = response.data
         self.assertEqual(response_data["statusCode"], 500)
+
+
+class JoinTeamByInviteCodeViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.view = JoinTeamByInviteCodeView()
+        self.mock_user_id = "507f1f77bcf86cd799439011"
+
+    @patch("todo.views.team.TeamService.join_team_by_invite_code")
+    def test_join_team_by_invite_code_success(self, mock_join):
+        team_dto = TeamDTO(
+            id="507f1f77bcf86cd799439012",
+            name="Test Team",
+            description="Test Description",
+            poc_id="507f1f77bcf86cd799439013",
+            invite_code="TEST123",
+            created_by="507f1f77bcf86cd799439011",
+            updated_by="507f1f77bcf86cd799439011",
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+        mock_join.return_value = team_dto
+        mock_request = MagicMock()
+        mock_request.user_id = self.mock_user_id
+        mock_request.data = {"invite_code": "TEST123"}
+        response = self.view.post(mock_request)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["name"], "Test Team")
+
+    @patch("todo.views.team.TeamService.join_team_by_invite_code")
+    def test_join_team_by_invite_code_invalid_code(self, mock_join):
+        mock_join.side_effect = ValueError("Invalid invite code or team does not exist.")
+        mock_request = MagicMock()
+        mock_request.user_id = self.mock_user_id
+        mock_request.data = {"invite_code": "INVALID"}
+        response = self.view.post(mock_request)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Invalid invite code", response.data["detail"])
+
+    @patch("todo.views.team.TeamService.join_team_by_invite_code")
+    def test_join_team_by_invite_code_already_member(self, mock_join):
+        mock_join.side_effect = ValueError("User is already a member of this team.")
+        mock_request = MagicMock()
+        mock_request.user_id = self.mock_user_id
+        mock_request.data = {"invite_code": "TEST123"}
+        response = self.view.post(mock_request)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("already a member", response.data["detail"])
+
+    def test_join_team_by_invite_code_validation_error(self):
+        mock_request = MagicMock()
+        mock_request.user_id = self.mock_user_id
+        mock_request.data = {"invite_code": ""}  # Empty code
+        response = self.view.post(mock_request)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("invite_code", response.data)

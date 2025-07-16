@@ -45,6 +45,13 @@ class TaskListView(APIView):
                 location=OpenApiParameter.QUERY,
                 description="Number of tasks per page",
             ),
+            OpenApiParameter(
+                name="teamId",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="If provided, filters tasks assigned to this team.",
+                required=False,
+            ),
         ],
         responses={
             200: OpenApiResponse(response=GetTasksResponse, description="Success"),
@@ -81,12 +88,14 @@ class TaskListView(APIView):
                 status=status.HTTP_200_OK,
             )
 
+        team_id = query.validated_data.get("teamId")
         response = TaskService.get_tasks(
             page=query.validated_data["page"],
             limit=query.validated_data["limit"],
             sort_by=query.validated_data["sort_by"],
             order=query.validated_data.get("order"),
             user_id=user["user_id"],
+            team_id=team_id,
         )
         return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
 

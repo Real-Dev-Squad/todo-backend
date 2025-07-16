@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.request import Request
 from django.conf import settings
 
-from todo.serializers.create_team_serializer import CreateTeamSerializer
+from todo.serializers.create_team_serializer import CreateTeamSerializer, JoinTeamByInviteCodeSerializer
 from todo.services.team_service import TeamService
 from todo.dto.team_dto import CreateTeamDTO
 from todo.dto.responses.create_team_response import CreateTeamResponse
@@ -372,58 +372,19 @@ class TeamDetailView(APIView):
         """Delete team (requires Owner role)"""
         pass
 
-
 class JoinTeamByInviteCodeView(APIView):
     @extend_schema(
         operation_id="join_team_by_invite_code",
-        summary="Join a team using invite code",
-        description="""
-        Join a team using a valid invite code.
-        
-        **Process:**
-        - User is automatically assigned as **Member** role
-        - Members can view team, create tasks, and see team members
-        - Can be promoted to Admin by Owner later
-        
-        **Features:**
-        - Instant team access upon joining
-        - Automatic role assignment  
-        - Returns joined team details with user's new role
-        """,
+        summary="Join a team by invite code",
+        description="Join a team using a valid invite code. Returns the joined team details.",
         tags=["teams"],
         request=JoinTeamByInviteCodeSerializer,
         responses={
-            200: OpenApiResponse(response=TeamDTO, description="Joined team successfully, assigned as Member"),
-            400: OpenApiResponse(
-                description="Bad request - validation error or already a member",
-                examples=[
-                    OpenApiExample("Already Team Member", value={"detail": "You are already a member of this team"}),
-                    OpenApiExample("Invalid Invite Code", value={"detail": "Invalid or expired invite code"}),
-                ],
-            ),
+            200: OpenApiResponse(response=TeamDTO, description="Joined team successfully"),
+            400: OpenApiResponse(description="Bad request - validation error or already a member"),
             404: OpenApiResponse(description="Team not found or invalid invite code"),
             500: OpenApiResponse(description="Internal server error"),
         },
-        examples=[
-            OpenApiExample(
-                "Join Team Request",
-                summary="Join team with invite code",
-                value={"invite_code": "ABC123"},
-                request_only=True,
-            ),
-            OpenApiExample(
-                "Join Team Response",
-                summary="Successfully joined as member",
-                value={
-                    "id": "team_id_123",
-                    "name": "Development Team",
-                    "description": "Main development team",
-                    "user_role": "member",
-                    "member_count": 6,
-                },
-                response_only=True,
-            ),
-        ],
     )
     def post(self, request: Request):
         serializer = JoinTeamByInviteCodeSerializer(data=request.data)
@@ -438,3 +399,4 @@ class JoinTeamByInviteCodeView(APIView):
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

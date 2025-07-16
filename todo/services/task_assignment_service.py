@@ -10,6 +10,8 @@ from todo.repositories.user_repository import UserRepository
 from todo.repositories.team_repository import TeamRepository
 from todo.exceptions.user_exceptions import UserNotFoundException
 from todo.exceptions.task_exceptions import TaskNotFoundException
+from todo.repositories.assignee_task_details_repository import AssigneeTaskDetailsRepository
+from todo.models.assignee_task_details import AssigneeTaskDetailsModel
 
 
 class TaskAssignmentService:
@@ -59,6 +61,20 @@ class TaskAssignmentService:
             )
 
             assignment = TaskAssignmentRepository.create(task_assignment)
+
+        # Also insert into assignee_task_details if this is a team assignment
+        if dto.user_type == "team":
+            AssigneeTaskDetailsRepository.create(
+                AssigneeTaskDetailsModel(
+                    assignee_id=PyObjectId(dto.assignee_id),
+                    task_id=PyObjectId(dto.task_id),
+                    relation_type="team",
+                    is_action_taken=False,
+                    is_active=True,
+                    created_by=PyObjectId(user_id),
+                    updated_by=None,
+                )
+            )
 
         # Prepare response
         response_dto = TaskAssignmentResponseDTO(

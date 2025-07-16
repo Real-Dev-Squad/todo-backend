@@ -56,7 +56,6 @@ class UserService:
     @classmethod
     def get_users_by_team_id(cls, team_id: str) -> list[UserDTO]:
         from todo.repositories.team_repository import UserTeamDetailsRepository
-        from todo.dto.user_dto import UserDTO
 
         users_and_added_on = UserTeamDetailsRepository.get_users_and_added_on_by_team_id(team_id)
         user_ids = [entry["user_id"] for entry in users_and_added_on]

@@ -1,7 +1,6 @@
 from pydantic import BaseModel, validator
 from typing import List, Optional
 from datetime import datetime
-from todo.dto.user_dto import UserDTO
 from todo.repositories.user_repository import UserRepository
 
 

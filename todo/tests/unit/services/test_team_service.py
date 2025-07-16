@@ -139,6 +139,7 @@ class TeamServiceTests(TestCase):
         mock_create.return_value = self.user_team_details
 
         from todo.services.team_service import TeamService
+
         team_dto = TeamService.join_team_by_invite_code("TEST123", self.user_id)
         self.assertEqual(team_dto.id, self.team_id)
         self.assertEqual(team_dto.name, "Test Team")
@@ -150,6 +151,7 @@ class TeamServiceTests(TestCase):
         """Test join by invite code with invalid code"""
         mock_get_by_invite_code.return_value = None
         from todo.services.team_service import TeamService
+
         with self.assertRaises(ValueError) as context:
             TeamService.join_team_by_invite_code("INVALID", self.user_id)
         self.assertIn("Invalid invite code", str(context.exception))
@@ -161,6 +163,7 @@ class TeamServiceTests(TestCase):
         mock_get_by_invite_code.return_value = self.team_model
         mock_get_by_user_id.return_value = [self.user_team_details]  # Already a member
         from todo.services.team_service import TeamService
+
         with self.assertRaises(ValueError) as context:
             TeamService.join_team_by_invite_code("TEST123", self.user_id)
         self.assertIn("already a member", str(context.exception))

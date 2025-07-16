@@ -204,6 +204,7 @@ class TeamService:
 
         # 2. Check if user is already a member
         from todo.repositories.team_repository import UserTeamDetailsRepository
+
         user_teams = UserTeamDetailsRepository.get_by_user_id(user_id)
         for user_team in user_teams:
             if str(user_team.team_id) == str(team.id) and user_team.is_active:
@@ -212,6 +213,7 @@ class TeamService:
         # 3. Add user to the team
         from todo.models.common.pyobjectid import PyObjectId
         from todo.models.team import UserTeamDetailsModel
+
         user_team = UserTeamDetailsModel(
             user_id=PyObjectId(user_id),
             team_id=team.id,

@@ -25,7 +25,6 @@ class TeamRepository(MongoRepository):
         insert_result = teams_collection.insert_one(team_dict)
         team.id = insert_result.inserted_id
 
-        logger.info(f"Created team {team.id} with name '{team.name}'")
         return team
 
     @classmethod

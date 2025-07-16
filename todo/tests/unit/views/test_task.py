@@ -318,7 +318,12 @@ class TaskViewSortingTests(AuthenticatedMongoTestCase):
 
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             mock_get_tasks.assert_called_once_with(
-                page=1, limit=20, sort_by=SORT_FIELD_CREATED_AT, order=SORT_ORDER_ASC, user_id=str(self.user_id), team_id=None
+                page=1,
+                limit=20,
+                sort_by=SORT_FIELD_CREATED_AT,
+                order=SORT_ORDER_ASC,
+                user_id=str(self.user_id),
+                team_id=None,
             )
 
 

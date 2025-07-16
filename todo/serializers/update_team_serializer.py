@@ -13,7 +13,7 @@ class UpdateTeamSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=100, required=False, allow_blank=True)
     description = serializers.CharField(max_length=500, required=False, allow_blank=True, allow_null=True)
     poc_id = serializers.CharField(required=False, allow_null=True, allow_blank=True)
-    member_ids = serializers.ListField(child=serializers.CharField(), required=False, default=list)
+    member_ids = serializers.ListField(child=serializers.CharField(), required=False, allow_empty=True, default=None)
 
     def validate_name(self, value):
         if value is not None and not value.strip():
@@ -33,6 +33,8 @@ class UpdateTeamSerializer(serializers.Serializer):
         return value
 
     def validate_member_ids(self, value):
+        if value is None:
+            return value
         for member_id in value:
             if not ObjectId.is_valid(member_id):
                 raise serializers.ValidationError(ValidationErrors.INVALID_OBJECT_ID.format(member_id))

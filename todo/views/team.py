@@ -167,7 +167,7 @@ class TeamDetailView(APIView):
     @extend_schema(
         operation_id="update_team",
         summary="Update team by ID",
-        description="Update a team's details including name, description, point of contact (POC), and team members. All fields are optional - only include the fields you want to update. For member management, the provided member_ids list completely replaces the current team members.",
+        description="Update a team's details including name, description, point of contact (POC), and team members. All fields are optional - only include the fields you want to update. For member management: if member_ids is provided, it completely replaces the current team members; if member_ids is not provided, existing members remain unchanged.",
         tags=["teams"],
         parameters=[
             OpenApiParameter(

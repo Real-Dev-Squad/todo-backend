@@ -48,4 +48,4 @@ class UpdateTeamDTO(BaseModel):
 
         if invalid_ids:
             raise ValueError(f"Invalid member IDs: {invalid_ids}")
-        return value 
+        return value

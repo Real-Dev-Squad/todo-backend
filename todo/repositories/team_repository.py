@@ -61,15 +61,12 @@ class TeamRepository(MongoRepository):
             # Add updated_by and updated_at fields
             update_data["updated_by"] = updated_by_user_id
             update_data["updated_at"] = datetime.now(timezone.utc)
-            
+
             # Remove None values to avoid overwriting with None
             update_data = {k: v for k, v in update_data.items() if v is not None}
-            
-            result = teams_collection.update_one(
-                {"_id": ObjectId(team_id), "is_deleted": False},
-                {"$set": update_data}
-            )
-            
+
+            result = teams_collection.update_one({"_id": ObjectId(team_id), "is_deleted": False}, {"$set": update_data})
+
             if result.modified_count > 0:
                 return cls.get_by_id(team_id)
             return None
@@ -188,35 +185,30 @@ class UserTeamDetailsRepository(MongoRepository):
         collection = cls.get_collection()
         try:
             result = collection.update_one(
-                {
-                    "team_id": team_id,
-                    "user_id": user_id,
-                    "is_active": True
-                },
+                {"team_id": team_id, "user_id": user_id, "is_active": True},
                 {
                     "$set": {
                         "is_active": False,
                         "updated_by": updated_by_user_id,
-                        "updated_at": datetime.now(timezone.utc)
+                        "updated_at": datetime.now(timezone.utc),
                     }
-                }
+                },
             )
             return result.modified_count > 0
         except Exception:
             return False
 
     @classmethod
-    def add_user_to_team(cls, team_id: str, user_id: str, role_id: str, created_by_user_id: str) -> UserTeamDetailsModel:
+    def add_user_to_team(
+        cls, team_id: str, user_id: str, role_id: str, created_by_user_id: str
+    ) -> UserTeamDetailsModel:
         """
         Add a user to a team.
         """
         collection = cls.get_collection()
         # Check if user is already in the team
-        existing_relationship = collection.find_one({
-            "team_id": team_id,
-            "user_id": user_id
-        })
-        
+        existing_relationship = collection.find_one({"team_id": team_id, "user_id": user_id})
+
         if existing_relationship:
             # If user exists but is inactive, reactivate them
             if not existing_relationship.get("is_active", True):
@@ -227,15 +219,15 @@ class UserTeamDetailsRepository(MongoRepository):
                             "is_active": True,
                             "role_id": role_id,
                             "updated_by": created_by_user_id,
-                            "updated_at": datetime.now(timezone.utc)
+                            "updated_at": datetime.now(timezone.utc),
                         }
-                    }
+                    },
                 )
                 return UserTeamDetailsModel(**existing_relationship)
             else:
                 # User is already active in the team
                 return UserTeamDetailsModel(**existing_relationship)
-        
+
         # Create new relationship
         user_team = UserTeamDetailsModel(
             user_id=user_id,
@@ -255,21 +247,21 @@ class UserTeamDetailsRepository(MongoRepository):
         try:
             # Get current team members
             current_members = cls.get_users_by_team_id(team_id)
-            
+
             # Find members to remove (in current but not in new list)
             members_to_remove = [user_id for user_id in current_members if user_id not in member_ids]
-            
+
             # Find members to add (in new list but not in current)
             members_to_add = [user_id for user_id in member_ids if user_id not in current_members]
-            
+
             # Remove members
             for user_id in members_to_remove:
                 cls.remove_user_from_team(team_id, user_id, updated_by_user_id)
-            
+
             # Add new members
             for user_id in members_to_add:
                 cls.add_user_to_team(team_id, user_id, "1", updated_by_user_id)  # Default role_id is "1"
-            
+
             return True
         except Exception:
             return False

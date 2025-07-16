@@ -5,8 +5,10 @@ from rest_framework.request import Request
 from django.conf import settings
 
 from todo.serializers.create_team_serializer import CreateTeamSerializer, JoinTeamByInviteCodeSerializer
+from todo.serializers.update_team_serializer import UpdateTeamSerializer
 from todo.services.team_service import TeamService
 from todo.dto.team_dto import CreateTeamDTO
+from todo.dto.update_team_dto import UpdateTeamDTO
 from todo.dto.responses.create_team_response import CreateTeamResponse
 from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
@@ -148,6 +150,62 @@ class TeamDetailView(APIView):
                 team_dto.users = users_data
             return Response(data=team_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
         except ValueError as e:
+            fallback_response = ApiErrorResponse(
+                statusCode=404,
+                message=str(e),
+                errors=[{"detail": str(e)}],
+            )
+            return Response(data=fallback_response.model_dump(mode="json"), status=404)
+        except Exception as e:
+            fallback_response = ApiErrorResponse(
+                statusCode=500,
+                message=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
+                errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}],
+            )
+            return Response(data=fallback_response.model_dump(mode="json"), status=500)
+
+    @extend_schema(
+        operation_id="update_team",
+        summary="Update team by ID",
+        description="Update a team's details including name, description, point of contact (POC), and team members. All fields are optional - only include the fields you want to update. For member management, the provided member_ids list completely replaces the current team members.",
+        tags=["teams"],
+        parameters=[
+            OpenApiParameter(
+                name="team_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the team",
+            ),
+        ],
+        request=UpdateTeamSerializer,
+        responses={
+            200: OpenApiResponse(response=TeamDTO, description="Team updated successfully"),
+            400: OpenApiResponse(description="Bad request - validation error or invalid member IDs"),
+            404: OpenApiResponse(description="Team not found"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+    )
+    def patch(self, request: Request, team_id: str):
+        """
+        Update a team by ID.
+        """
+        serializer = UpdateTeamSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return self._handle_validation_errors(serializer.errors)
+
+        try:
+            dto = UpdateTeamDTO(**serializer.validated_data)
+            updated_by_user_id = request.user_id
+            response: TeamDTO = TeamService.update_team(team_id, dto, updated_by_user_id)
+
+            return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
+
+        except ValueError as e:
+            if isinstance(e.args[0], ApiErrorResponse):
+                error_response = e.args[0]
+                return Response(data=error_response.model_dump(mode="json"), status=error_response.statusCode)
+
             fallback_response = ApiErrorResponse(
                 statusCode=404,
                 message=str(e),

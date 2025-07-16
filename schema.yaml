@@ -678,6 +678,60 @@ paths:
           description: Team not found
         '500':
           description: Internal server error
+    patch:
+      operationId: update_team
+      description: Update a team's details including name, description, point of contact (POC), and team members. All fields are optional - only include the fields you want to update. For member management, the provided member_ids list completely replaces the current team members.
+      summary: Update team by ID
+      parameters:
+      - in: path
+        name: team_id
+        schema:
+          type: string
+        description: Unique identifier of the team
+        required: true
+      tags:
+      - teams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTeamRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UpdateTeamRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdateTeamRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamDTO'
+          description: Team updated successfully
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Bad request - validation error or invalid member IDs
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Team not found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Internal server error
   /v1/teams/join-by-invite:
     post:
       operationId: join_team_by_invite_code
@@ -1132,6 +1186,25 @@ components:
           nullable: true
       required:
       - name
+    UpdateTeamRequest:
+      type: object
+      description: All fields are optional for PATCH operations. Only include the fields you want to update. For member management, the provided member_ids list completely replaces the current team members.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        member_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        poc_id:
+          type: string
+          nullable: true
     CreateTeamResponse:
       description: |-
         Response model for team creation endpoint.

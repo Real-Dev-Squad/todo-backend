@@ -10,9 +10,9 @@ class UpdateTeamSerializer(serializers.Serializer):
     All fields are optional for PATCH operations.
     """
 
-    name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    name = serializers.CharField(max_length=100, required=False, allow_blank=False)
     description = serializers.CharField(max_length=500, required=False, allow_blank=True, allow_null=True)
-    poc_id = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    poc_id = serializers.CharField(required=False, allow_null=True, allow_blank=False)
     member_ids = serializers.ListField(child=serializers.CharField(), required=False, allow_empty=True, default=None)
 
     def validate_name(self, value):

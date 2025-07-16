@@ -181,3 +181,56 @@ class TeamService:
             created_at=team.created_at,
             updated_at=team.updated_at,
         )
+
+    @classmethod
+    def join_team_by_invite_code(cls, invite_code: str, user_id: str) -> TeamDTO:
+        """
+        Join a team using an invite code.
+
+        Args:
+            invite_code: The invite code for the team
+            user_id: The user who wants to join
+
+        Returns:
+            TeamDTO with the team details
+
+        Raises:
+            ValueError: If invite code is invalid, team not found, or user already a member
+        """
+        # 1. Find the team by invite code
+        team = TeamRepository.get_by_invite_code(invite_code)
+        if not team:
+            raise ValueError("Invalid invite code or team does not exist.")
+
+        # 2. Check if user is already a member
+        from todo.repositories.team_repository import UserTeamDetailsRepository
+        user_teams = UserTeamDetailsRepository.get_by_user_id(user_id)
+        for user_team in user_teams:
+            if str(user_team.team_id) == str(team.id) and user_team.is_active:
+                raise ValueError("User is already a member of this team.")
+
+        # 3. Add user to the team
+        from todo.models.common.pyobjectid import PyObjectId
+        from todo.models.team import UserTeamDetailsModel
+        user_team = UserTeamDetailsModel(
+            user_id=PyObjectId(user_id),
+            team_id=team.id,
+            role_id=DEFAULT_ROLE_ID,
+            is_active=True,
+            created_by=PyObjectId(user_id),
+            updated_by=PyObjectId(user_id),
+        )
+        UserTeamDetailsRepository.create(user_team)
+
+        # 4. Return team details
+        return TeamDTO(
+            id=str(team.id),
+            name=team.name,
+            description=team.description,
+            poc_id=str(team.poc_id) if team.poc_id else None,
+            invite_code=team.invite_code,
+            created_by=str(team.created_by),
+            updated_by=str(team.updated_by),
+            created_at=team.created_at,
+            updated_at=team.updated_at,
+        )

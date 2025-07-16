@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.request import Request
 from django.conf import settings
 
-from todo.serializers.create_team_serializer import CreateTeamSerializer
+from todo.serializers.create_team_serializer import CreateTeamSerializer, JoinTeamByInviteCodeSerializer
 from todo.services.team_service import TeamService
 from todo.dto.team_dto import CreateTeamDTO
 from todo.dto.responses.create_team_response import CreateTeamResponse
@@ -163,3 +163,32 @@ class TeamDetailView(APIView):
                 errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}],
             )
             return Response(data=fallback_response.model_dump(mode="json"), status=500)
+
+
+class JoinTeamByInviteCodeView(APIView):
+    @extend_schema(
+        operation_id="join_team_by_invite_code",
+        summary="Join a team by invite code",
+        description="Join a team using a valid invite code. Returns the joined team details.",
+        tags=["teams"],
+        request=JoinTeamByInviteCodeSerializer,
+        responses={
+            200: OpenApiResponse(response=TeamDTO, description="Joined team successfully"),
+            400: OpenApiResponse(description="Bad request - validation error or already a member"),
+            404: OpenApiResponse(description="Team not found or invalid invite code"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+    )
+    def post(self, request: Request):
+        serializer = JoinTeamByInviteCodeSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user_id = request.user_id
+            invite_code = serializer.validated_data["invite_code"]
+            team_dto = TeamService.join_team_by_invite_code(invite_code, user_id)
+            return Response(data=team_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

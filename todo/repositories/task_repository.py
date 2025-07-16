@@ -24,6 +24,7 @@ class TaskRepository(MongoRepository):
 
         if team_id:
             from todo.repositories.assignee_task_details_repository import AssigneeTaskDetailsRepository
+
             logger.debug(f"TaskRepository.list: team_id={team_id}")
             team_assignments = AssigneeTaskDetailsRepository.get_by_assignee_id(team_id, "team")
             team_task_ids = [assignment.task_id for assignment in team_assignments]

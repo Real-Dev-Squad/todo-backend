@@ -47,19 +47,18 @@ class AssigneeTaskDetailsRepository(MongoRepository):
         logger = logging.getLogger(__name__)
         try:
             from bson import ObjectId
+
             logger.debug(f"get_by_assignee_id: assignee_id={assignee_id}, relation_type={relation_type}")
-            results = list(collection.find({
-                "assignee_id": ObjectId(assignee_id),
-                "relation_type": relation_type,
-                "is_active": True
-            }))
+            results = list(
+                collection.find(
+                    {"assignee_id": ObjectId(assignee_id), "relation_type": relation_type, "is_active": True}
+                )
+            )
             logger.debug(f"ObjectId query returned {len(results)} results")
             if not results:
-                results = list(collection.find({
-                    "assignee_id": assignee_id,
-                    "relation_type": relation_type,
-                    "is_active": True
-                }))
+                results = list(
+                    collection.find({"assignee_id": assignee_id, "relation_type": relation_type, "is_active": True})
+                )
                 logger.debug(f"String query returned {len(results)} results")
             return [AssigneeTaskDetailsModel(**data) for data in results]
         except Exception as e:
@@ -120,4 +119,3 @@ class AssigneeTaskDetailsRepository(MongoRepository):
             return result.modified_count > 0
         except Exception:
             return False
-

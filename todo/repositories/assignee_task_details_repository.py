@@ -44,20 +44,17 @@ class AssigneeTaskDetailsRepository(MongoRepository):
         """
         collection = cls.get_collection()
         try:
-          
             from bson import ObjectId
-            results = list(collection.find({
-                "assignee_id": ObjectId(assignee_id),
-                "relation_type": relation_type,
-                "is_active": True
-            }))
+
+            results = list(
+                collection.find(
+                    {"assignee_id": ObjectId(assignee_id), "relation_type": relation_type, "is_active": True}
+                )
+            )
             if not results:
-                
-                results = list(collection.find({
-                    "assignee_id": assignee_id,
-                    "relation_type": relation_type,
-                    "is_active": True
-                }))
+                results = list(
+                    collection.find({"assignee_id": assignee_id, "relation_type": relation_type, "is_active": True})
+                )
             return [AssigneeTaskDetailsModel(**data) for data in results]
         except Exception:
             return []

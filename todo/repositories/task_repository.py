@@ -15,12 +15,15 @@ class TaskRepository(MongoRepository):
     collection_name = TaskModel.collection_name
 
     @classmethod
-    def list(cls, page: int, limit: int, sort_by: str, order: str, user_id: str = None, team_id: str = None) -> List[TaskModel]:
+    def list(
+        cls, page: int, limit: int, sort_by: str, order: str, user_id: str = None, team_id: str = None
+    ) -> List[TaskModel]:
         tasks_collection = cls.get_collection()
 
         if team_id:
             # Get all task IDs assigned to this team
             from todo.repositories.assignee_task_details_repository import AssigneeTaskDetailsRepository
+
             team_assignments = AssigneeTaskDetailsRepository.get_by_assignee_id(team_id, "team")
             team_task_ids = [assignment.task_id for assignment in team_assignments]
             query_filter = {"_id": {"$in": team_task_ids}}
@@ -69,6 +72,7 @@ class TaskRepository(MongoRepository):
         tasks_collection = cls.get_collection()
         if team_id:
             from todo.repositories.assignee_task_details_repository import AssigneeTaskDetailsRepository
+
             team_assignments = AssigneeTaskDetailsRepository.get_by_assignee_id(team_id, "team")
             team_task_ids = [assignment.task_id for assignment in team_assignments]
             query_filter = {"_id": {"$in": team_task_ids}}

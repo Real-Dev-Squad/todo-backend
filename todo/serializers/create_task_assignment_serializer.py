@@ -24,3 +24,7 @@ class CreateTaskAssignmentSerializer(serializers.Serializer):
         if value not in ["user", "team"]:
             raise serializers.ValidationError("user_type must be either 'user' or 'team'")
         return value
+
+
+class AssignTaskToUserSerializer(serializers.Serializer):
+    assignee_id = serializers.CharField(help_text="User ID to assign the task to")

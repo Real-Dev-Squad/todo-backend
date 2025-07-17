@@ -8,6 +8,7 @@ from todo.views.label import LabelListView
 from todo.views.team import TeamListView, TeamDetailView, JoinTeamByInviteCodeView, AddTeamMembersView
 from todo.views.watchlist import WatchlistListView, WatchlistDetailView, WatchlistCheckView
 from todo.views.task_assignment import TaskAssignmentView, TaskAssignmentDetailView
+from todo.views.task import AssignTaskToUserView
 
 urlpatterns = [
     path("teams", TeamListView.as_view(), name="teams"),
@@ -16,6 +17,7 @@ urlpatterns = [
     path("teams/<str:team_id>/members", AddTeamMembersView.as_view(), name="add_team_members"),
     path("tasks", TaskListView.as_view(), name="tasks"),
     path("tasks/<str:task_id>", TaskDetailView.as_view(), name="task_detail"),
+    path("tasks/<str:task_id>/assign/", AssignTaskToUserView.as_view(), name="assign_task_to_user"),
     path("task-assignments", TaskAssignmentView.as_view(), name="task_assignments"),
     path("task-assignments/<str:task_id>", TaskAssignmentDetailView.as_view(), name="task_assignment_detail"),
     path("roles", RoleListView.as_view(), name="roles"),

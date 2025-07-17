@@ -140,3 +140,36 @@ class TaskAssignmentRepository(MongoRepository):
             return result.modified_count > 0
         except Exception:
             return False
+
+    @classmethod
+    def update_executor(cls, task_id: str, executor_id: str, user_id: str) -> bool:
+        """
+        Update the executor_id for the active assignment of the given task_id.
+        """
+        collection = cls.get_collection()
+        try:
+            result = collection.update_one(
+                {"task_id": ObjectId(task_id), "is_active": True},
+                {
+                    "$set": {
+                        "executor_id": ObjectId(executor_id),
+                        "updated_by": ObjectId(user_id),
+                        "updated_at": datetime.now(timezone.utc),
+                    }
+                },
+            )
+            if result.modified_count == 0:
+                # Try with string if ObjectId doesn't work
+                result = collection.update_one(
+                    {"task_id": task_id, "is_active": True},
+                    {
+                        "$set": {
+                            "executor_id": ObjectId(executor_id),
+                            "updated_by": ObjectId(user_id),
+                            "updated_at": datetime.now(timezone.utc),
+                        }
+                    },
+                )
+            return result.modified_count > 0
+        except Exception:
+            return False

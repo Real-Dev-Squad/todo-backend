@@ -7,7 +7,7 @@ from todo.exceptions.auth_exceptions import (
 )
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from typing import List, Tuple
-from todo.dto.user_dto import UserDTO
+from todo.dto.user_dto import UserDTO, UsersDTO
 
 
 class UserService:
@@ -65,7 +65,9 @@ class UserService:
         for user in users:
             user.addedOn = added_on_map.get(user.id)
             # Compute tasksAssignedCount: tasks assigned to both user and team
-            from todo.repositories.assignee_task_details_repository import AssigneeTaskDetailsRepository
+            from todo.repositories.assignee_task_details_repository import (
+                AssigneeTaskDetailsRepository,
+            )
 
             user_task_ids = set(
                 [
@@ -119,3 +121,19 @@ class UserService:
 
         if validation_errors:
             raise DRFValidationError(validation_errors)
+
+    @classmethod
+    def get_all_users(cls, page: int = 1, limit: int = 10) -> List[UsersDTO]:
+        """
+        Get all users with pagination
+        """
+        users, total_count = UserRepository.get_all_users(page, limit)
+        user_dtos = [
+            UsersDTO(
+                id=str(user.id),
+                name=user.name,
+            )
+            for user in users
+        ]
+
+        return user_dtos, total_count

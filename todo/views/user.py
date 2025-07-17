@@ -6,7 +6,7 @@ from todo.services.user_service import UserService
 from rest_framework import status
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
-from todo.dto.user_dto import UserSearchDTO, UserSearchResponseDTO
+from todo.dto.user_dto import UserSearchResponseDTO, UsersDTO
 from todo.dto.responses.error_response import ApiErrorResponse
 
 
@@ -91,13 +91,10 @@ class UsersView(APIView):
         limit = int(request.query_params.get("limit", 10))
 
         # If no search parameter provided, return 404
-        if not search:
-            return Response(
-                {"statusCode": 404, "message": "Route does not exist.", "data": None},
-                status=404,
-            )
-
-        users, total_count = UserService.search_users(search, page, limit)
+        if search:
+            users, total_count = UserService.search_users(search, page, limit)
+        else:
+            users, total_count = UserService.get_all_users(page, limit)
 
         if not users:
             return Response(
@@ -110,12 +107,9 @@ class UsersView(APIView):
             )
 
         user_dtos = [
-            UserSearchDTO(
+            UsersDTO(
                 id=str(user.id),
                 name=user.name,
-                email_id=user.email_id,
-                created_at=user.created_at,
-                updated_at=user.updated_at,
             )
             for user in users
         ]

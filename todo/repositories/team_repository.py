@@ -83,6 +83,7 @@ class TeamRepository(MongoRepository):
             return None
 
     @classmethod
+
     def delete_by_id(cls, team_id: str, user_id: str) -> TeamModel | None:
         """Soft delete team by setting is_deleted=True"""
         teams_collection = cls.get_collection()
@@ -109,6 +110,16 @@ class TeamRepository(MongoRepository):
         except Exception as e:
             logger.error(f"Error deleting team {team_id}: {e}")
             return None
+
+    def is_user_spoc(cls, team_id: str, user_id: str) -> bool:
+        """
+        Check if the given user is the SPOC (poc_id) for the given team.
+        """
+        team = cls.get_by_id(team_id)
+        if not team or not team.poc_id:
+            return False
+        return str(team.poc_id) == str(user_id)
+
 
 
 class UserTeamDetailsRepository(MongoRepository):

@@ -250,7 +250,7 @@ class TaskDetailView(APIView):
                 name="action",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description="Action to perform: 'update' or 'defer'",
+                description="Action to perform: TODO, IN_PROGRESS, DONE",
             ),
         ],
         request=UpdateTaskSerializer,

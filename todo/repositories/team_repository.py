@@ -83,7 +83,6 @@ class TeamRepository(MongoRepository):
             return None
 
     @classmethod
-
     def delete_by_id(cls, team_id: str, user_id: str) -> TeamModel | None:
         """Soft delete team by setting is_deleted=True"""
         teams_collection = cls.get_collection()
@@ -119,7 +118,6 @@ class TeamRepository(MongoRepository):
         if not team or not team.poc_id:
             return False
         return str(team.poc_id) == str(user_id)
-
 
 
 class UserTeamDetailsRepository(MongoRepository):

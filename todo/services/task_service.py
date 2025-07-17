@@ -67,8 +67,11 @@ class TaskService:
             # If team_id is provided, only allow SPOC to fetch tasks
             if team_id:
                 from todo.repositories.team_repository import TeamRepository
+
                 if not TeamRepository.is_user_spoc(team_id, user_id):
-                    return GetTasksResponse(tasks=[], links=None, error={"message": "Only SPOC can view team tasks.", "code": "FORBIDDEN"})
+                    return GetTasksResponse(
+                        tasks=[], links=None, error={"message": "Only SPOC can view team tasks.", "code": "FORBIDDEN"}
+                    )
 
             tasks = TaskRepository.list(page, limit, sort_by, order, user_id, team_id=team_id)
             total_count = TaskRepository.count(user_id, team_id=team_id)

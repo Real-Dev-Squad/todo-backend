@@ -4,6 +4,7 @@ from pydantic import Field
 from todo.models.common.document import Document
 from todo.models.common.pyobjectid import PyObjectId
 
+
 class AuditLogModel(Document):
     collection_name: ClassVar[str] = "audit_logs"
 
@@ -13,4 +14,4 @@ class AuditLogModel(Document):
     new_executor_id: PyObjectId
     spoc_id: PyObjectId
     action: str = "reassign_executor"
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc)) 
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

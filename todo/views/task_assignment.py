@@ -93,6 +93,7 @@ class TaskAssignmentView(APIView):
 class ExecutorUpdateSerializer(serializers.Serializer):
     executor_id = serializers.CharField(help_text="User ID of the new executor (must be a member of the team)")
 
+
 class TaskAssignmentDetailView(APIView):
     @extend_schema(
         operation_id="get_task_assignment",
@@ -186,16 +187,22 @@ class TaskAssignmentDetailView(APIView):
         # Fetch the assignment and check if it's a team assignment
         from todo.repositories.task_assignment_repository import TaskAssignmentRepository
         from todo.repositories.team_repository import TeamRepository
+
         assignment = TaskAssignmentRepository.get_by_task_id(task_id)
         if not assignment or assignment.user_type != "team":
-            return Response({"error": "Task is not assigned to a team or does not exist."}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {"error": "Task is not assigned to a team or does not exist."}, status=status.HTTP_404_NOT_FOUND
+            )
 
         # Only SPOC can update executor
         if not TeamRepository.is_user_spoc(str(assignment.assignee_id), user["user_id"]):
-            return Response({"error": "Only the SPOC can update executor for this team task."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"error": "Only the SPOC can update executor for this team task."}, status=status.HTTP_403_FORBIDDEN
+            )
 
         # Update executor_id
         from todo.repositories.task_assignment_repository import TaskAssignmentRepository
+
         updated = TaskAssignmentRepository.update_executor(task_id, executor_id, user["user_id"])
         if not updated:
             return Response({"error": "Failed to update executor."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -203,14 +210,15 @@ class TaskAssignmentDetailView(APIView):
         # Audit log
         from todo.models.audit_log import AuditLogModel
         from todo.repositories.audit_log_repository import AuditLogRepository
-        previous_executor_id = assignment.executor_id if hasattr(assignment, 'executor_id') else None
+
+        previous_executor_id = assignment.executor_id if hasattr(assignment, "executor_id") else None
         audit_log = AuditLogModel(
             task_id=assignment.task_id,
             team_id=assignment.assignee_id,
             previous_executor_id=previous_executor_id,
             new_executor_id=executor_id,
             spoc_id=user["user_id"],
-            action="reassign_executor"
+            action="reassign_executor",
         )
         AuditLogRepository.create(audit_log)
 

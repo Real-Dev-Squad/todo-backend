@@ -357,6 +357,70 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiErrorResponse'
           description: Internal server error
+    patch:
+      operationId: set_executor_for_team_task
+      summary: Set or update executor for a team-assigned task (SPOC only)
+      description: |
+        Allows the SPOC of a team to set or update the executor (user within the team) for a team-assigned task.
+        All SPOC re-assignments are logged in the audit trail.
+      tags:
+        - task-assignments
+      parameters:
+        - in: path
+          name: task_id
+          schema:
+            type: string
+          required: true
+          description: Unique identifier of the task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                executor_id:
+                  type: string
+                  description: User ID of the new executor (must be a member of the team)
+              required:
+                - executor_id
+      responses:
+        '200':
+          description: Executor updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '403':
+          description: Forbidden - only SPOC can update executor for team task
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '404':
+          description: Task assignment not found or not a team assignment
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
     delete:
       operationId: delete_task_assignment
       description: Remove the assignment for a specific task

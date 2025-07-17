@@ -6,16 +6,22 @@ services:
     environment:
       MONGODB_URI: mongodb://db:27017
       DB_NAME: todo-app
+      POSTGRES_DB: todo_app
+      POSTGRES_USER: todo_user
+      POSTGRES_PASSWORD: todo_password
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
       PYTHONUNBUFFERED: 1
       PYDEVD_DISABLE_FILE_VALIDATION: 1
     volumes:
       - .:/app
     ports:
       - "8000:8000"
-      - "5678:5678"  # Debug port
+      - "5678:5678" # Debug port
     depends_on:
       - db
       - mongo-init
+      - postgres
     stdin_open: true
     tty: true
 
@@ -28,12 +34,19 @@ services:
     volumes:
       - ./mongo_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "if (db.runCommand({ping:1}).ok) process.exit(0); else process.exit(1)"]
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--eval",
+          "if (db.runCommand({ping:1}).ok) process.exit(0); else process.exit(1)",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 15s
-      
+
   # Initialize replica set - this runs once and exits
   mongo-init:
     image: mongo:latest
@@ -55,7 +68,7 @@ services:
       }
       "
     restart: "no"
- 
+
   mongo-express:
     image: mongo-express
     container_name: todo-mongo-express
@@ -67,3 +80,35 @@ services:
     depends_on:
       - db
       - mongo-init
+
+  postgres:
+    image: postgres:15
+    container_name: todo-postgres
+    environment:
+      POSTGRES_DB: todo_app
+      POSTGRES_USER: todo_user
+      POSTGRES_PASSWORD: todo_password
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U todo_user -d todo_app"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: todo-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:

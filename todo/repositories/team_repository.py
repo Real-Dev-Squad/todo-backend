@@ -1,13 +1,10 @@
-import logging
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional
 from bson import ObjectId
 from pymongo import ReturnDocument
 
 from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.repositories.common.mongo_repository import MongoRepository
-
-logger = logging.getLogger(__name__)
 
 
 class TeamRepository(MongoRepository):
@@ -25,20 +22,20 @@ class TeamRepository(MongoRepository):
         team_dict = team.model_dump(mode="json", by_alias=True, exclude_none=True)
         insert_result = teams_collection.insert_one(team_dict)
         team.id = insert_result.inserted_id
-
         return team
 
     @classmethod
     def get_by_id(cls, team_id: str) -> Optional[TeamModel]:
-        """Get team by ID"""
+        """
+        Get a team by its ID.
+        """
         teams_collection = cls.get_collection()
         try:
             team_data = teams_collection.find_one({"_id": ObjectId(team_id), "is_deleted": False})
             if team_data:
                 return TeamModel(**team_data)
             return None
-        except Exception as e:
-            logger.error(f"Error retrieving team {team_id}: {e}")
+        except Exception:
             return None
 
     @classmethod
@@ -83,33 +80,6 @@ class TeamRepository(MongoRepository):
             return None
 
     @classmethod
-    def delete_by_id(cls, team_id: str, user_id: str) -> TeamModel | None:
-        """Soft delete team by setting is_deleted=True"""
-        teams_collection = cls.get_collection()
-        try:
-            team_data = teams_collection.find_one({"_id": ObjectId(team_id), "is_deleted": False})
-            if not team_data:
-                return None
-
-            deleted_team_data = teams_collection.find_one_and_update(
-                {"_id": ObjectId(team_id)},
-                {
-                    "$set": {
-                        "is_deleted": True,
-                        "updated_at": datetime.now(timezone.utc),
-                        "updated_by": ObjectId(user_id),
-                    }
-                },
-                return_document=ReturnDocument.AFTER,
-            )
-
-            if deleted_team_data:
-                return TeamModel(**deleted_team_data)
-            return None
-        except Exception as e:
-            logger.error(f"Error deleting team {team_id}: {e}")
-            return None
-
     def is_user_spoc(cls, team_id: str, user_id: str) -> bool:
         """
         Check if the given user is the SPOC (poc_id) for the given team.
@@ -135,12 +105,10 @@ class UserTeamDetailsRepository(MongoRepository):
         user_team_dict = user_team.model_dump(mode="json", by_alias=True, exclude_none=True)
         insert_result = collection.insert_one(user_team_dict)
         user_team.id = insert_result.inserted_id
-
-        logger.info(f"Added user {user_team.user_id} to team {user_team.team_id}")
         return user_team
 
     @classmethod
-    def create_many(cls, user_teams: List[UserTeamDetailsModel]) -> List[UserTeamDetailsModel]:
+    def create_many(cls, user_teams: list[UserTeamDetailsModel]) -> list[UserTeamDetailsModel]:
         """
         Creates multiple user-team relationships.
         """
@@ -156,14 +124,14 @@ class UserTeamDetailsRepository(MongoRepository):
         ]
         insert_result = collection.insert_many(user_teams_dicts)
 
+        # Set the inserted IDs
         for i, user_team in enumerate(user_teams):
             user_team.id = insert_result.inserted_ids[i]
 
-        logger.info(f"Batch created {len(user_teams)} user-team relationships")
         return user_teams
 
     @classmethod
-    def get_by_user_id(cls, user_id: str) -> List[UserTeamDetailsModel]:
+    def get_by_user_id(cls, user_id: str) -> list[UserTeamDetailsModel]:
         """
         Get all team relationships for a specific user.
         """
@@ -171,12 +139,11 @@ class UserTeamDetailsRepository(MongoRepository):
         try:
             user_teams_data = collection.find({"user_id": user_id, "is_active": True})
             return [UserTeamDetailsModel(**data) for data in user_teams_data]
-        except Exception as e:
-            logger.error(f"Error retrieving teams for user {user_id}: {e}")
+        except Exception:
             return []
 
     @classmethod
-    def get_users_by_team_id(cls, team_id: str) -> List[str]:
+    def get_users_by_team_id(cls, team_id: str) -> list[str]:
         """
         Get all user IDs for a specific team.
         """
@@ -184,12 +151,11 @@ class UserTeamDetailsRepository(MongoRepository):
         try:
             user_teams_data = list(collection.find({"team_id": team_id, "is_active": True}))
             return [data["user_id"] for data in user_teams_data]
-        except Exception as e:
-            logger.error(f"Error retrieving users for team {team_id}: {e}")
+        except Exception:
             return []
 
     @classmethod
-    def get_user_infos_by_team_id(cls, team_id: str) -> List[dict]:
+    def get_user_infos_by_team_id(cls, team_id: str) -> list[dict]:
         """
         Get all user info (user_id, name, email) for a specific team.
         """
@@ -197,16 +163,10 @@ class UserTeamDetailsRepository(MongoRepository):
 
         user_ids = cls.get_users_by_team_id(team_id)
         user_infos = []
-
         for user_id in user_ids:
-            try:
-                user = UserRepository.get_by_id(user_id)
-                if user:
-                    user_infos.append({"user_id": user_id, "name": user.name, "email": user.email_id})
-            except Exception as e:
-                logger.warning(f"Error retrieving user info for {user_id}: {e}")
-                continue
-
+            user = UserRepository.get_by_id(user_id)
+            if user:
+                user_infos.append({"user_id": user_id, "name": user.name, "email": user.email_id})
         return user_infos
 
     @classmethod
@@ -319,26 +279,5 @@ class UserTeamDetailsRepository(MongoRepository):
                 cls.add_user_to_team(team_id, user_id, "1", updated_by_user_id)  # Default role_id is "1"
 
             return True
-        except Exception:
-            return False
-
-    @classmethod
-    def update_user_role_in_team(cls, team_id: str, user_id: str, new_role_id: str, updated_by_user_id: str) -> bool:
-        """
-        Update a user's role in a team.
-        """
-        collection = cls.get_collection()
-        try:
-            result = collection.update_one(
-                {"team_id": team_id, "user_id": user_id, "is_active": True},
-                {
-                    "$set": {
-                        "role_id": new_role_id,
-                        "updated_by": updated_by_user_id,
-                        "updated_at": datetime.now(timezone.utc),
-                    }
-                },
-            )
-            return result.modified_count > 0
         except Exception:
             return False

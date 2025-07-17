@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.exceptions import AuthenticationFailed, ValidationError
 from django.conf import settings
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiExample
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 from todo.middlewares.jwt_auth import get_current_user_info
 from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer
@@ -30,92 +30,33 @@ class TaskListView(APIView):
     @extend_schema(
         operation_id="get_tasks",
         summary="Get paginated list of tasks",
-        description="""
-        Retrieve a paginated list of tasks with optional filtering and sorting. Each task now includes an 'in_watchlist' property indicating the watchlist status: true if actively watched, false if in watchlist but inactive, or null if not in watchlist.
-        
-        **Authentication Required:**
-        - Use cookie-based authentication: `Cookie: todo-access=<JWT_token>`
-        - Example: `Cookie: todo-access=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...`
-        
-        **Team-based Access Control:**
-        - If `teamId` is provided, only shows tasks assigned to that specific team
-        - User must be a member of the team to see team tasks
-        - Returns 401 if user lacks team membership
-        
-        **Test with curl:**
-        ```bash
-        # Get all user tasks
-        curl -X GET "http://localhost:8000/v1/tasks?page=1&limit=10" \
-             -H "Cookie: todo-access=<your-jwt-token>"
-             
-        # Get team-specific tasks
-        curl -X GET "http://localhost:8000/v1/tasks?teamId=6879287077d79dd472916a3f&page=1&limit=10" \
-             -H "Cookie: todo-access=<your-jwt-token>"
-        ```
-        """,
+        description="Retrieve a paginated list of tasks with optional filtering and sorting. Each task now includes an 'in_watchlist' property indicating the watchlist status: true if actively watched, false if in watchlist but inactive, or null if not in watchlist.",
         tags=["tasks"],
         parameters=[
             OpenApiParameter(
                 name="page",
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
-                description="Page number for pagination (default: 1)",
+                description="Page number for pagination",
             ),
             OpenApiParameter(
                 name="limit",
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
-                description="Number of tasks per page (default: 10)",
+                description="Number of tasks per page",
             ),
             OpenApiParameter(
                 name="teamId",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description="If provided, filters tasks assigned to this team (e.g., 6879287077d79dd472916a3f).",
+                description="If provided, filters tasks assigned to this team.",
                 required=False,
             ),
         ],
         responses={
-            200: OpenApiResponse(
-                response=GetTasksResponse,
-                description="Tasks retrieved successfully",
-                examples=[
-                    OpenApiExample(
-                        "Tasks Response",
-                        summary="Paginated tasks with team assignment",
-                        value={
-                            "tasks": [
-                                {
-                                    "id": "6879298277d79dd472916a43",
-                                    "title": "Test Task for RBAC Team",
-                                    "description": "Testing task creation and team assignment",
-                                    "priority": "medium",
-                                    "status": "pending",
-                                    "assignee_team_id": "6879287077d79dd472916a3f",
-                                    "assignee_team_name": "Complete RBAC Test Team",
-                                    "created_by": "686a451ad6706973cbd2ba30",
-                                    "in_watchlist": None,
-                                }
-                            ],
-                            "pagination": {"page": 1, "limit": 10, "total": 1, "pages": 1},
-                        },
-                        response_only=True,
-                    ),
-                ],
-            ),
-            400: OpenApiResponse(description="Bad request - invalid parameters"),
-            401: OpenApiResponse(
-                description="Authentication required - missing or invalid JWT token",
-                examples=[
-                    OpenApiExample(
-                        "Authentication Required",
-                        value={
-                            "detail": "Authentication credentials were not provided.",
-                            "code": "authentication_required",
-                        },
-                    )
-                ],
-            ),
+            200: OpenApiResponse(response=GetTasksResponse, description="Successful response"),
+            400: OpenApiResponse(description="Bad request"),
+            500: OpenApiResponse(description="Internal server error"),
         },
     )
     def get(self, request: Request):
@@ -160,100 +101,13 @@ class TaskListView(APIView):
 
     @extend_schema(
         operation_id="create_task",
-        summary="Create new task",
-        description="""
-        Create task with privacy controls and team assignment.
-        
-        **Authentication Required:**
-        - Use cookie-based authentication: `Cookie: todo-access=<JWT_token>`
-        
-        **Team Assignment:**
-        - If `assignee_team_id` is provided, task is assigned to that team
-        - User must be a member of the team to assign tasks to it
-        - Team members with appropriate roles can view and manage team tasks
-        
-        **Privacy Controls:**
-        - Tasks can be marked as private or public
-        - Private tasks are only visible to creator and assigned team members
-        
-        **Test with curl:**
-        ```bash
-        # Create task assigned to team
-        curl -X POST "http://localhost:8000/v1/tasks" \
-             -H "Content-Type: application/json" \
-             -H "Cookie: todo-access=<your-jwt-token>" \
-             -d '{
-               "title": "My Test Task",
-               "description": "Testing task creation via Swagger",
-               "priority": "high",
-               "assignee_team_id": "6879287077d79dd472916a3f"
-             }'
-             
-        # Create personal task (no team assignment)
-        curl -X POST "http://localhost:8000/v1/tasks" \
-             -H "Content-Type: application/json" \
-             -H "Cookie: todo-access=<your-jwt-token>" \
-             -d '{
-               "title": "Personal Task",
-               "description": "My personal task",
-               "priority": "medium"
-             }'
-        ```
-        """,
+        summary="Create a new task",
+        description="Create a new task with the provided details",
         tags=["tasks"],
         request=CreateTaskSerializer,
         responses={
-            201: OpenApiResponse(
-                response=CreateTaskResponse,
-                description="Task created successfully",
-                examples=[
-                    OpenApiExample(
-                        "Task Created Successfully",
-                        summary="Task assigned to team",
-                        value={
-                            "task": {
-                                "id": "6879298277d79dd472916a43",
-                                "title": "My Test Task",
-                                "description": "Testing task creation via Swagger",
-                                "priority": "high",
-                                "status": "pending",
-                                "assignee_team_id": "6879287077d79dd472916a3f",
-                                "assignee_team_name": "Complete RBAC Test Team",
-                                "created_by": "686a451ad6706973cbd2ba30",
-                                "is_private": False,
-                            },
-                            "message": "Task created successfully",
-                        },
-                        response_only=True,
-                    ),
-                ],
-            ),
-            400: OpenApiResponse(description="Validation error - invalid team ID or missing required fields"),
-            401: OpenApiResponse(
-                description="Authentication required - missing or invalid JWT token",
-                examples=[
-                    OpenApiExample(
-                        "Authentication Required",
-                        value={
-                            "detail": "Authentication credentials were not provided.",
-                            "code": "authentication_required",
-                        },
-                    )
-                ],
-            ),
-            403: OpenApiResponse(
-                description="Permission denied - not a member of assigned team",
-                examples=[
-                    OpenApiExample(
-                        "Team Membership Required",
-                        value={
-                            "error": "Team membership required",
-                            "message": "Must be a member of team to assign tasks",
-                            "details": {"team_id": "6879287077d79dd472916a3f"},
-                        },
-                    )
-                ],
-            ),
+            201: OpenApiResponse(description="Task created successfully"),
+            400: OpenApiResponse(description="Bad request"),
             500: OpenApiResponse(description="Internal server error"),
         },
     )
@@ -331,86 +185,18 @@ class TaskDetailView(APIView):
     @extend_schema(
         operation_id="get_task_by_id",
         summary="Get task by ID",
-        description="""
-        Retrieve a single task by its unique identifier.
-        
-        **Authentication Required:**
-        - Use cookie-based authentication: `Cookie: todo-access=<JWT_token>`
-        
-        **Access Control:**
-        - Task creator can always view their tasks
-        - Team members can view tasks assigned to their team
-        - Private tasks are only visible to creator and team members
-        - Returns 403 if user lacks permission to view task
-        
-        **Test with curl:**
-        ```bash
-        curl -X GET "http://localhost:8000/v1/tasks/6879298277d79dd472916a43" \
-             -H "Cookie: todo-access=<your-jwt-token>"
-        ```
-        """,
+        description="Retrieve a single task by its unique identifier",
         tags=["tasks"],
         parameters=[
             OpenApiParameter(
                 name="task_id",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.PATH,
-                description="Unique identifier of the task (e.g., 6879298277d79dd472916a43)",
+                description="Unique identifier of the task",
             ),
         ],
         responses={
-            200: OpenApiResponse(
-                response=GetTaskByIdResponse,
-                description="Task retrieved successfully",
-                examples=[
-                    OpenApiExample(
-                        "Task Details Response",
-                        summary="Task with team assignment",
-                        value={
-                            "data": {
-                                "id": "6879298277d79dd472916a43",
-                                "title": "Test Task for RBAC Team",
-                                "description": "Testing task creation and team assignment",
-                                "priority": "high",
-                                "status": "pending",
-                                "assignee_team_id": "6879287077d79dd472916a3f",
-                                "assignee_team_name": "Complete RBAC Test Team",
-                                "created_by": "686a451ad6706973cbd2ba30",
-                                "created_at": "2024-01-15T10:30:00Z",
-                                "updated_at": "2024-01-15T10:30:00Z",
-                                "is_private": False,
-                                "in_watchlist": None,
-                            }
-                        },
-                        response_only=True,
-                    ),
-                ],
-            ),
-            401: OpenApiResponse(
-                description="Authentication required - missing or invalid JWT token",
-                examples=[
-                    OpenApiExample(
-                        "Authentication Required",
-                        value={
-                            "detail": "Authentication credentials were not provided.",
-                            "code": "authentication_required",
-                        },
-                    )
-                ],
-            ),
-            403: OpenApiResponse(
-                description="Permission denied - insufficient access to task",
-                examples=[
-                    OpenApiExample(
-                        "Task Access Denied",
-                        value={
-                            "error": "Permission denied",
-                            "message": "Insufficient permissions to view this task",
-                            "details": {"task_id": "6879298277d79dd472916a43", "reason": "not_team_member"},
-                        },
-                    )
-                ],
-            ),
+            200: OpenApiResponse(description="Task retrieved successfully"),
             404: OpenApiResponse(description="Task not found"),
             500: OpenApiResponse(description="Internal server error"),
         },
@@ -426,61 +212,18 @@ class TaskDetailView(APIView):
     @extend_schema(
         operation_id="delete_task",
         summary="Delete task",
-        description="""
-        Delete a task by its unique identifier.
-        
-        **Authentication Required:**
-        - Use cookie-based authentication: `Cookie: todo-access=<JWT_token>`
-        
-        **Permission Requirements:**
-        - Task creator can delete their own tasks
-        - Team admins/owners can delete team tasks
-        - Members cannot delete team tasks (unless they created them)
-        
-        **Test with curl:**
-        ```bash
-        curl -X DELETE "http://localhost:8000/v1/tasks/6879298277d79dd472916a43" \
-             -H "Cookie: todo-access=<your-jwt-token>"
-        ```
-        
-        **Expected Response:** HTTP 204 No Content
-        """,
+        description="Delete a task by its unique identifier",
         tags=["tasks"],
         parameters=[
             OpenApiParameter(
                 name="task_id",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.PATH,
-                description="Unique identifier of the task to delete (e.g., 6879298277d79dd472916a43)",
+                description="Unique identifier of the task to delete",
             ),
         ],
         responses={
             204: OpenApiResponse(description="Task deleted successfully"),
-            401: OpenApiResponse(
-                description="Authentication required - missing or invalid JWT token",
-                examples=[
-                    OpenApiExample(
-                        "Authentication Required",
-                        value={
-                            "detail": "Authentication credentials were not provided.",
-                            "code": "authentication_required",
-                        },
-                    )
-                ],
-            ),
-            403: OpenApiResponse(
-                description="Permission denied - insufficient role to delete task",
-                examples=[
-                    OpenApiExample(
-                        "Task Deletion Denied",
-                        value={
-                            "error": "Permission denied",
-                            "message": "Insufficient permissions to delete this task",
-                            "details": {"task_id": "6879298277d79dd472916a43", "required_role": "admin"},
-                        },
-                    )
-                ],
-            ),
             404: OpenApiResponse(description="Task not found"),
             500: OpenApiResponse(description="Internal server error"),
         },
@@ -494,109 +237,26 @@ class TaskDetailView(APIView):
     @extend_schema(
         operation_id="update_task",
         summary="Update or defer task",
-        description="""
-        Partially update a task or defer it based on the action parameter.
-        
-        **Authentication Required:**
-        - Use cookie-based authentication: `Cookie: todo-access=<JWT_token>`
-        
-        **Permission Requirements:**
-        - Task creator can update their own tasks
-        - Team admins/owners can update team tasks
-        - Members can update team tasks they have access to
-        
-        **Actions:**
-        - `update`: Modify task fields (title, description, priority, status, etc.)
-        - `defer`: Postpone task execution to a specific date
-        
-        **Updateable Fields:**
-        - title, description, priority, status
-        - assignee_team_id (reassign to different team)
-        - is_private (change privacy setting)
-        
-        **Test with curl:**
-        ```bash
-        # Update task details
-        curl -X PATCH "http://localhost:8000/v1/tasks/6879298277d79dd472916a43?action=update" \
-             -H "Content-Type: application/json" \
-             -H "Cookie: todo-access=<your-jwt-token>" \
-             -d '{
-               "title": "Updated Task Title",
-               "priority": "urgent",
-               "status": "in_progress"
-             }'
-             
-        # Defer task
-        curl -X PATCH "http://localhost:8000/v1/tasks/6879298277d79dd472916a43?action=defer" \
-             -H "Content-Type: application/json" \
-             -H "Cookie: todo-access=<your-jwt-token>" \
-             -d '{"deferredTill": "2024-02-01T10:00:00Z"}'
-        ```
-        """,
+        description="Partially update a task or defer it based on the action parameter",
         tags=["tasks"],
         parameters=[
             OpenApiParameter(
                 name="task_id",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.PATH,
-                description="Unique identifier of the task (e.g., 6879298277d79dd472916a43)",
+                description="Unique identifier of the task",
             ),
             OpenApiParameter(
                 name="action",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description="Action to perform: 'update' (default) or 'defer'",
-                enum=["update", "defer"],
+                description="Action to perform: 'update' or 'defer'",
             ),
         ],
         request=UpdateTaskSerializer,
         responses={
-            200: OpenApiResponse(
-                description="Task updated successfully",
-                examples=[
-                    OpenApiExample(
-                        "Task Updated Successfully",
-                        summary="Updated task details",
-                        value={
-                            "id": "6879298277d79dd472916a43",
-                            "title": "Updated Task Title",
-                            "description": "Testing task creation and team assignment",
-                            "priority": "urgent",
-                            "status": "in_progress",
-                            "assignee_team_id": "6879287077d79dd472916a3f",
-                            "assignee_team_name": "Complete RBAC Test Team",
-                            "updated_at": "2024-01-15T11:30:00Z",
-                        },
-                        response_only=True,
-                    ),
-                ],
-            ),
-            400: OpenApiResponse(description="Bad request - invalid action or validation error"),
-            401: OpenApiResponse(
-                description="Authentication required - missing or invalid JWT token",
-                examples=[
-                    OpenApiExample(
-                        "Authentication Required",
-                        value={
-                            "detail": "Authentication credentials were not provided.",
-                            "code": "authentication_required",
-                        },
-                    )
-                ],
-            ),
-            403: OpenApiResponse(
-                description="Permission denied - insufficient role to update task",
-                examples=[
-                    OpenApiExample(
-                        "Task Update Denied",
-                        value={
-                            "error": "Permission denied",
-                            "message": "Insufficient permissions to update this task",
-                            "details": {"task_id": "6879298277d79dd472916a43", "user_role": "member"},
-                        },
-                    )
-                ],
-            ),
+            200: OpenApiResponse(description="Task updated successfully"),
+            400: OpenApiResponse(description="Bad request"),
             404: OpenApiResponse(description="Task not found"),
             500: OpenApiResponse(description="Internal server error"),
         },

@@ -29,12 +29,21 @@ class UserService:
         return user
 
     @classmethod
-    def search_users(cls, query: str, page: int = 1, limit: int = 10) -> Tuple[List[UserModel], int]:
+    def search_users(cls, query: str, page: int = 1, limit: int = 10) -> Tuple[List[UsersDTO], int]:
         """
         Search users by name or email using fuzzy search
         """
         cls._validate_search_params(query, page, limit)
-        return UserRepository.search_users(query, page, limit)
+
+        users, totalCount = UserRepository.search_users(query, page, limit)
+        usersData = [
+            UsersDTO(
+                id=str(user.id),
+                name=user.name,
+            )
+            for user in users
+        ]
+        return usersData, totalCount
 
     @classmethod
     def get_users_by_ids(cls, user_ids: list[str]) -> list[UserDTO]:

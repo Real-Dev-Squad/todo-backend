@@ -106,16 +106,8 @@ class UsersView(APIView):
                 status=status.HTTP_204_NO_CONTENT,
             )
 
-        user_dtos = [
-            UsersDTO(
-                id=str(user.id),
-                name=user.name,
-            )
-            for user in users
-        ]
-
         response_data = UserSearchResponseDTO(
-            users=user_dtos,
+            users=users,
             total_count=total_count,
             page=page,
             limit=limit,

@@ -5,14 +5,35 @@ from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
+from todo.repositories.role_repository import RoleRepository
+from todo.models.role import RoleModel
+from todo.constants.role import RoleScope
 from todo.constants.messages import AppMessages
 from todo.utils.invite_code_utils import generate_invite_code
 from typing import List
 
-DEFAULT_ROLE_ID = "1"
-
 
 class TeamService:
+    @classmethod
+    def _get_or_create_role(cls, role_name: str, role_scope: RoleScope = RoleScope.TEAM) -> str:
+        """Get or create a role by name and return its ID"""
+        collection = RoleRepository.get_collection()
+        existing_role = collection.find_one({"name": role_name, "scope": role_scope.value})
+
+        if existing_role:
+            return str(existing_role["_id"])
+
+        role_model = RoleModel(
+            name=role_name,
+            description=f"Team {role_name} role",
+            scope=role_scope,
+            is_active=True,
+            created_by="system",
+        )
+
+        created_role = RoleRepository.create(role_model)
+        return str(created_role.id)
+
     @classmethod
     def create_team(cls, dto: CreateTeamDTO, created_by_user_id: str) -> CreateTeamResponse:
         """
@@ -29,13 +50,12 @@ class TeamService:
             ValueError: If team creation fails
         """
         try:
-            # Member IDs and POC ID validation is handled at DTO level
-            member_ids = dto.member_ids or []
+            owner_role_id = cls._get_or_create_role("owner")
+            member_role_id = cls._get_or_create_role("member")
 
-            # Generate invite code
+            member_ids = dto.member_ids or []
             invite_code = generate_invite_code(dto.name)
 
-            # Create team
             team = TeamModel(
                 name=dto.name,
                 description=dto.description if dto.description else None,
@@ -46,8 +66,6 @@ class TeamService:
             )
 
             created_team = TeamRepository.create(team)
-
-            # Create user-team relationships
             user_teams = []
 
             # Add members to the team
@@ -55,7 +73,7 @@ class TeamService:
                 user_team = UserTeamDetailsModel(
                     user_id=PyObjectId(member_id),
                     team_id=created_team.id,
-                    role_id=DEFAULT_ROLE_ID,
+                    role_id=member_role_id,
                     is_active=True,
                     created_by=PyObjectId(created_by_user_id),
                     updated_by=PyObjectId(created_by_user_id),
@@ -67,30 +85,26 @@ class TeamService:
                 user_team = UserTeamDetailsModel(
                     user_id=PyObjectId(dto.poc_id),
                     team_id=created_team.id,
-                    role_id=DEFAULT_ROLE_ID,
+                    role_id=member_role_id,
                     is_active=True,
                     created_by=PyObjectId(created_by_user_id),
                     updated_by=PyObjectId(created_by_user_id),
                 )
                 user_teams.append(user_team)
 
-            # Always add the creator as a member if not already in member_ids or as POC
-            if created_by_user_id not in member_ids and created_by_user_id != dto.poc_id:
-                user_team = UserTeamDetailsModel(
-                    user_id=PyObjectId(created_by_user_id),
-                    team_id=created_team.id,
-                    role_id=DEFAULT_ROLE_ID,
-                    is_active=True,
-                    created_by=PyObjectId(created_by_user_id),
-                    updated_by=PyObjectId(created_by_user_id),
-                )
-                user_teams.append(user_team)
+            user_team = UserTeamDetailsModel(
+                user_id=PyObjectId(created_by_user_id),
+                team_id=created_team.id,
+                role_id=owner_role_id,
+                is_active=True,
+                created_by=PyObjectId(created_by_user_id),
+                updated_by=PyObjectId(created_by_user_id),
+            )
+            user_teams.append(user_team)
 
-            # Create all user-team relationships
             if user_teams:
                 UserTeamDetailsRepository.create_many(user_teams)
 
-            # Convert to DTO
             team_dto = TeamDTO(
                 id=str(created_team.id),
                 name=created_team.name,
@@ -199,34 +213,28 @@ class TeamService:
         Raises:
             ValueError: If invite code is invalid, team not found, or user already a member
         """
-        # 1. Find the team by invite code
+        # Find the team by invite code
         team = TeamRepository.get_by_invite_code(invite_code)
         if not team:
             raise ValueError("Invalid invite code or team does not exist.")
-
-        # 2. Check if user is already a member
-        from todo.repositories.team_repository import UserTeamDetailsRepository
 
         user_teams = UserTeamDetailsRepository.get_by_user_id(user_id)
         for user_team in user_teams:
             if str(user_team.team_id) == str(team.id) and user_team.is_active:
                 raise ValueError("User is already a member of this team.")
 
-        # 3. Add user to the team
-        from todo.models.common.pyobjectid import PyObjectId
-        from todo.models.team import UserTeamDetailsModel
+        member_role_id = cls._get_or_create_role("member")
 
         user_team = UserTeamDetailsModel(
             user_id=PyObjectId(user_id),
             team_id=team.id,
-            role_id=DEFAULT_ROLE_ID,
+            role_id=member_role_id,
             is_active=True,
             created_by=PyObjectId(user_id),
             updated_by=PyObjectId(user_id),
         )
         UserTeamDetailsRepository.create(user_team)
 
-        # 4. Return team details
         return TeamDTO(
             id=str(team.id),
             name=team.name,
@@ -316,6 +324,7 @@ class TeamService:
             ValueError: If user is not a team member, team not found, or operation fails
         """
         try:
+            member_role_id = cls._get_or_create_role("member")
             # Check if team exists
             team = TeamRepository.get_by_id(team_id)
             if not team:
@@ -354,7 +363,7 @@ class TeamService:
                 user_team = UserTeamDetailsModel(
                     user_id=PyObjectId(member_id),
                     team_id=team.id,
-                    role_id=DEFAULT_ROLE_ID,
+                    role_id=member_role_id,
                     is_active=True,
                     created_by=PyObjectId(added_by_user_id),
                     updated_by=PyObjectId(added_by_user_id),
@@ -379,3 +388,127 @@ class TeamService:
 
         except Exception as e:
             raise ValueError(f"Failed to add team members: {str(e)}")
+
+    @classmethod
+    def delete_team(cls, team_id: str, user_id: str) -> None:
+        """
+        Delete a team (soft delete) and deactivate all user-team relationships.
+
+        Args:
+            team_id: ID of the team to delete
+            user_id: ID of the user performing the deletion
+
+        Raises:
+            ValueError: If the team is not found or deletion fails
+        """
+        try:
+            team = TeamRepository.get_by_id(team_id)
+            if not team:
+                raise ValueError(f"Team with id {team_id} not found")
+
+            from todo.repositories.team_repository import UserTeamDetailsRepository
+
+            user_ids = UserTeamDetailsRepository.get_users_by_team_id(team_id)
+            for uid in user_ids:
+                UserTeamDetailsRepository.remove_user_from_team(team_id, uid, user_id)
+
+            deleted_team = TeamRepository.delete_by_id(team_id, user_id)
+            if not deleted_team:
+                raise ValueError(f"Failed to delete team {team_id}")
+
+        except Exception as e:
+            raise ValueError(f"Failed to delete team: {str(e)}")
+
+    @classmethod
+    def promote_to_admin(cls, team_id: str, user_id: str, promoted_by_user_id: str) -> TeamDTO:
+        """
+        Promote a team member to admin role.
+
+        Args:
+            team_id: ID of the team
+            user_id: ID of the user to promote
+            promoted_by_user_id: ID of the user performing the promotion (must be owner)
+
+        Returns:
+            TeamDTO with the updated team details
+
+        Raises:
+            ValueError: If operation fails or permissions are insufficient
+        """
+        try:
+            team = TeamRepository.get_by_id(team_id)
+            if not team:
+                raise ValueError(f"Team with id {team_id} not found")
+
+            admin_role_id = cls._get_or_create_role("admin")
+
+            from todo.repositories.team_repository import UserTeamDetailsRepository
+
+            success = UserTeamDetailsRepository.update_user_role_in_team(
+                team_id, user_id, admin_role_id, promoted_by_user_id
+            )
+
+            if not success:
+                raise ValueError(f"Failed to promote user {user_id} to admin in team {team_id}")
+
+            return TeamDTO(
+                id=str(team.id),
+                name=team.name,
+                description=team.description,
+                poc_id=str(team.poc_id) if team.poc_id else None,
+                invite_code=team.invite_code,
+                created_by=str(team.created_by),
+                updated_by=str(team.updated_by),
+                created_at=team.created_at,
+                updated_at=team.updated_at,
+            )
+
+        except Exception as e:
+            raise ValueError(f"Failed to promote user to admin: {str(e)}")
+
+    @classmethod
+    def demote_from_admin(cls, team_id: str, user_id: str, demoted_by_user_id: str) -> TeamDTO:
+        """
+        Demote an admin to member role.
+
+        Args:
+            team_id: ID of the team
+            user_id: ID of the user to demote
+            demoted_by_user_id: ID of the user performing the demotion (must be owner)
+
+        Returns:
+            TeamDTO with the updated team details
+
+        Raises:
+            ValueError: If operation fails or permissions are insufficient
+        """
+        try:
+            team = TeamRepository.get_by_id(team_id)
+            if not team:
+                raise ValueError(f"Team with id {team_id} not found")
+
+            member_role_id = cls._get_or_create_role("member")
+
+            from todo.repositories.team_repository import UserTeamDetailsRepository
+
+            success = UserTeamDetailsRepository.update_user_role_in_team(
+                team_id, user_id, member_role_id, demoted_by_user_id
+            )
+
+            if not success:
+                raise ValueError(f"Failed to demote user {user_id} from admin in team {team_id}")
+
+            return TeamDTO(
+                id=str(team.id),
+                name=team.name,
+                description=team.description,
+                poc_id=str(team.poc_id) if team.poc_id else None,
+                invite_code=team.invite_code,
+                created_by=str(team.created_by),
+                updated_by=str(team.updated_by),
+                created_at=team.created_at,
+                updated_at=team.updated_at,
+            )
+
+        except Exception as e:
+            raise ValueError(f"Failed to demote user from admin: {str(e)}")

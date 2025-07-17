@@ -95,11 +95,23 @@ class TeamServiceTests(TestCase):
 
         self.assertIn("Failed to get user teams", str(context.exception))
 
+    @patch("todo.services.team_service.TeamService._get_or_create_role")
     @patch("todo.services.team_service.TeamRepository.create")
     @patch("todo.services.team_service.UserTeamDetailsRepository.create_many")
     @patch("todo.dto.team_dto.UserRepository.get_by_id")
-    def test_creator_always_added_as_member(self, mock_user_get_by_id, mock_create_many, mock_team_create):
+    @patch("todo.utils.invite_code_utils.generate_invite_code")
+    def test_creator_always_added_as_member(
+        self,
+        mock_generate_invite_code,
+        mock_user_get_by_id,
+        mock_create_many,
+        mock_team_create,
+        mock_get_or_create_role,
+    ):
         """Test that the creator is always added as a member when creating a team"""
+        mock_generate_invite_code.return_value = "TEST123"
+        mock_get_or_create_role.side_effect = lambda role_name: f"role_{role_name}_id"
+
         # Patch user lookup to always return a mock user
         mock_user = type(
             "User",
@@ -107,10 +119,15 @@ class TeamServiceTests(TestCase):
             {"id": None, "name": "Test User", "email_id": "test@example.com", "created_at": None, "updated_at": None},
         )()
         mock_user_get_by_id.return_value = mock_user
+
+        mock_team = self.team_model
+        mock_team_create.return_value = mock_team
+
         # Creator is not in member_ids or as POC
         creator_id = "507f1f77bcf86cd799439099"
         member_ids = ["507f1f77bcf86cd799439011"]
         poc_id = "507f1f77bcf86cd799439012"
+
         from todo.dto.team_dto import CreateTeamDTO
 
         dto = CreateTeamDTO(
@@ -119,21 +136,34 @@ class TeamServiceTests(TestCase):
             member_ids=member_ids,
             poc_id=poc_id,
         )
-        # Mock team creation
-        mock_team = self.team_model
-        mock_team_create.return_value = mock_team
+
         # Call create_team
         TeamService.create_team(dto, creator_id)
+
+        mock_get_or_create_role.assert_any_call("owner")
+        mock_get_or_create_role.assert_any_call("member")
+
         # Check that creator_id is in the user_team relationships
         user_team_objs = mock_create_many.call_args[0][0]
         all_user_ids = [str(obj.user_id) for obj in user_team_objs]
         self.assertIn(creator_id, all_user_ids)
 
+        creator_role_assigned = None
+        for obj in user_team_objs:
+            if str(obj.user_id) == creator_id:
+                creator_role_assigned = obj.role_id
+                break
+        self.assertEqual(creator_role_assigned, "role_owner_id")
+
+    @patch("todo.services.team_service.TeamService._get_or_create_role")
     @patch("todo.services.team_service.TeamRepository.get_by_invite_code")
     @patch("todo.services.team_service.UserTeamDetailsRepository.get_by_user_id")
     @patch("todo.services.team_service.UserTeamDetailsRepository.create")
-    def test_join_team_by_invite_code_success(self, mock_create, mock_get_by_user_id, mock_get_by_invite_code):
+    def test_join_team_by_invite_code_success(
+        self, mock_create, mock_get_by_user_id, mock_get_by_invite_code, mock_get_or_create_role
+    ):
         """Test successful join by invite code"""
+        mock_get_or_create_role.return_value = "member_role_id"
         mock_get_by_invite_code.return_value = self.team_model
         mock_get_by_user_id.return_value = []  # Not a member yet
         mock_create.return_value = self.user_team_details
@@ -141,9 +171,12 @@ class TeamServiceTests(TestCase):
         from todo.services.team_service import TeamService
 
         team_dto = TeamService.join_team_by_invite_code("TEST123", self.user_id)
+
         self.assertEqual(team_dto.id, self.team_id)
         self.assertEqual(team_dto.name, "Test Team")
+
         mock_get_by_invite_code.assert_called_once_with("TEST123")
+        mock_get_or_create_role.assert_called_once_with("member")
         mock_create.assert_called_once()
 
     @patch("todo.services.team_service.TeamRepository.get_by_invite_code")

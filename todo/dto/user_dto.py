@@ -1,11 +1,13 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 
 class UserDTO(BaseModel):
     id: str
     name: str
+    addedOn: Optional[datetime] = None
+    tasksAssignedCount: Optional[int] = None
 
 
 class UserSearchDTO(BaseModel):

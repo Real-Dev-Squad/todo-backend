@@ -600,22 +600,71 @@ paths:
   /v1/teams/{team_id}:
     get:
       operationId: get_team_by_id
-      description: Retrieve a single team by its unique identifier. Optionally, set
-        ?member=true to get users belonging to this team.
-      summary: Get team by ID
+      description: 'Retrieve details for a specific team. If ?member=true is provided, the users array will include an addedOn field for each user, indicating when they were added to the team.'
+      summary: Get team details by ID
       parameters:
-      - in: query
-        name: member
-        schema:
-          type: boolean
-        description: If true, returns users that belong to this team instead of team
-          details.
       - in: path
         name: team_id
         schema:
           type: string
-        description: Unique identifier of the team
         required: true
+        description: The ID of the team
+      - in: query
+        name: member
+        schema:
+          type: boolean
+        required: false
+        description: If true, include users array with addedOn field for each user
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  created_by:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+                  users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        email:
+                          type: string
+                        is_active:
+                          type: boolean
+                        is_verified:
+                          type: boolean
+                        created_at:
+                          type: string
+                          format: date-time
+                        updated_at:
+                          type: string
+                          format: date-time
+                        addedOn:
+                          type: string
+                          format: date-time
+                          description: Date the user was added to the team
+                        tasksAssignedCount:
+                          type: integer
+                          description: Number of tasks assigned to this user that are also assigned to this team
       tags:
       - teams
       security:
@@ -628,6 +677,59 @@ paths:
         '404':
           description: Team not found
         '500':
+          description: Internal server error
+    patch:
+      operationId: update_team
+      description: "Update a team's details including name, description, point of contact (POC), and team members. All fields are optional - only include the fields you want to update. For member management: if member_ids is provided, it completely replaces the current team members; if member_ids is not provided, existing members remain unchanged."
+      summary: Update team by ID
+      parameters:
+      - in: path
+        name: team_id
+        schema:
+          type: string
+        description: Unique identifier of the team
+        required: true
+      tags:
+      - teams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTeamRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UpdateTeamRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdateTeamRequest'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamDTO'
+          description: Team updated successfully
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Bad request - validation error or invalid member IDs
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Team not found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
           description: Internal server error
   /v1/teams/join-by-invite:
     post:
@@ -671,6 +773,48 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiErrorResponse'
           description: Internal server error
+  /v1/teams/{teamid}/members:
+    post:
+      operationId: add_team_members
+      description: 'Add new members to a team. Only existing team members can add other members.'
+      summary: Add members to a team
+      parameters:
+      - in: path
+        name: teamid
+        schema:
+          type: string
+        required: true
+        description: The ID of the team
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                member_ids:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  description: List of user IDs to add to the team
+              required:
+              - member_ids
+      responses:
+        '200':
+          description: Team members added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamDTO'
+        '400':
+          description: Bad request - validation error or user not a team member
+        '404':
+          description: Team not found
+        '500':
+          description: Internal server error
+      tags:
+      - teams
   /v1/users:
     get:
       operationId: get_users
@@ -1083,6 +1227,25 @@ components:
           nullable: true
       required:
       - name
+    UpdateTeamRequest:
+      type: object
+      description: All fields are optional for PATCH operations. Only include the fields you want to update. For member management: if member_ids is provided, it completely replaces the current team members; if member_ids is not provided, existing members remain unchanged.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        member_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        poc_id:
+          type: string
+          nullable: true
     CreateTeamResponse:
       description: |-
         Response model for team creation endpoint.

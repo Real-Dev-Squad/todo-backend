@@ -54,6 +54,35 @@ class UserService:
         return users
 
     @classmethod
+    def get_users_by_team_id(cls, team_id: str) -> list[UserDTO]:
+        from todo.repositories.team_repository import UserTeamDetailsRepository
+
+        users_and_added_on = UserTeamDetailsRepository.get_users_and_added_on_by_team_id(team_id)
+        user_ids = [entry["user_id"] for entry in users_and_added_on]
+        added_on_map = {entry["user_id"]: entry["added_on"] for entry in users_and_added_on}
+        users = cls.get_users_by_ids(user_ids)
+        # Attach addedOn to each user dto
+        for user in users:
+            user.addedOn = added_on_map.get(user.id)
+            # Compute tasksAssignedCount: tasks assigned to both user and team
+            from todo.repositories.assignee_task_details_repository import AssigneeTaskDetailsRepository
+
+            user_task_ids = set(
+                [
+                    str(assignment.task_id)
+                    for assignment in AssigneeTaskDetailsRepository.get_by_assignee_id(user.id, "user")
+                ]
+            )
+            team_task_ids = set(
+                [
+                    str(assignment.task_id)
+                    for assignment in AssigneeTaskDetailsRepository.get_by_assignee_id(team_id, "team")
+                ]
+            )
+            user.tasksAssignedCount = len(user_task_ids & team_task_ids)
+        return users
+
+    @classmethod
     def _validate_google_user_data(cls, google_user_data: dict) -> None:
         validation_errors = {}
 

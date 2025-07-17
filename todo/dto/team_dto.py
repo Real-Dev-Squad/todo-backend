@@ -1,7 +1,6 @@
 from pydantic import BaseModel, validator
 from typing import List, Optional
 from datetime import datetime
-from todo.dto.user_dto import UserDTO
 from todo.repositories.user_repository import UserRepository
 
 
@@ -49,4 +48,4 @@ class TeamDTO(BaseModel):
     updated_by: str
     created_at: datetime
     updated_at: datetime
-    users: Optional[List[UserDTO]] = None
+    users: Optional[list] = None  # list of dicts with addedOn when member=true

@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional, List
 from bson import ObjectId
+from pymongo import ReturnDocument
 
 from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.repositories.common.mongo_repository import MongoRepository
@@ -50,6 +51,33 @@ class TeamRepository(MongoRepository):
             team_data = teams_collection.find_one({"invite_code": invite_code, "is_deleted": False})
             if team_data:
                 return TeamModel(**team_data)
+            return None
+        except Exception:
+            return None
+
+    @classmethod
+    def update(cls, team_id: str, update_data: dict, updated_by_user_id: str) -> Optional[TeamModel]:
+        """
+        Update a team by its ID using atomic operation to prevent race conditions.
+        """
+        teams_collection = cls.get_collection()
+        try:
+            # Add updated_by and updated_at fields
+            update_data["updated_by"] = updated_by_user_id
+            update_data["updated_at"] = datetime.now(timezone.utc)
+
+            # Remove None values to avoid overwriting with None
+            update_data = {k: v for k, v in update_data.items() if v is not None}
+
+            # Use find_one_and_update for atomicity - prevents race conditions
+            updated_doc = teams_collection.find_one_and_update(
+                {"_id": ObjectId(team_id), "is_deleted": False},
+                {"$set": update_data},
+                return_document=ReturnDocument.AFTER,
+            )
+
+            if updated_doc:
+                return TeamModel(**updated_doc)
             return None
         except Exception:
             return None
@@ -145,31 +173,114 @@ class UserTeamDetailsRepository(MongoRepository):
         return user_infos
 
     @classmethod
-    def get_by_user_and_team(cls, user_id: str, team_id: str) -> Optional[UserTeamDetailsModel]:
-        """Get user-team relationship"""
+    def get_users_and_added_on_by_team_id(cls, team_id: str) -> list[dict]:
+        """
+        Get all user IDs and their addedOn (created_at) for a specific team.
+        """
         collection = cls.get_collection()
         try:
-            user_team_data = collection.find_one({"user_id": user_id, "team_id": team_id, "is_active": True})
-            if user_team_data:
-                return UserTeamDetailsModel(**user_team_data)
-            return None
-        except Exception as e:
-            logger.error(f"Error retrieving user-team relationship for user {user_id} and team {team_id}: {e}")
-            return None
+            user_teams_data = list(collection.find({"team_id": team_id, "is_active": True}))
+            return [{"user_id": data["user_id"], "added_on": data.get("created_at")} for data in user_teams_data]
+        except Exception:
+            return []
 
     @classmethod
-    def deactivate_user_team(cls, user_id: str, team_id: str) -> bool:
-        """Deactivate user-team relationship"""
+    def get_by_team_id(cls, team_id: str) -> list[UserTeamDetailsModel]:
+        """
+        Get all user-team relationships for a specific team.
+        """
+        collection = cls.get_collection()
+        try:
+            user_teams_data = collection.find({"team_id": team_id, "is_active": True})
+            return [UserTeamDetailsModel(**data) for data in user_teams_data]
+        except Exception:
+            return []
+
+    @classmethod
+    def remove_user_from_team(cls, team_id: str, user_id: str, updated_by_user_id: str) -> bool:
+        """
+        Remove a user from a team by setting is_active to False.
+        """
         collection = cls.get_collection()
         try:
             result = collection.update_one(
-                {"user_id": user_id, "team_id": team_id},
-                {"$set": {"is_active": False, "updated_at": datetime.now(timezone.utc)}},
+                {"team_id": team_id, "user_id": user_id, "is_active": True},
+                {
+                    "$set": {
+                        "is_active": False,
+                        "updated_by": updated_by_user_id,
+                        "updated_at": datetime.now(timezone.utc),
+                    }
+                },
             )
-            success = result.modified_count > 0
-            if success:
-                logger.info(f"Deactivated user {user_id} from team {team_id}")
-            return success
-        except Exception as e:
-            logger.error(f"Error deactivating user {user_id} from team {team_id}: {e}")
+            return result.modified_count > 0
+        except Exception:
+            return False
+
+    @classmethod
+    def add_user_to_team(
+        cls, team_id: str, user_id: str, role_id: str, created_by_user_id: str
+    ) -> UserTeamDetailsModel:
+        """
+        Add a user to a team.
+        """
+        collection = cls.get_collection()
+        # Check if user is already in the team
+        existing_relationship = collection.find_one({"team_id": team_id, "user_id": user_id})
+
+        if existing_relationship:
+            # If user exists but is inactive, reactivate them
+            if not existing_relationship.get("is_active", True):
+                collection.update_one(
+                    {"_id": existing_relationship["_id"]},
+                    {
+                        "$set": {
+                            "is_active": True,
+                            "role_id": role_id,
+                            "updated_by": created_by_user_id,
+                            "updated_at": datetime.now(timezone.utc),
+                        }
+                    },
+                )
+                return UserTeamDetailsModel(**existing_relationship)
+            else:
+                # User is already active in the team
+                return UserTeamDetailsModel(**existing_relationship)
+
+        # Create new relationship
+        user_team = UserTeamDetailsModel(
+            user_id=user_id,
+            team_id=team_id,
+            role_id=role_id,
+            is_active=True,
+            created_by=created_by_user_id,
+            updated_by=created_by_user_id,
+        )
+        return cls.create(user_team)
+
+    @classmethod
+    def update_team_members(cls, team_id: str, member_ids: list[str], updated_by_user_id: str) -> bool:
+        """
+        Update team members by replacing the current members with the new list.
+        """
+        try:
+            # Get current team members
+            current_members = cls.get_users_by_team_id(team_id)
+
+            # Find members to remove (in current but not in new list)
+            members_to_remove = [user_id for user_id in current_members if user_id not in member_ids]
+
+            # Find members to add (in new list but not in current)
+            members_to_add = [user_id for user_id in member_ids if user_id not in current_members]
+
+            # Remove members
+            for user_id in members_to_remove:
+                cls.remove_user_from_team(team_id, user_id, updated_by_user_id)
+
+            # Add new members
+            for user_id in members_to_add:
+                cls.add_user_to_team(team_id, user_id, "1", updated_by_user_id)  # Default role_id is "1"
+
+            return True
+        except Exception:
             return False

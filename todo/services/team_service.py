@@ -1,4 +1,5 @@
 from todo.dto.team_dto import CreateTeamDTO, TeamDTO
+from todo.dto.update_team_dto import UpdateTeamDTO
 from todo.dto.responses.create_team_response import CreateTeamResponse
 from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.models.team import TeamModel, UserTeamDetailsModel
@@ -9,6 +10,7 @@ from todo.models.role import RoleModel
 from todo.constants.role import RoleScope
 from todo.constants.messages import AppMessages
 from todo.utils.invite_code_utils import generate_invite_code
+from typing import List
 
 
 class TeamService:
@@ -244,3 +246,145 @@ class TeamService:
             created_at=team.created_at,
             updated_at=team.updated_at,
         )
+
+    @classmethod
+    def update_team(cls, team_id: str, dto: UpdateTeamDTO, updated_by_user_id: str) -> TeamDTO:
+        """
+        Update a team by its ID.
+
+        Args:
+            team_id: ID of the team to update
+            dto: Team update data including name, description, and POC
+            updated_by_user_id: ID of the user updating the team
+
+        Returns:
+            TeamDTO with the updated team details
+
+        Raises:
+            ValueError: If team update fails or team not found
+        """
+        try:
+            # Check if team exists
+            existing_team = TeamRepository.get_by_id(team_id)
+            if not existing_team:
+                raise ValueError(f"Team with id {team_id} not found")
+
+            # Prepare update data
+            update_data = {}
+            if dto.name is not None:
+                update_data["name"] = dto.name
+            if dto.description is not None:
+                update_data["description"] = dto.description
+            if dto.poc_id is not None:
+                update_data["poc_id"] = PyObjectId(dto.poc_id)
+
+            # Update the team
+            updated_team = TeamRepository.update(team_id, update_data, updated_by_user_id)
+            if not updated_team:
+                raise ValueError(f"Failed to update team with id {team_id}")
+
+            # Handle member updates if provided
+            if dto.member_ids is not None:
+                from todo.repositories.team_repository import UserTeamDetailsRepository
+
+                success = UserTeamDetailsRepository.update_team_members(team_id, dto.member_ids, updated_by_user_id)
+                if not success:
+                    raise ValueError(f"Failed to update team members for team with id {team_id}")
+
+            # Convert to DTO
+            return TeamDTO(
+                id=str(updated_team.id),
+                name=updated_team.name,
+                description=updated_team.description,
+                poc_id=str(updated_team.poc_id) if updated_team.poc_id else None,
+                invite_code=updated_team.invite_code,
+                created_by=str(updated_team.created_by),
+                updated_by=str(updated_team.updated_by),
+                created_at=updated_team.created_at,
+                updated_at=updated_team.updated_at,
+            )
+
+        except Exception as e:
+            raise ValueError(f"Failed to update team: {str(e)}")
+
+    @classmethod
+    def add_team_members(cls, team_id: str, member_ids: List[str], added_by_user_id: str) -> TeamDTO:
+        """
+        Add members to a team. Only existing team members can add new members.
+
+        Args:
+            team_id: ID of the team to add members to
+            member_ids: List of user IDs to add to the team
+            added_by_user_id: ID of the user adding the members
+
+        Returns:
+            TeamDTO with the updated team details
+
+        Raises:
+            ValueError: If user is not a team member, team not found, or operation fails
+        """
+        try:
+            member_role_id = cls._get_or_create_role("member")
+            # Check if team exists
+            team = TeamRepository.get_by_id(team_id)
+            if not team:
+                raise ValueError(f"Team with id {team_id} not found")
+
+            # Check if the user adding members is already a team member
+            from todo.repositories.team_repository import UserTeamDetailsRepository
+
+            user_teams = UserTeamDetailsRepository.get_by_user_id(added_by_user_id)
+            user_is_member = any(str(user_team.team_id) == team_id and user_team.is_active for user_team in user_teams)
+
+            if not user_is_member:
+                raise ValueError("You must be a member of the team to add other members")
+
+            # Validate that all users exist
+            from todo.repositories.user_repository import UserRepository
+
+            for member_id in member_ids:
+                user = UserRepository.get_by_id(member_id)
+                if not user:
+                    raise ValueError(f"User with id {member_id} not found")
+
+            # Check if any users are already team members
+            existing_members = UserTeamDetailsRepository.get_users_by_team_id(team_id)
+            already_members = [member_id for member_id in member_ids if member_id in existing_members]
+
+            if already_members:
+                raise ValueError(f"Users {', '.join(already_members)} are already team members")
+
+            # Add new members to the team
+            from todo.models.team import UserTeamDetailsModel
+            from todo.models.common.pyobjectid import PyObjectId
+
+            new_user_teams = []
+            for member_id in member_ids:
+                user_team = UserTeamDetailsModel(
+                    user_id=PyObjectId(member_id),
+                    team_id=team.id,
+                    role_id=member_role_id,
+                    is_active=True,
+                    created_by=PyObjectId(added_by_user_id),
+                    updated_by=PyObjectId(added_by_user_id),
+                )
+                new_user_teams.append(user_team)
+
+            if new_user_teams:
+                UserTeamDetailsRepository.create_many(new_user_teams)
+
+            # Return updated team details
+            return TeamDTO(
+                id=str(team.id),
+                name=team.name,
+                description=team.description,
+                poc_id=str(team.poc_id) if team.poc_id else None,
+                invite_code=team.invite_code,
+                created_by=str(team.created_by),
+                updated_by=str(team.updated_by),
+                created_at=team.created_at,
+                updated_at=team.updated_at,
+            )
+
+        except Exception as e:
+            raise ValueError(f"Failed to add team members: {str(e)}")

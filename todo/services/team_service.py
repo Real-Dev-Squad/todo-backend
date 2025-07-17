@@ -388,3 +388,127 @@ class TeamService:
 
         except Exception as e:
             raise ValueError(f"Failed to add team members: {str(e)}")
+
+    @classmethod
+    def delete_team(cls, team_id: str, user_id: str) -> None:
+        """
+        Delete a team (soft delete) and deactivate all user-team relationships.
+
+        Args:
+            team_id: ID of the team to delete
+            user_id: ID of the user performing the deletion
+
+        Raises:
+            ValueError: If the team is not found or deletion fails
+        """
+        try:
+            team = TeamRepository.get_by_id(team_id)
+            if not team:
+                raise ValueError(f"Team with id {team_id} not found")
+
+            from todo.repositories.team_repository import UserTeamDetailsRepository
+
+            user_ids = UserTeamDetailsRepository.get_users_by_team_id(team_id)
+            for uid in user_ids:
+                UserTeamDetailsRepository.remove_user_from_team(team_id, uid, user_id)
+
+            deleted_team = TeamRepository.delete_by_id(team_id, user_id)
+            if not deleted_team:
+                raise ValueError(f"Failed to delete team {team_id}")
+
+        except Exception as e:
+            raise ValueError(f"Failed to delete team: {str(e)}")
+
+    @classmethod
+    def promote_to_admin(cls, team_id: str, user_id: str, promoted_by_user_id: str) -> TeamDTO:
+        """
+        Promote a team member to admin role.
+
+        Args:
+            team_id: ID of the team
+            user_id: ID of the user to promote
+            promoted_by_user_id: ID of the user performing the promotion (must be owner)
+
+        Returns:
+            TeamDTO with the updated team details
+
+        Raises:
+            ValueError: If operation fails or permissions are insufficient
+        """
+        try:
+            team = TeamRepository.get_by_id(team_id)
+            if not team:
+                raise ValueError(f"Team with id {team_id} not found")
+
+            admin_role_id = cls._get_or_create_role("admin")
+
+            from todo.repositories.team_repository import UserTeamDetailsRepository
+
+            success = UserTeamDetailsRepository.update_user_role_in_team(
+                team_id, user_id, admin_role_id, promoted_by_user_id
+            )
+
+            if not success:
+                raise ValueError(f"Failed to promote user {user_id} to admin in team {team_id}")
+
+            return TeamDTO(
+                id=str(team.id),
+                name=team.name,
+                description=team.description,
+                poc_id=str(team.poc_id) if team.poc_id else None,
+                invite_code=team.invite_code,
+                created_by=str(team.created_by),
+                updated_by=str(team.updated_by),
+                created_at=team.created_at,
+                updated_at=team.updated_at,
+            )
+
+        except Exception as e:
+            raise ValueError(f"Failed to promote user to admin: {str(e)}")
+
+    @classmethod
+    def demote_from_admin(cls, team_id: str, user_id: str, demoted_by_user_id: str) -> TeamDTO:
+        """
+        Demote an admin to member role.
+
+        Args:
+            team_id: ID of the team
+            user_id: ID of the user to demote
+            demoted_by_user_id: ID of the user performing the demotion (must be owner)
+
+        Returns:
+            TeamDTO with the updated team details
+
+        Raises:
+            ValueError: If operation fails or permissions are insufficient
+        """
+        try:
+            team = TeamRepository.get_by_id(team_id)
+            if not team:
+                raise ValueError(f"Team with id {team_id} not found")
+
+            member_role_id = cls._get_or_create_role("member")
+
+            from todo.repositories.team_repository import UserTeamDetailsRepository
+
+            success = UserTeamDetailsRepository.update_user_role_in_team(
+                team_id, user_id, member_role_id, demoted_by_user_id
+            )
+
+            if not success:
+                raise ValueError(f"Failed to demote user {user_id} from admin in team {team_id}")
+
+            return TeamDTO(
+                id=str(team.id),
+                name=team.name,
+                description=team.description,
+                poc_id=str(team.poc_id) if team.poc_id else None,
+                invite_code=team.invite_code,
+                created_by=str(team.created_by),
+                updated_by=str(team.updated_by),
+                created_at=team.created_at,
+                updated_at=team.updated_at,
+            )
+
+        except Exception as e:
+            raise ValueError(f"Failed to demote user from admin: {str(e)}")

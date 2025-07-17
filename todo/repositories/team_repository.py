@@ -82,6 +82,34 @@ class TeamRepository(MongoRepository):
         except Exception:
             return None
 
+    @classmethod
+    def delete_by_id(cls, team_id: str, user_id: str) -> TeamModel | None:
+        """Soft delete team by setting is_deleted=True"""
+        teams_collection = cls.get_collection()
+        try:
+            team_data = teams_collection.find_one({"_id": ObjectId(team_id), "is_deleted": False})
+            if not team_data:
+                return None
+
+            deleted_team_data = teams_collection.find_one_and_update(
+                {"_id": ObjectId(team_id)},
+                {
+                    "$set": {
+                        "is_deleted": True,
+                        "updated_at": datetime.now(timezone.utc),
+                        "updated_by": ObjectId(user_id),
+                    }
+                },
+                return_document=ReturnDocument.AFTER,
+            )
+
+            if deleted_team_data:
+                return TeamModel(**deleted_team_data)
+            return None
+        except Exception as e:
+            logger.error(f"Error deleting team {team_id}: {e}")
+            return None
+
 
 class UserTeamDetailsRepository(MongoRepository):
     collection_name = UserTeamDetailsModel.collection_name
@@ -282,5 +310,26 @@ class UserTeamDetailsRepository(MongoRepository):
                 cls.add_user_to_team(team_id, user_id, "1", updated_by_user_id)  # Default role_id is "1"
 
             return True
+        except Exception:
+            return False
+
+    @classmethod
+    def update_user_role_in_team(cls, team_id: str, user_id: str, new_role_id: str, updated_by_user_id: str) -> bool:
+        """
+        Update a user's role in a team.
+        """
+        collection = cls.get_collection()
+        try:
+            result = collection.update_one(
+                {"team_id": team_id, "user_id": user_id, "is_active": True},
+                {
+                    "$set": {
+                        "role_id": new_role_id,
+                        "updated_by": updated_by_user_id,
+                        "updated_at": datetime.now(timezone.utc),
+                    }
+                },
+            )
+            return result.modified_count > 0
         except Exception:
             return False

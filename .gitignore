@@ -104,4 +104,5 @@ cython_debug/
 
 .ruff_cache
 mongo_data
+postgres_data
 logs

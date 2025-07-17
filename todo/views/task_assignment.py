@@ -6,6 +6,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from django.conf import settings
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
+from rest_framework import serializers
 
 from todo.middlewares.jwt_auth import get_current_user_info
 from todo.serializers.create_task_assignment_serializer import CreateTaskAssignmentSerializer
@@ -89,6 +90,9 @@ class TaskAssignmentView(APIView):
             )
 
 
+class ExecutorUpdateSerializer(serializers.Serializer):
+    executor_id = serializers.CharField(help_text="User ID of the new executor (must be a member of the team)")
+
 class TaskAssignmentDetailView(APIView):
     @extend_schema(
         operation_id="get_task_assignment",
@@ -148,9 +152,9 @@ class TaskAssignmentDetailView(APIView):
     @extend_schema(
         operation_id="set_executor_for_team_task",
         summary="Set or update executor for a team-assigned task (SPOC only)",
-        description="Allows the SPOC of a team to set or update the executor (user within the team) for a team-assigned task.",
+        description="Allows the SPOC of a team to set or update the executor (user within the team) for a team-assigned task. All SPOC re-assignments are logged in the audit trail.",
         tags=["task-assignments"],
-        request=None,  # Accepts JSON body with executor_id
+        request=ExecutorUpdateSerializer,
         parameters=[
             OpenApiParameter(
                 name="task_id",
@@ -163,8 +167,8 @@ class TaskAssignmentDetailView(APIView):
         responses={
             200: OpenApiResponse(description="Executor updated successfully"),
             403: OpenApiResponse(description="Forbidden - only SPOC can update executor for team task"),
-            404: OpenApiResponse(response=ApiErrorResponse, description="Task assignment not found"),
-            500: OpenApiResponse(response=ApiErrorResponse, description="Internal server error"),
+            404: OpenApiResponse(description="Task assignment not found"),
+            500: OpenApiResponse(description="Internal server error"),
         },
     )
     def patch(self, request: Request, task_id: str):

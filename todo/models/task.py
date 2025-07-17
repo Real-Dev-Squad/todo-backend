@@ -4,6 +4,7 @@ from datetime import datetime
 
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.models.common.document import Document
+
 from todo.models.common.pyobjectid import PyObjectId
 from todo_project.db.config import DatabaseManager
 
@@ -38,7 +39,5 @@ class TaskModel(Document):
     updatedAt: datetime | None = None
     createdBy: str
     updatedBy: str | None = None
-
-    private: bool = False
 
     model_config = ConfigDict(ser_enum="value")

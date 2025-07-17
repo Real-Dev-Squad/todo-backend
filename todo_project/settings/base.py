@@ -19,6 +19,14 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",") if os.getenv("ALLOWED_
 MONGODB_URI = os.getenv("MONGODB_URI")
 DB_NAME = os.getenv("DB_NAME")
 
+POSTGRES_CONFIG = {
+    "HOST": os.getenv("POSTGRES_HOST", "localhost"),
+    "PORT": int(os.getenv("POSTGRES_PORT", "5432")),
+    "DATABASE": os.getenv("POSTGRES_DB", "todo_app"),
+    "USER": os.getenv("POSTGRES_USER", "todo_user"),
+    "PASSWORD": os.getenv("POSTGRES_PASSWORD", "todo_password"),
+}
+
 INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
@@ -149,8 +157,12 @@ SERVICES = {
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("POSTGRES_DB", "todo_app"),
+        "USER": os.getenv("POSTGRES_USER", "todo_user"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "todo_password"),
+        "HOST": os.getenv("POSTGRES_HOST", "localhost"),
+        "PORT": os.getenv("POSTGRES_PORT", "5432"),
     }
 }
 

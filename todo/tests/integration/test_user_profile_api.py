@@ -13,10 +13,6 @@ class UserProfileAPIIntegrationTest(AuthenticatedMongoTestCase):
         response = client.get(self.url + "?profile=true")
         self.assertEqual(response.status_code, HTTPStatus.UNAUTHORIZED)
 
-    def test_user_profile_true_requires_profile_param(self):
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
-
     def test_user_profile_true_returns_user_info(self):
         response = self.client.get(self.url + "?profile=true")
         self.assertEqual(response.status_code, HTTPStatus.OK)

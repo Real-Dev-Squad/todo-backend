@@ -123,7 +123,7 @@ class UserService:
             raise DRFValidationError(validation_errors)
 
     @classmethod
-    def get_all_users(cls, page: int = 1, limit: int = 10) -> List[UsersDTO]:
+    def get_all_users(cls, page: int = 1, limit: int = 10) -> tuple[List[UsersDTO], int]:
         """
         Get all users with pagination
         """

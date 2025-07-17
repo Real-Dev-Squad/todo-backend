@@ -8,6 +8,7 @@ from todo.views.label import LabelListView
 from todo.views.team import TeamListView, TeamDetailView, JoinTeamByInviteCodeView, AddTeamMembersView
 from todo.views.watchlist import WatchlistListView, WatchlistDetailView, WatchlistCheckView
 from todo.views.task_assignment import TaskAssignmentView, TaskAssignmentDetailView
+from todo.views.postgres_health import PostgresHealthView
 
 urlpatterns = [
     path("teams", TeamListView.as_view(), name="teams"),
@@ -29,4 +30,5 @@ urlpatterns = [
     path("auth/google/callback", GoogleCallbackView.as_view(), name="google_callback"),
     path("auth/logout", LogoutView.as_view(), name="google_logout"),
     path("users", UsersView.as_view(), name="users"),
+    path("postgress/health", PostgresHealthView.as_view(), name="postgres_health"),
 ]

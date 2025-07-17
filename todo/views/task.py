@@ -24,6 +24,10 @@ from todo.dto.responses.error_response import (
 from todo.constants.messages import ApiErrors
 from todo.constants.messages import ValidationErrors
 from todo.dto.responses.get_tasks_response import GetTasksResponse
+from todo.serializers.create_task_assignment_serializer import AssignTaskToUserSerializer
+from todo.services.task_assignment_service import TaskAssignmentService
+from todo.dto.task_assignment_dto import CreateTaskAssignmentDTO
+from todo.dto.responses.create_task_assignment_response import CreateTaskAssignmentResponse
 
 
 class TaskListView(APIView):
@@ -292,3 +296,53 @@ class TaskDetailView(APIView):
             raise ValidationError({"action": ValidationErrors.UNSUPPORTED_ACTION.format(action)})
 
         return Response(data=updated_task_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
+
+
+class AssignTaskToUserView(APIView):
+    @extend_schema(
+        operation_id="assign_task_to_user",
+        summary="Assign task to a user",
+        description="Assign a task to a user by user ID. Only authorized users can perform this action.",
+        tags=["task-assignments"],
+        request=AssignTaskToUserSerializer,
+        parameters=[
+            OpenApiParameter(
+                name="task_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the task",
+                required=True,
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(response=CreateTaskAssignmentResponse, description="Task assigned successfully"),
+            400: OpenApiResponse(
+                response=ApiErrorResponse, description="Bad request - validation error or assignee not found"
+            ),
+            404: OpenApiResponse(response=ApiErrorResponse, description="Task not found"),
+            401: OpenApiResponse(response=ApiErrorResponse, description="Unauthorized"),
+            500: OpenApiResponse(response=ApiErrorResponse, description="Internal server error"),
+        },
+    )
+    def patch(self, request: Request, task_id: str):
+        user = get_current_user_info(request)
+        if not user:
+            raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
+
+        serializer = AssignTaskToUserSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(data={"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            dto = CreateTaskAssignmentDTO(
+                task_id=task_id, assignee_id=serializer.validated_data["assignee_id"], user_type="user"
+            )
+            response: CreateTaskAssignmentResponse = TaskAssignmentService.create_task_assignment(dto, user["user_id"])
+            return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
+        except Exception as e:
+            error_response = ApiErrorResponse(
+                statusCode=500,
+                message=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
+                errors=[{"detail": str(e)}],
+            )
+            return Response(data=error_response.model_dump(mode="json"), status=status.HTTP_500_INTERNAL_SERVER_ERROR)

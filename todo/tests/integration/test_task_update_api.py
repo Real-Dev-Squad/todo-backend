@@ -30,7 +30,7 @@ class TaskUpdateAPIIntegrationTest(AuthenticatedMongoTestCase):
             "_id": ObjectId(),
             "assignee_id": ObjectId(self.user_id),
             "task_id": self.task_id,
-            "relation_type": "user",
+            "user_type": "user",
             "is_action_taken": False,
             "is_active": True,
             "created_by": ObjectId(self.user_id),

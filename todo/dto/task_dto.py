@@ -39,7 +39,7 @@ class CreateTaskDTO(BaseModel):
     description: str | None = None
     priority: TaskPriority = TaskPriority.LOW
     status: TaskStatus = TaskStatus.TODO
-    assignee: dict | None = None  # {"assignee_id": str, "relation_type": "team"|"user"}
+    assignee: dict | None = None  # {"assignee_id": str, "user_type": "team"|"user"}
     labels: List[str] = []
     dueAt: datetime | None = None
     createdBy: str

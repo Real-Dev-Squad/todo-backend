@@ -23,10 +23,8 @@ class TaskRepository(MongoRepository):
         logger = logging.getLogger(__name__)
 
         if team_id:
-            from todo.repositories.assignee_task_details_repository import AssigneeTaskDetailsRepository
-
             logger.debug(f"TaskRepository.list: team_id={team_id}")
-            team_assignments = AssigneeTaskDetailsRepository.get_by_assignee_id(team_id, "team")
+            team_assignments = TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
             team_task_ids = [assignment.task_id for assignment in team_assignments]
             logger.debug(f"TaskRepository.list: team_task_ids={team_task_ids}")
             query_filter = {"_id": {"$in": team_task_ids}}
@@ -75,9 +73,7 @@ class TaskRepository(MongoRepository):
     def count(cls, user_id: str = None, team_id: str = None) -> int:
         tasks_collection = cls.get_collection()
         if team_id:
-            from todo.repositories.assignee_task_details_repository import AssigneeTaskDetailsRepository
-
-            team_assignments = AssigneeTaskDetailsRepository.get_by_assignee_id(team_id, "team")
+            team_assignments = TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
             team_task_ids = [assignment.task_id for assignment in team_assignments]
             query_filter = {"_id": {"$in": team_task_ids}}
         elif user_id:

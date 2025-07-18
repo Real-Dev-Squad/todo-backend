@@ -73,16 +73,16 @@ class TaskService:
         try:
             cls._validate_pagination_params(page, limit)
 
-            # If team_id is provided, only allow SPOC to fetch tasks
+            # If team_id is provided, only allow team members to fetch tasks
             if team_id:
                 from todo.repositories.team_repository import TeamRepository
 
-                if not TeamRepository.is_user_spoc(team_id, user_id):
+                if not TeamRepository.is_user_team_member(team_id, user_id):
                     return GetTasksResponse(
                         tasks=[],
                         links=None,
                         error={
-                            "message": "Only SPOC can view team tasks.",
+                            "message": "Only team members can view team tasks.",
                             "code": "FORBIDDEN",
                         },
                     )

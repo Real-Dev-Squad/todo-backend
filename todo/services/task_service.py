@@ -11,7 +11,11 @@ from todo.dto.user_dto import UserDTO
 from todo.dto.assignee_task_details_dto import AssigneeInfoDTO
 from todo.dto.responses.get_tasks_response import GetTasksResponse
 from todo.dto.responses.create_task_response import CreateTaskResponse
-from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
+from todo.dto.responses.error_response import (
+    ApiErrorResponse,
+    ApiErrorDetail,
+    ApiErrorSource,
+)
 from todo.dto.responses.paginated_response import LinksData
 from todo.exceptions.user_exceptions import UserNotFoundException
 from todo.models.task import TaskModel, DeferredDetailsModel
@@ -19,7 +23,9 @@ from todo.models.assignee_task_details import AssigneeTaskDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.label_repository import LabelRepository
-from todo.repositories.assignee_task_details_repository import AssigneeTaskDetailsRepository
+from todo.repositories.assignee_task_details_repository import (
+    AssigneeTaskDetailsRepository,
+)
 from todo.repositories.team_repository import TeamRepository
 from todo.constants.task import (
     TaskStatus,
@@ -48,7 +54,13 @@ class PaginationConfig:
 
 
 class TaskService:
-    DIRECT_ASSIGNMENT_FIELDS = {"title", "description", "dueAt", "startedAt", "isAcknowledged"}
+    DIRECT_ASSIGNMENT_FIELDS = {
+        "title",
+        "description",
+        "dueAt",
+        "startedAt",
+        "isAcknowledged",
+    }
 
     @classmethod
     def get_tasks(
@@ -69,7 +81,12 @@ class TaskService:
 
                 if not TeamRepository.is_user_spoc(team_id, user_id):
                     return GetTasksResponse(
-                        tasks=[], links=None, error={"message": "Only SPOC can view team tasks.", "code": "FORBIDDEN"}
+                        tasks=[],
+                        links=None,
+                        error={
+                            "message": "Only SPOC can view team tasks.",
+                            "code": "FORBIDDEN",
+                        },
                     )
 
             tasks = TaskRepository.list(page, limit, sort_by, order, user_id, team_id=team_id)
@@ -85,11 +102,20 @@ class TaskService:
             return GetTasksResponse(tasks=task_dtos, links=links)
 
         except ValidationError as e:
-            return GetTasksResponse(tasks=[], links=None, error={"message": str(e), "code": "VALIDATION_ERROR"})
+            return GetTasksResponse(
+                tasks=[],
+                links=None,
+                error={"message": str(e), "code": "VALIDATION_ERROR"},
+            )
 
         except Exception:
             return GetTasksResponse(
-                tasks=[], links=None, error={"message": ApiErrors.UNEXPECTED_ERROR_OCCURRED, "code": "INTERNAL_ERROR"}
+                tasks=[],
+                links=None,
+                error={
+                    "message": ApiErrors.UNEXPECTED_ERROR_OCCURRED,
+                    "code": "INTERNAL_ERROR",
+                },
             )
 
     @classmethod
@@ -167,23 +193,12 @@ class TaskService:
     @classmethod
     def _prepare_label_dtos(cls, label_ids: List[str]) -> List[LabelDTO]:
         label_models = LabelRepository.list_by_ids(label_ids)
-        found_ids = {str(label_model.id) for label_model in label_models}
-        missing_ids = [label_id for label_id in label_ids if label_id not in found_ids]
-        if missing_ids:
-            print(
-                f"[DEBUG] The following label IDs are referenced by tasks but do not exist in the database: {missing_ids}"
-            )
+
         return [
             LabelDTO(
                 id=str(label_model.id),
                 name=label_model.name,
                 color=label_model.color,
-                createdAt=label_model.createdAt,
-                updatedAt=label_model.updatedAt if hasattr(label_model, "updatedAt") else None,
-                createdBy=cls.prepare_user_dto(label_model.createdBy),
-                updatedBy=cls.prepare_user_dto(label_model.updatedBy)
-                if hasattr(label_model, "updatedBy") and label_model.updatedBy
-                else None,
             )
             for label_model in label_models
         ]
@@ -302,7 +317,10 @@ class TaskService:
         if "assignee" in validated_data:
             assignee_info = validated_data["assignee"]
             AssigneeTaskDetailsRepository.update_assignee(
-                task_id, assignee_info["assignee_id"], assignee_info["relation_type"], user_id
+                task_id,
+                assignee_info["assignee_id"],
+                assignee_info["relation_type"],
+                user_id,
             )
 
         if not update_payload:
@@ -431,7 +449,7 @@ class TaskService:
                         ApiErrorDetail(
                             source={ApiErrorSource.PARAMETER: "task_repository"},
                             title=ApiErrors.UNEXPECTED_ERROR,
-                            detail=str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR,
+                            detail=(str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR),
                         )
                     ],
                 )
@@ -445,7 +463,7 @@ class TaskService:
                         ApiErrorDetail(
                             source={ApiErrorSource.PARAMETER: "server"},
                             title=ApiErrors.UNEXPECTED_ERROR,
-                            detail=str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR,
+                            detail=(str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR),
                         )
                     ],
                 )
@@ -460,7 +478,10 @@ class TaskService:
 
     @classmethod
     def get_tasks_for_user(
-        cls, user_id: str, page: int = PaginationConfig.DEFAULT_PAGE, limit: int = PaginationConfig.DEFAULT_LIMIT
+        cls,
+        user_id: str,
+        page: int = PaginationConfig.DEFAULT_PAGE,
+        limit: int = PaginationConfig.DEFAULT_LIMIT,
     ) -> GetTasksResponse:
         cls._validate_pagination_params(page, limit)
         tasks = TaskRepository.get_tasks_for_user(user_id, page, limit)

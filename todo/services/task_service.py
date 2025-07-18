@@ -4,7 +4,6 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from urllib.parse import urlencode
 from datetime import datetime, timezone, timedelta
-from rest_framework.exceptions import ValidationError as DRFValidationError
 from todo.dto.deferred_details_dto import DeferredDetailsDTO
 from todo.dto.label_dto import LabelDTO
 from todo.dto.task_dto import TaskDTO, CreateTaskDTO
@@ -244,15 +243,6 @@ class TaskService:
             return []
 
         label_object_ids = [PyObjectId(label_id_str) for label_id_str in raw_labels]
-
-        if label_object_ids:
-            existing_labels = LabelRepository.list_by_ids(label_object_ids)
-            if len(existing_labels) != len(label_object_ids):
-                found_db_ids_str = {str(label.id) for label in existing_labels}
-                missing_ids_str = [str(py_id) for py_id in label_object_ids if str(py_id) not in found_db_ids_str]
-                raise DRFValidationError(
-                    {"labels": [ValidationErrors.MISSING_LABEL_IDS.format(", ".join(missing_ids_str))]}
-                )
         return label_object_ids
 
     @classmethod
@@ -391,7 +381,8 @@ class TaskService:
                     raise ValueError(f"Team not found: {assignee_id}")
 
         if dto.labels:
-            existing_labels = LabelRepository.list_by_ids(dto.labels)
+            label_object_ids = [PyObjectId(label_id) for label_id in dto.labels]
+            existing_labels = LabelRepository.list_by_ids(label_object_ids)
             if len(existing_labels) != len(dto.labels):
                 found_ids = [str(label.id) for label in existing_labels]
                 missing_ids = [label_id for label_id in dto.labels if label_id not in found_ids]

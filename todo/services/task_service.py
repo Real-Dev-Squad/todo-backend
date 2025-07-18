@@ -285,7 +285,9 @@ class TaskService:
 
         for field, value in validated_data.items():
             if field == "labels":
-                update_payload[field] = cls._process_labels_for_update(value)  # Only convert to ObjectId, do not check existence
+                update_payload[field] = cls._process_labels_for_update(
+                    value
+                )  # Only convert to ObjectId, do not check existence
             elif field in enum_fields:
                 update_payload[field] = cls._process_enum_for_update(enum_fields[field], value)
             elif field in cls.DIRECT_ASSIGNMENT_FIELDS:

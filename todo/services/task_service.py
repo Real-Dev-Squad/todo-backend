@@ -338,6 +338,86 @@ class TaskService:
         return cls.prepare_task_dto(updated_task, user_id)
 
     @classmethod
+    def update_task_with_assignee(cls, task_id: str, dto: CreateTaskDTO, user_id: str) -> TaskDTO:
+        """
+        Update both task details and assignee information in a single operation.
+        Similar to create_task but for updates.
+        """
+        current_task = TaskRepository.get_by_id(task_id)
+
+        if not current_task:
+            raise TaskNotFoundException(task_id)
+
+        # Check if user is the creator
+        if current_task.createdBy != user_id:
+            # Check if user is assigned to this task
+            assigned_task_ids = TaskRepository._get_assigned_task_ids_for_user(user_id)
+            if current_task.id not in assigned_task_ids:
+                raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+
+        # Validate assignee if provided
+        if dto.assignee:
+            assignee_id = dto.assignee.get("assignee_id")
+            user_type = dto.assignee.get("user_type")
+
+            if user_type == "user":
+                user_data = UserRepository.get_by_id(assignee_id)
+                if not user_data:
+                    raise UserNotFoundException(assignee_id)
+            elif user_type == "team":
+                team_data = TeamRepository.get_by_id(assignee_id)
+                if not team_data:
+                    raise ValueError(f"Team not found: {assignee_id}")
+
+        # Prepare update payload for task fields
+        update_payload = {}
+        enum_fields = {"priority": TaskPriority, "status": TaskStatus}
+
+        # Process task fields from DTO
+        dto_data = dto.model_dump(exclude_none=True, exclude={"assignee", "createdBy"})
+
+        for field, value in dto_data.items():
+            # Skip if the value is the same as current task
+            current_value = getattr(current_task, field, None)
+            if current_value == value:
+                continue
+
+            if field == "labels":
+                update_payload[field] = cls._process_labels_for_update(value)
+            elif field in enum_fields:
+                # For enums, we need to get the name if it's an enum instance, or process as string
+                if hasattr(value, "name"):
+                    update_payload[field] = value.value
+                else:
+                    update_payload[field] = cls._process_enum_for_update(enum_fields[field], value)
+            elif field in cls.DIRECT_ASSIGNMENT_FIELDS:
+                update_payload[field] = value
+
+        # Handle startedAt logic
+        if dto.status == TaskStatus.IN_PROGRESS and not current_task.startedAt:
+            update_payload["startedAt"] = datetime.now(timezone.utc)
+
+        # Update task if there are changes
+        if update_payload:
+            update_payload["updatedBy"] = user_id
+            updated_task = TaskRepository.update(task_id, update_payload)
+            if not updated_task:
+                raise TaskNotFoundException(task_id)
+        else:
+            updated_task = current_task
+
+        # Handle assignee updates
+        if dto.assignee:
+            TaskAssignmentRepository.update_assignment(
+                task_id,
+                dto.assignee["assignee_id"],
+                dto.assignee["user_type"],
+                user_id,
+            )
+
+        return cls.prepare_task_dto(updated_task, user_id)
+
+    @classmethod
     def defer_task(cls, task_id: str, deferred_till: datetime, user_id: str) -> TaskDTO:
         current_task = TaskRepository.get_by_id(task_id)
 

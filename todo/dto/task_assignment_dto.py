@@ -35,7 +35,7 @@ class TaskAssignmentDTO(BaseModel):
     id: str
     task_id: str
     assignee_id: str
-    assignee_name: str
+    assignee_name: Optional[str] = None
     user_type: Literal["user", "team"]
     is_active: bool
     created_by: str
@@ -49,7 +49,7 @@ class TaskAssignmentResponseDTO(BaseModel):
     task_id: str
     assignee_id: str
     user_type: Literal["user", "team"]
-    assignee_name: str
+    assignee_name: Optional[str] = None
     is_active: bool
     created_by: str
     updated_by: Optional[str] = None

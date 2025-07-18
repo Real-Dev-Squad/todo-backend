@@ -78,7 +78,6 @@ class UsersView(APIView):
             }
             return Response(
                 {
-                    "statusCode": 200,
                     "message": "Current user details fetched successfully",
                     "data": userResponse,
                 },
@@ -113,7 +112,6 @@ class UsersView(APIView):
 
         return Response(
             {
-                "statusCode": status.HTTP_200_OK,
                 "message": "Users fetched successfully",
                 "data": response_data.model_dump(),
             },

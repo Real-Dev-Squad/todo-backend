@@ -4,6 +4,8 @@ from pydantic_core._pydantic_core import ValidationError
 from todo.models.task import TaskModel
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.tests.fixtures.task import tasks_db_data
+from todo.dto.task_assignment_dto import TaskAssignmentDTO
+from datetime import datetime
 
 
 class TaskModelTest(TestCase):

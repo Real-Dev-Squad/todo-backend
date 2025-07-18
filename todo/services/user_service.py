@@ -8,6 +8,7 @@ from todo.exceptions.auth_exceptions import (
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from typing import List, Tuple
 from todo.dto.user_dto import UserDTO, UsersDTO
+from todo.repositories.task_assignment_repository import TaskAssignmentRepository
 
 
 class UserService:
@@ -65,20 +66,16 @@ class UserService:
         for user in users:
             user.addedOn = added_on_map.get(user.id)
             # Compute tasksAssignedCount: tasks assigned to both user and team
-            from todo.repositories.assignee_task_details_repository import (
-                AssigneeTaskDetailsRepository,
-            )
-
             user_task_ids = set(
                 [
                     str(assignment.task_id)
-                    for assignment in AssigneeTaskDetailsRepository.get_by_assignee_id(user.id, "user")
+                    for assignment in TaskAssignmentRepository.get_by_assignee_id(user.id, "user")
                 ]
             )
             team_task_ids = set(
                 [
                     str(assignment.task_id)
-                    for assignment in AssigneeTaskDetailsRepository.get_by_assignee_id(team_id, "team")
+                    for assignment in TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
                 ]
             )
             user.tasksAssignedCount = len(user_task_ids & team_task_ids)

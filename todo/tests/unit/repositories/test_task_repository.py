@@ -21,6 +21,7 @@ from todo.constants.task import (
 )
 from todo.tests.fixtures.task import tasks_db_data
 from todo.constants.messages import RepositoryErrors, ApiErrors
+from todo.repositories.task_assignment_repository import TaskAssignmentRepository
 
 
 class TaskRepositoryTests(TestCase):

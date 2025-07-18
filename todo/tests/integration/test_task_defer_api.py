@@ -12,7 +12,7 @@ class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.db.tasks.delete_many({})
-        self.db.assignee_task_details.delete_many({})
+        self.db.task_details.delete_many({})
 
     def _insert_task(self, *, status: str = TaskStatus.TODO.value, due_at: datetime | None = None) -> str:
         task_fixture = tasks_db_data[0].copy()
@@ -46,7 +46,7 @@ class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
             "created_at": datetime.now(timezone.utc),
             "updated_at": None,
         }
-        self.db.assignee_task_details.insert_one(assignee_details)
+        self.db.task_details.insert_one(assignee_details)
 
         return str(new_id)
 

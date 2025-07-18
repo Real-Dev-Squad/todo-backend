@@ -96,16 +96,6 @@ class UsersView(APIView):
         else:
             users, total_count = UserService.get_all_users(page, limit)
 
-        if not users:
-            return Response(
-                {
-                    "statusCode": status.HTTP_204_NO_CONTENT,
-                    "message": "No users found",
-                    "data": None,
-                },
-                status=status.HTTP_204_NO_CONTENT,
-            )
-
         user_dtos = [
             UsersDTO(
                 id=str(user.id),
@@ -124,7 +114,7 @@ class UsersView(APIView):
         return Response(
             {
                 "statusCode": status.HTTP_200_OK,
-                "message": "Users searched successfully",
+                "message": "Users fetched successfully",
                 "data": response_data.model_dump(),
             },
             status=status.HTTP_200_OK,

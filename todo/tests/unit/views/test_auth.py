@@ -270,5 +270,5 @@ class UserViewProfileTrueTests(APITestCase):
 
         response = self.client.get(self.url + "?profile=true")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["data"]["userId"], self.user_data["user_id"])
+        self.assertEqual(response.data["data"]["id"], self.user_data["user_id"])
         self.assertEqual(response.data["data"]["email"], self.user_data["email"])

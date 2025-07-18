@@ -71,14 +71,13 @@ class UsersView(APIView):
                 )
             userData = userData.model_dump(mode="json", exclude_none=True)
             userResponse = {
-                "userId": userData["id"],
+                "id": userData["id"],
                 "email": userData["email_id"],
                 "name": userData.get("name"),
                 "picture": userData.get("picture"),
             }
             return Response(
                 {
-                    "statusCode": 200,
                     "message": "Current user details fetched successfully",
                     "data": userResponse,
                 },
@@ -95,16 +94,6 @@ class UsersView(APIView):
             users, total_count = UserService.search_users(search, page, limit)
         else:
             users, total_count = UserService.get_all_users(page, limit)
-
-        if not users:
-            return Response(
-                {
-                    "statusCode": status.HTTP_204_NO_CONTENT,
-                    "message": "No users found",
-                    "data": None,
-                },
-                status=status.HTTP_204_NO_CONTENT,
-            )
 
         user_dtos = [
             UsersDTO(
@@ -123,8 +112,7 @@ class UsersView(APIView):
 
         return Response(
             {
-                "statusCode": status.HTTP_200_OK,
-                "message": "Users searched successfully",
+                "message": "Users fetched successfully",
                 "data": response_data.model_dump(),
             },
             status=status.HTTP_200_OK,

@@ -28,7 +28,7 @@ class TaskDeleteAPIIntegrationTest(AuthenticatedMongoTestCase):
             "_id": ObjectId(),
             "assignee_id": ObjectId(self.user_data["user_id"]),
             "task_id": str(task_doc["_id"]),
-            "relation_type": "user",
+            "user_type": "user",
             "is_action_taken": False,
             "is_active": True,
             "created_by": ObjectId(self.user_data["user_id"]),

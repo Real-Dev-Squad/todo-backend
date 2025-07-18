@@ -1,7 +1,7 @@
 from typing import Optional
 
 from todo.dto.assignee_task_details_dto import AssigneeTaskDetailsDTO, CreateAssigneeTaskDetailsDTO
-from todo.dto.task_assignment_dto import  TaskAssignmentResponseDTO
+from todo.dto.task_assignment_dto import TaskAssignmentResponseDTO
 from todo.dto.responses.create_task_assignment_response import CreateTaskAssignmentResponse
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_assignment_repository import TaskAssignmentRepository

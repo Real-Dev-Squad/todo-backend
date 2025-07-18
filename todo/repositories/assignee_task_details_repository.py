@@ -119,7 +119,7 @@ class AssigneeTaskDetailsRepository(MongoRepository):
             return result.modified_count > 0
         except Exception:
             return False
-        
+
     @classmethod
     def update_assignment(
         cls, task_id: str, assignee_id: str, user_type: str, user_id: str
@@ -134,14 +134,12 @@ class AssigneeTaskDetailsRepository(MongoRepository):
             task_object_id = ObjectId(task_id)
             assignee_object_id = ObjectId(assignee_id)
             user_object_id = ObjectId(user_id)
-            
+
             # Check if assignment with same task_id and assignee_id already exists
-            existing_assignment = collection.find_one({
-                "task_id": task_object_id,
-                "assignee_id": assignee_object_id,
-                "is_active": True
-            })
-            
+            existing_assignment = collection.find_one(
+                {"task_id": task_object_id, "assignee_id": assignee_object_id, "is_active": True}
+            )
+
             if existing_assignment:
                 # Update existing assignment
                 update_result = collection.update_one(
@@ -152,9 +150,9 @@ class AssigneeTaskDetailsRepository(MongoRepository):
                             "updated_by": user_object_id,
                             "updated_at": datetime.now(timezone.utc),
                         }
-                    }
+                    },
                 )
-                
+
                 if update_result.modified_count > 0:
                     # Return updated assignment
                     updated_data = collection.find_one({"_id": existing_assignment["_id"]})

@@ -27,7 +27,7 @@ from todo.constants.messages import ValidationErrors
 from todo.dto.responses.get_tasks_response import GetTasksResponse
 from todo.serializers.create_task_assignment_serializer import AssignTaskToUserSerializer
 from todo.services.task_assignment_service import TaskAssignmentService
-from todo.dto.responses.create_task_assignment_response import CreateTaskAssignmentResponse 
+from todo.dto.responses.create_task_assignment_response import CreateTaskAssignmentResponse
 
 
 class TaskListView(APIView):

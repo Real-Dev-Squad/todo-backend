@@ -58,6 +58,7 @@ class TaskAssignmentViewTests(AuthenticatedMongoTestCase):
             is_active=True,
             created_by=str(self.user_id),
             created_at=datetime.now(timezone.utc),
+            assignee_name="SYSTEM",
         )
         mock_create_assignment.return_value = CreateTaskAssignmentResponse(data=response_dto)
 
@@ -114,6 +115,7 @@ class TaskAssignmentDetailViewTests(AuthenticatedMongoTestCase):
             is_active=True,
             created_by=str(self.user_id),
             created_at=datetime.now(timezone.utc),
+            assignee_name="SYSTEM",
         )
         mock_get_assignment.return_value = response_dto
 

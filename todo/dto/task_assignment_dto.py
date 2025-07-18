@@ -35,6 +35,7 @@ class TaskAssignmentDTO(BaseModel):
     id: str
     task_id: str
     assignee_id: str
+    assignee_name: str
     user_type: Literal["user", "team"]
     is_active: bool
     created_by: str

@@ -515,9 +515,9 @@ class TaskUpdateViewTests(AuthenticatedMongoTestCase):
             in_watchlist=None,
         )
 
-    @patch("todo.views.task.CreateTaskSerializer")
-    @patch("todo.views.task.TaskService.update_task_with_assignee")
-    def test_patch_task_and_assignee_success(self, mock_service_update_task, mock_create_serializer_class):
+    @patch("todo.views.task.UpdateTaskSerializer")
+    @patch("todo.views.task.TaskService.update_task_with_assignee_from_dict")
+    def test_patch_task_and_assignee_success(self, mock_service_update_task, mock_update_serializer_class):
         future_date = datetime.now(timezone.utc) + timedelta(days=5)
         assignee_id = str(ObjectId())
 
@@ -526,8 +526,7 @@ class TaskUpdateViewTests(AuthenticatedMongoTestCase):
             "description": "Updated Description",
             "priority": TaskPriority.HIGH.name,
             "status": TaskStatus.IN_PROGRESS.name,
-            "assignee_id": assignee_id,
-            "user_type": "user",
+            "assignee": {"assignee_id": assignee_id, "user_type": "user"},
             "dueAt": future_date.isoformat(),
         }
 
@@ -541,7 +540,7 @@ class TaskUpdateViewTests(AuthenticatedMongoTestCase):
             "assignee": {"assignee_id": assignee_id, "user_type": "user"},
             "dueAt": future_date,
         }
-        mock_create_serializer_class.return_value = mock_serializer_instance
+        mock_update_serializer_class.return_value = mock_serializer_instance
 
         mock_service_update_task.return_value = self.updated_task_dto_fixture
 
@@ -550,8 +549,8 @@ class TaskUpdateViewTests(AuthenticatedMongoTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Check that the serializer was called with the correct data
-        mock_create_serializer_class.assert_called_once()
-        call_args = mock_create_serializer_class.call_args
+        mock_update_serializer_class.assert_called_once()
+        call_args = mock_update_serializer_class.call_args
         self.assertEqual(call_args[1]["partial"], True)
 
         mock_serializer_instance.is_valid.assert_called_once()
@@ -560,8 +559,8 @@ class TaskUpdateViewTests(AuthenticatedMongoTestCase):
         expected_response_data = self.updated_task_dto_fixture.model_dump(mode="json")
         self.assertEqual(response.data, expected_response_data)
 
-    @patch("todo.views.task.CreateTaskSerializer")
-    def test_patch_task_and_assignee_validation_error(self, mock_create_serializer_class):
+    @patch("todo.views.task.UpdateTaskSerializer")
+    def test_patch_task_and_assignee_validation_error(self, mock_update_serializer_class):
         invalid_payload = {
             "title": "",  # Invalid: empty title
             "priority": "INVALID_PRIORITY",  # Invalid priority
@@ -573,7 +572,7 @@ class TaskUpdateViewTests(AuthenticatedMongoTestCase):
             "title": ["Title cannot be blank"],
             "priority": ["Invalid priority value"],
         }
-        mock_create_serializer_class.return_value = mock_serializer_instance
+        mock_update_serializer_class.return_value = mock_serializer_instance
 
         response = self.client.patch(self.task_url, data=invalid_payload, format="json")
 
@@ -581,15 +580,15 @@ class TaskUpdateViewTests(AuthenticatedMongoTestCase):
         self.assertIn("errors", response.data)
         self.assertEqual(response.data["statusCode"], 400)
 
-    @patch("todo.views.task.CreateTaskSerializer")
-    @patch("todo.views.task.TaskService.update_task_with_assignee")
-    def test_patch_task_and_assignee_task_not_found(self, mock_service_update_task, mock_create_serializer_class):
+    @patch("todo.views.task.UpdateTaskSerializer")
+    @patch("todo.views.task.TaskService.update_task_with_assignee_from_dict")
+    def test_patch_task_and_assignee_task_not_found(self, mock_service_update_task, mock_update_serializer_class):
         valid_payload = {"title": "Updated Title"}
 
         mock_serializer_instance = Mock()
         mock_serializer_instance.is_valid.return_value = True
         mock_serializer_instance.validated_data = {"title": "Updated Title"}
-        mock_create_serializer_class.return_value = mock_serializer_instance
+        mock_update_serializer_class.return_value = mock_serializer_instance
 
         mock_service_update_task.side_effect = TaskNotFoundException(self.task_id_str)
 
@@ -598,15 +597,15 @@ class TaskUpdateViewTests(AuthenticatedMongoTestCase):
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertIn("errors", response.data)
 
-    @patch("todo.views.task.CreateTaskSerializer")
-    @patch("todo.views.task.TaskService.update_task_with_assignee")
-    def test_patch_task_and_assignee_permission_denied(self, mock_service_update_task, mock_create_serializer_class):
+    @patch("todo.views.task.UpdateTaskSerializer")
+    @patch("todo.views.task.TaskService.update_task_with_assignee_from_dict")
+    def test_patch_task_and_assignee_permission_denied(self, mock_service_update_task, mock_update_serializer_class):
         valid_payload = {"title": "Updated Title"}
 
         mock_serializer_instance = Mock()
         mock_serializer_instance.is_valid.return_value = True
         mock_serializer_instance.validated_data = {"title": "Updated Title"}
-        mock_create_serializer_class.return_value = mock_serializer_instance
+        mock_update_serializer_class.return_value = mock_serializer_instance
 
         mock_service_update_task.side_effect = PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
 

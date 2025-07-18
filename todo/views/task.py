@@ -314,7 +314,7 @@ class TaskUpdateView(APIView):
                 required=True,
             ),
         ],
-        request=CreateTaskSerializer,
+        request=UpdateTaskSerializer,
         responses={
             200: OpenApiResponse(description="Task and assignee updated successfully"),
             400: OpenApiResponse(description="Bad request"),
@@ -331,17 +331,16 @@ class TaskUpdateView(APIView):
         if not user:
             raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
 
-        serializer = CreateTaskSerializer(data=request.data, partial=True)
+        serializer = UpdateTaskSerializer(data=request.data, partial=True)
 
         if not serializer.is_valid():
             return self._handle_validation_errors(serializer.errors)
 
         try:
-            # Create DTO with the validated data
-            dto = CreateTaskDTO(**serializer.validated_data, createdBy=user["user_id"])
-
-            # Update the task using the service
-            updated_task_dto = TaskService.update_task_with_assignee(task_id=task_id, dto=dto, user_id=user["user_id"])
+            # Update the task using the service with validated data
+            updated_task_dto = TaskService.update_task_with_assignee_from_dict(
+                task_id=task_id, validated_data=serializer.validated_data, user_id=user["user_id"]
+            )
 
             return Response(data=updated_task_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
 

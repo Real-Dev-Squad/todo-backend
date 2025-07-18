@@ -167,7 +167,10 @@ class TaskService:
     @classmethod
     def _prepare_label_dtos(cls, label_ids: List[str]) -> List[LabelDTO]:
         label_models = LabelRepository.list_by_ids(label_ids)
-
+        found_ids = {str(label_model.id) for label_model in label_models}
+        missing_ids = [label_id for label_id in label_ids if label_id not in found_ids]
+        if missing_ids:
+            print(f"[DEBUG] The following label IDs are referenced by tasks but do not exist in the database: {missing_ids}")
         return [
             LabelDTO(
                 id=str(label_model.id),

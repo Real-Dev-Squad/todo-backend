@@ -221,6 +221,7 @@ class TaskService:
             id=str(assignee_details.id),
             task_id=str(assignee_details.task_id),
             assignee_id=assignee_id,
+            assignee_name=assignee.name,
             user_type=assignee_details.user_type,
             is_active=assignee_details.is_active,
             created_by=str(assignee_details.created_by),

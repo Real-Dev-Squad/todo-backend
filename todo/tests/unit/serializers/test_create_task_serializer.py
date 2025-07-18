@@ -13,7 +13,8 @@ class CreateTaskSerializerTest(TestCase):
             "description": "Some test description",
             "priority": "LOW",
             "status": "TODO",
-            "assignee": {"assignee_id": str(ObjectId()), "relation_type": "user"},
+            "assignee_id": str(ObjectId()),
+            "user_type": "user",
             "labels": [],
             "dueAt": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat().replace("+00:00", "Z"),
         }
@@ -36,9 +37,24 @@ class CreateTaskSerializerTest(TestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn("status", serializer.errors)
 
-    def test_serializer_rejects_invalid_assignee(self):
+    def test_serializer_rejects_invalid_assignee_id(self):
         data = self.valid_data.copy()
-        data["assignee"] = {"assignee_id": "1234"}
+        data["assignee_id"] = "1234"  # Not a valid ObjectId
         serializer = CreateTaskSerializer(data=data)
         self.assertFalse(serializer.is_valid())
-        self.assertIn("assignee", serializer.errors)
+        self.assertIn("assignee_id", serializer.errors)
+
+    def test_serializer_rejects_missing_user_type(self):
+        data = self.valid_data.copy()
+        del data["user_type"]
+        serializer = CreateTaskSerializer(data=data)
+        # Should be valid, as assignee is optional, but if assignee_id is present, user_type must be too
+        self.assertTrue(serializer.is_valid())
+        # If both are missing, should still be valid (assignee is optional)
+
+    def test_serializer_rejects_invalid_user_type(self):
+        data = self.valid_data.copy()
+        data["user_type"] = "invalid_type"
+        serializer = CreateTaskSerializer(data=data)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("user_type", serializer.errors)

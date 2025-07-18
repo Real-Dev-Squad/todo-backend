@@ -11,6 +11,7 @@ from todo.exceptions.user_exceptions import UserNotFoundException
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.task_assignment import TaskAssignmentModel
 from todo.dto.task_assignment_dto import TaskAssignmentDTO
+from bson import ObjectId
 
 
 class TaskAssignmentService:
@@ -50,6 +51,7 @@ class TaskAssignmentService:
         else:
             # Create new assignment
             task_assignment = TaskAssignmentModel(
+                _id=ObjectId(),
                 task_id=PyObjectId(dto.task_id),
                 assignee_id=PyObjectId(dto.assignee_id),
                 user_type=dto.user_type,
@@ -78,6 +80,7 @@ class TaskAssignmentService:
             task_id=str(assignment.task_id),
             assignee_id=str(assignment.assignee_id),
             user_type=assignment.user_type,
+            assignee_name=assignee.name,
             is_active=assignment.is_active,
             created_by=str(assignment.created_by),
             updated_by=str(assignment.updated_by) if assignment.updated_by else None,

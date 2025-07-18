@@ -60,9 +60,15 @@ class TaskAssignmentView(APIView):
         serializer = CreateTaskAssignmentSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(data={"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
-            dto = CreateTaskAssignmentDTO(**serializer.validated_data)
+            data = serializer.validated_data
+
+            dto = CreateTaskAssignmentDTO(
+                task_id=data["task_id"],
+                assignee_id=data["assignee_id"],
+                user_type=data["user_type"],
+            )
+
             response: CreateTaskAssignmentResponse = TaskAssignmentService.create_task_assignment(dto, user["user_id"])
 
             return Response(data=response.model_dump(mode="json"), status=status.HTTP_201_CREATED)

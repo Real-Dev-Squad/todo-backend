@@ -8,6 +8,18 @@ from todo.dto.watchlist_dto import WatchlistDTO
 from bson import ObjectId
 
 
+def _convert_objectids_to_str(obj):
+    """Recursively convert all ObjectId values in a dict/list to strings."""
+    if isinstance(obj, dict):
+        return {k: _convert_objectids_to_str(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_convert_objectids_to_str(item) for item in obj]
+    elif isinstance(obj, ObjectId):
+        return str(obj)
+    else:
+        return obj
+
+
 class WatchlistRepository(MongoRepository):
     collection_name = WatchlistModel.collection_name
 
@@ -78,7 +90,8 @@ class WatchlistRepository(MongoRepository):
         result = next(aggregation_result, {"total": 0, "data": []})
         count = result.get("total", 0)
 
-        tasks = [WatchlistDTO(**doc) for doc in result.get("data", [])]
+        tasks = [_convert_objectids_to_str(doc) for doc in result.get("data", [])]
+        tasks = [WatchlistDTO(**doc) for doc in tasks]
 
         return count, tasks
 

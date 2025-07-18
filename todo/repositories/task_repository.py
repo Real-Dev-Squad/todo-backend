@@ -33,7 +33,7 @@ class TaskRepository(MongoRepository):
             logger.debug(f"TaskRepository.list: query_filter={query_filter}")
         elif user_id:
             assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
-            query_filter = {"$or": [{"createdBy": user_id}, {"_id": {"$in": assigned_task_ids}}]}
+            query_filter = {"_id": {"$in": assigned_task_ids}}
         else:
             query_filter = {}
 
@@ -215,6 +215,6 @@ class TaskRepository(MongoRepository):
     def get_tasks_for_user(cls, user_id: str, page: int, limit: int) -> List[TaskModel]:
         tasks_collection = cls.get_collection()
         assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
-        query = {"$or": [{"createdBy": user_id}, {"_id": {"$in": assigned_task_ids}}]}
+        query = {"_id": {"$in": assigned_task_ids}}
         tasks_cursor = tasks_collection.find(query).skip((page - 1) * limit).limit(limit)
         return [TaskModel(**task) for task in tasks_cursor]

@@ -4,7 +4,6 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from urllib.parse import urlencode
 from datetime import datetime, timezone, timedelta
-from rest_framework.exceptions import ValidationError as DRFValidationError
 from todo.dto.deferred_details_dto import DeferredDetailsDTO
 from todo.dto.label_dto import LabelDTO
 from todo.dto.task_dto import TaskDTO, CreateTaskDTO
@@ -244,10 +243,6 @@ class TaskService:
             return []
 
         label_object_ids = [PyObjectId(label_id_str) for label_id_str in raw_labels]
-
-        if label_object_ids:
-            existing_labels = LabelRepository.list_by_ids(label_object_ids)
-            
         return label_object_ids
 
     @classmethod

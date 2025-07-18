@@ -67,16 +67,10 @@ class UserService:
             user.addedOn = added_on_map.get(user.id)
             # Compute tasksAssignedCount: tasks assigned to both user and team
             user_task_ids = set(
-                [
-                    str(assignment.task_id)
-                    for assignment in TaskAssignmentRepository.get_by_assignee_id(user.id, "user")
-                ]
+                [str(assignment.task_id) for assignment in TaskAssignmentRepository.get_by_assignee_id(user.id, "user")]
             )
             team_task_ids = set(
-                [
-                    str(assignment.task_id)
-                    for assignment in TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
-                ]
+                [str(assignment.task_id) for assignment in TaskAssignmentRepository.get_by_assignee_id(team_id, "team")]
             )
             user.tasksAssignedCount = len(user_task_ids & team_task_ids)
         return users

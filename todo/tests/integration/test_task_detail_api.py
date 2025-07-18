@@ -11,7 +11,7 @@ class TaskDetailAPIIntegrationTest(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.db.tasks.delete_many({})
-        self.db.assignee_task_details.delete_many({})
+        self.db.task_details.delete_many({})
 
         self.task_doc = tasks_db_data[1].copy()
         self.task_doc["_id"] = self.task_doc.pop("id")
@@ -23,18 +23,17 @@ class TaskDetailAPIIntegrationTest(AuthenticatedMongoTestCase):
 
         # Create assignee task details in separate collection
         assignee_details = {
-            "_id": ObjectId(),
-            "assignee_id": ObjectId(self.user_id),
+            "_id": str(ObjectId()),
+            "assignee_id": str(self.user_id),
             "task_id": str(self.task_doc["_id"]),
-            "relation_type": "user",
-            "is_action_taken": False,
+            "user_type": "user",
             "is_active": True,
-            "created_by": ObjectId(self.user_id),
+            "created_by": str(self.user_id),
             "updated_by": None,
             "created_at": datetime.now(timezone.utc),
             "updated_at": None,
         }
-        self.db.assignee_task_details.insert_one(assignee_details)
+        self.db.task_details.insert_one(assignee_details)
 
         self.existing_task_id = str(self.task_doc["_id"])
         self.non_existent_id = str(ObjectId())
@@ -53,8 +52,8 @@ class TaskDetailAPIIntegrationTest(AuthenticatedMongoTestCase):
         self.assertEqual(data["createdBy"]["id"], self.task_doc["createdBy"])
         # Check that assignee details are included
         self.assertIsNotNone(data["assignee"])
-        self.assertEqual(data["assignee"]["id"], str(self.user_id))
-        self.assertEqual(data["assignee"]["relation_type"], "user")
+        self.assertEqual(data["assignee"]["assignee_id"], str(self.user_id))
+        self.assertEqual(data["assignee"]["user_type"], "user")
 
     def test_get_task_by_id_not_found(self):
         url = reverse("task_detail", args=[self.non_existent_id])

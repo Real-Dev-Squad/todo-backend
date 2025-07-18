@@ -1,7 +1,7 @@
 from pydantic import BaseModel
-from todo.dto.assignee_task_details_dto import AssigneeTaskDetailsDTO
+from todo.dto.task_assignment_dto import TaskAssignmentDTO
 
 
 class CreateTaskAssignmentResponse(BaseModel):
-    data: AssigneeTaskDetailsDTO
+    data: TaskAssignmentDTO
     message: str = "Task assignment created successfully"

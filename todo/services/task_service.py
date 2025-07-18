@@ -8,7 +8,6 @@ from todo.dto.deferred_details_dto import DeferredDetailsDTO
 from todo.dto.label_dto import LabelDTO
 from todo.dto.task_dto import TaskDTO, CreateTaskDTO
 from todo.dto.user_dto import UserDTO
-from todo.dto.assignee_task_details_dto import AssigneeInfoDTO
 from todo.dto.responses.get_tasks_response import GetTasksResponse
 from todo.dto.responses.create_task_response import CreateTaskResponse
 from todo.dto.responses.error_response import (
@@ -19,13 +18,12 @@ from todo.dto.responses.error_response import (
 from todo.dto.responses.paginated_response import LinksData
 from todo.exceptions.user_exceptions import UserNotFoundException
 from todo.models.task import TaskModel, DeferredDetailsModel
-from todo.models.assignee_task_details import AssigneeTaskDetailsModel
+from todo.models.task_assignment import TaskAssignmentModel
+from todo.repositories.task_assignment_repository import TaskAssignmentRepository
+from todo.dto.task_assignment_dto import TaskAssignmentDTO
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.label_repository import LabelRepository
-from todo.repositories.assignee_task_details_repository import (
-    AssigneeTaskDetailsRepository,
-)
 from todo.repositories.team_repository import TeamRepository
 from todo.constants.task import (
     TaskStatus,
@@ -160,7 +158,7 @@ class TaskService:
             cls.prepare_deferred_details_dto(task_model.deferredDetails) if task_model.deferredDetails else None
         )
 
-        assignee_details = AssigneeTaskDetailsRepository.get_by_task_id(str(task_model.id))
+        assignee_details = TaskAssignmentRepository.get_by_task_id(str(task_model.id))
         assignee_dto = cls._prepare_assignee_dto(assignee_details) if assignee_details else None
 
         # Check if task is in user's watchlist
@@ -204,14 +202,14 @@ class TaskService:
         ]
 
     @classmethod
-    def _prepare_assignee_dto(cls, assignee_details: AssigneeTaskDetailsModel) -> AssigneeInfoDTO:
+    def _prepare_assignee_dto(cls, assignee_details: TaskAssignmentModel) -> TaskAssignmentDTO:
         """Prepare assignee DTO from assignee task details."""
         assignee_id = str(assignee_details.assignee_id)
 
-        # Get assignee details based on relation type
-        if assignee_details.relation_type == "user":
+        # Get assignee details based on user_type
+        if assignee_details.user_type == "user":
             assignee = UserRepository.get_by_id(assignee_id)
-        elif assignee_details.relation_type == "team":
+        elif assignee_details.user_type == "team":
             assignee = TeamRepository.get_by_id(assignee_id)
         else:
             return None
@@ -219,12 +217,16 @@ class TaskService:
         if not assignee:
             return None
 
-        return AssigneeInfoDTO(
-            id=assignee_id,
-            name=assignee.name,
-            relation_type=assignee_details.relation_type,
-            is_action_taken=assignee_details.is_action_taken,
+        return TaskAssignmentDTO(
+            id=str(assignee_details.id),
+            task_id=str(assignee_details.task_id),
+            assignee_id=assignee_id,
+            user_type=assignee_details.user_type,
             is_active=assignee_details.is_active,
+            created_by=str(assignee_details.created_by),
+            updated_by=str(assignee_details.updated_by) if assignee_details.updated_by else None,
+            created_at=assignee_details.created_at,
+            updated_at=assignee_details.updated_at,
         )
 
     @classmethod
@@ -316,7 +318,7 @@ class TaskService:
         # Handle assignee updates separately
         if "assignee" in validated_data:
             assignee_info = validated_data["assignee"]
-            AssigneeTaskDetailsRepository.update_assignee(
+            TaskAssignmentRepository.update_assignee(
                 task_id,
                 assignee_info["assignee_id"],
                 assignee_info["relation_type"],
@@ -427,14 +429,14 @@ class TaskService:
 
             # Create assignee relationship if assignee is provided
             if dto.assignee:
-                assignee_relationship = AssigneeTaskDetailsModel(
+                assignee_relationship = TaskAssignmentModel(
                     assignee_id=PyObjectId(dto.assignee["assignee_id"]),
                     task_id=created_task.id,
-                    relation_type=dto.assignee["relation_type"],
+                    user_type=dto.assignee["relation_type"],
                     created_by=PyObjectId(dto.createdBy),
                     updated_by=None,
                 )
-                AssigneeTaskDetailsRepository.create(assignee_relationship)
+                TaskAssignmentRepository.create(assignee_relationship)
 
             task_dto = cls.prepare_task_dto(created_task, dto.createdBy)
             return CreateTaskResponse(data=task_dto)

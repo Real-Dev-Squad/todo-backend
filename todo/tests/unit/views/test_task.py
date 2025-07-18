@@ -29,7 +29,7 @@ from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from todo.dto.deferred_details_dto import DeferredDetailsDTO
 from rest_framework.test import APIClient
-from todo.dto.assignee_task_details_dto import AssigneeInfoDTO
+from todo.dto.task_assignment_dto import TaskAssignmentDTO
 
 
 class TaskViewTests(AuthenticatedMongoTestCase):
@@ -352,8 +352,14 @@ class CreateTaskViewTests(AuthenticatedMongoTestCase):
             description=self.valid_payload["description"],
             priority=TaskPriority[self.valid_payload["priority"]],
             status=TaskStatus[self.valid_payload["status"]],
-            assignee=AssigneeInfoDTO(
-                id=self.user_id, name="SYSTEM", relation_type="user", is_action_taken=False, is_active=True
+            assignee=TaskAssignmentDTO(
+                id="assignment-1",
+                task_id="task-1",
+                assignee_id="user-1",
+                user_type="user",
+                is_active=True,
+                created_by="user-1",
+                created_at=datetime.now(timezone.utc),
             ),
             isAcknowledged=False,
             labels=[],
@@ -485,8 +491,14 @@ class TaskDetailViewPatchTests(AuthenticatedMongoTestCase):
             description="Updated description.",
             priority=TaskPriority.HIGH.value,
             status=TaskStatus.IN_PROGRESS.value,
-            assignee=AssigneeInfoDTO(
-                id="user_assignee_id", name="SYSTEM", relation_type="user", is_action_taken=False, is_active=True
+            assignee=TaskAssignmentDTO(
+                id="assignment-1",
+                task_id="task-1",
+                assignee_id="user-1",
+                user_type="user",
+                is_active=True,
+                created_by="user-1",
+                created_at=datetime.now(timezone.utc) - timedelta(days=2),
             ),
             isAcknowledged=True,
             labels=[],

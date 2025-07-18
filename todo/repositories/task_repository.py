@@ -7,7 +7,7 @@ import logging
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.task import TaskModel
 from todo.repositories.common.mongo_repository import MongoRepository
-from todo.repositories.assignee_task_details_repository import AssigneeTaskDetailsRepository
+from todo.repositories.task_assignment_repository import TaskAssignmentRepository
 from todo.constants.messages import ApiErrors, RepositoryErrors
 from todo.constants.task import SORT_FIELD_PRIORITY, SORT_FIELD_ASSIGNEE, SORT_ORDER_DESC
 
@@ -54,7 +54,7 @@ class TaskRepository(MongoRepository):
     @classmethod
     def _get_assigned_task_ids_for_user(cls, user_id: str) -> List[ObjectId]:
         """Get task IDs where user is assigned (either directly or as team member)."""
-        direct_assignments = AssigneeTaskDetailsRepository.get_by_assignee_id(user_id, "user")
+        direct_assignments = TaskAssignmentRepository.get_by_assignee_id(user_id, "user")
         direct_task_ids = [assignment.task_id for assignment in direct_assignments]
 
         # Get teams where user is a member
@@ -66,7 +66,7 @@ class TaskRepository(MongoRepository):
         # Get tasks assigned to those teams
         team_task_ids = []
         for team_id in team_ids:
-            team_assignments = AssigneeTaskDetailsRepository.get_by_assignee_id(team_id, "team")
+            team_assignments = TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
             team_task_ids.extend([assignment.task_id for assignment in team_assignments])
 
         return direct_task_ids + team_task_ids
@@ -166,7 +166,7 @@ class TaskRepository(MongoRepository):
                 raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
 
         # Deactivate assignee relationship for this task
-        AssigneeTaskDetailsRepository.deactivate_by_task_id(str(task_id), user_id)
+        TaskAssignmentRepository.deactivate_by_task_id(str(task_id), user_id)
 
         deleted_task_data = tasks_collection.find_one_and_update(
             {"_id": task_id},

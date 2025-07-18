@@ -8,7 +8,7 @@ from todo.constants.task import TaskPriority, TaskStatus
 from todo.dto.deferred_details_dto import DeferredDetailsDTO
 from todo.dto.label_dto import LabelDTO
 from todo.dto.user_dto import UserDTO
-from todo.dto.assignee_task_details_dto import AssigneeInfoDTO
+from todo.dto.task_assignment_dto import TaskAssignmentDTO
 
 
 class TaskDTO(BaseModel):
@@ -18,7 +18,7 @@ class TaskDTO(BaseModel):
     description: str | None = None
     priority: TaskPriority | None = None
     status: TaskStatus | None = None
-    assignee: AssigneeInfoDTO | None = None
+    assignee: TaskAssignmentDTO | None = None
     isAcknowledged: bool | None = None
     labels: List[LabelDTO] = []
     startedAt: datetime | None = None

@@ -19,6 +19,7 @@ def _convert_objectids_to_str(obj):
     else:
         return obj
 
+
 class WatchlistRepository(MongoRepository):
     collection_name = WatchlistModel.collection_name
 
@@ -89,7 +90,6 @@ class WatchlistRepository(MongoRepository):
         result = next(aggregation_result, {"total": 0, "data": []})
         count = result.get("total", 0)
 
-       
         tasks = [_convert_objectids_to_str(doc) for doc in result.get("data", [])]
         tasks = [WatchlistDTO(**doc) for doc in tasks]
 

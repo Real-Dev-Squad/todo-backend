@@ -1,8 +1,8 @@
 from typing import Optional
 
-from todo.dto.task_assignment_dto import CreateTaskAssignmentDTO, TaskAssignmentResponseDTO
+from todo.dto.assignee_task_details_dto import AssigneeTaskDetailsDTO, CreateAssigneeTaskDetailsDTO
+from todo.dto.task_assignment_dto import TaskAssignmentResponseDTO
 from todo.dto.responses.create_task_assignment_response import CreateTaskAssignmentResponse
-from todo.models.task_assignment import TaskAssignmentModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_assignment_repository import TaskAssignmentRepository
 from todo.repositories.task_repository import TaskRepository
@@ -16,7 +16,7 @@ from todo.models.assignee_task_details import AssigneeTaskDetailsModel
 
 class TaskAssignmentService:
     @classmethod
-    def create_task_assignment(cls, dto: CreateTaskAssignmentDTO, user_id: str) -> CreateTaskAssignmentResponse:
+    def create_task_assignment(cls, dto: CreateAssigneeTaskDetailsDTO, user_id: str) -> CreateTaskAssignmentResponse:
         """
         Create a new task assignment with validation for task, user, and team existence.
         """
@@ -26,25 +26,25 @@ class TaskAssignmentService:
             raise TaskNotFoundException(dto.task_id)
 
         # Validate assignee exists based on user_type
-        if dto.user_type == "user":
+        if dto.relation_type == "user":
             assignee = UserRepository.get_by_id(dto.assignee_id)
             if not assignee:
                 raise UserNotFoundException(dto.assignee_id)
             assignee_name = assignee.name
-        elif dto.user_type == "team":
+        elif dto.relation_type == "team":
             assignee = TeamRepository.get_by_id(dto.assignee_id)
             if not assignee:
                 raise ValueError(f"Team not found: {dto.assignee_id}")
             assignee_name = assignee.name
         else:
-            raise ValueError("Invalid user_type")
+            raise ValueError("Invalid relation_type")
 
         # Check if task already has an active assignment
-        existing_assignment = TaskAssignmentRepository.get_by_task_id(dto.task_id)
+        existing_assignment = AssigneeTaskDetailsRepository.get_by_task_id(dto.task_id)
         if existing_assignment:
             # Update existing assignment
-            updated_assignment = TaskAssignmentRepository.update_assignment(
-                dto.task_id, dto.assignee_id, dto.user_type, user_id
+            updated_assignment = AssigneeTaskDetailsRepository.update_assignment(
+                dto.task_id, dto.assignee_id, dto.relation_type, user_id
             )
             if not updated_assignment:
                 raise ValueError("Failed to update task assignment")
@@ -52,18 +52,18 @@ class TaskAssignmentService:
             assignment = updated_assignment
         else:
             # Create new assignment
-            task_assignment = TaskAssignmentModel(
+            task_assignment = AssigneeTaskDetailsModel(
                 task_id=PyObjectId(dto.task_id),
                 assignee_id=PyObjectId(dto.assignee_id),
-                user_type=dto.user_type,
+                relation_type=dto.relation_type,
                 created_by=PyObjectId(user_id),
                 updated_by=None,
             )
 
-            assignment = TaskAssignmentRepository.create(task_assignment)
+            assignment = AssigneeTaskDetailsRepository.create(task_assignment)
 
         # Also insert into assignee_task_details if this is a team assignment
-        if dto.user_type == "team":
+        if dto.relation_type == "team":
             AssigneeTaskDetailsRepository.create(
                 AssigneeTaskDetailsModel(
                     assignee_id=PyObjectId(dto.assignee_id),
@@ -77,17 +77,16 @@ class TaskAssignmentService:
             )
 
         # Prepare response
-        response_dto = TaskAssignmentResponseDTO(
+        response_dto = AssigneeTaskDetailsDTO(
             id=str(assignment.id),
             task_id=str(assignment.task_id),
             assignee_id=str(assignment.assignee_id),
-            user_type=assignment.user_type,
+            relation_type=assignment.relation_type,
+            is_action_taken=assignment.is_action_taken,
             assignee_name=assignee_name,
             is_active=assignment.is_active,
             created_by=str(assignment.created_by),
-            updated_by=str(assignment.updated_by) if assignment.updated_by else None,
             created_at=assignment.created_at,
-            updated_at=assignment.updated_at,
         )
 
         return CreateTaskAssignmentResponse(data=response_dto)

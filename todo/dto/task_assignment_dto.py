@@ -47,7 +47,7 @@ class TaskAssignmentResponseDTO(BaseModel):
     id: str
     task_id: str
     assignee_id: str
-    user_type: Literal["user", "team"]
+    relation_type: Literal["user", "team"]
     assignee_name: str
     is_active: bool
     created_by: str

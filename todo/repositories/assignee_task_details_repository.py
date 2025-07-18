@@ -119,3 +119,67 @@ class AssigneeTaskDetailsRepository(MongoRepository):
             return result.modified_count > 0
         except Exception:
             return False
+
+    @classmethod
+    def update_assignment(
+        cls, task_id: str, assignee_id: str, user_type: str, user_id: str
+    ) -> Optional[AssigneeTaskDetailsModel]:
+        """
+        Update the assignment for a task.
+        If the same task_id and assignee_id combination exists, update it instead of creating new.
+        """
+        collection = cls.get_collection()
+        try:
+            # Convert IDs to ObjectId for consistent querying
+            task_object_id = ObjectId(task_id)
+            assignee_object_id = ObjectId(assignee_id)
+            user_object_id = ObjectId(user_id)
+
+            # Check if assignment with same task_id and assignee_id already exists
+            existing_assignment = collection.find_one(
+                {"task_id": task_object_id, "assignee_id": assignee_object_id, "is_active": True}
+            )
+
+            if existing_assignment:
+                # Update existing assignment
+                update_result = collection.update_one(
+                    {"_id": existing_assignment["_id"]},
+                    {
+                        "$set": {
+                            "relation_type": user_type,
+                            "updated_by": user_object_id,
+                            "updated_at": datetime.now(timezone.utc),
+                        }
+                    },
+                )
+
+                if update_result.modified_count > 0:
+                    # Return updated assignment
+                    updated_data = collection.find_one({"_id": existing_assignment["_id"]})
+                    return AssigneeTaskDetailsModel(**updated_data)
+                return None
+            else:
+                # Deactivate any other assignments for this task
+                collection.update_one(
+                    {"task_id": task_object_id, "is_active": True},
+                    {
+                        "$set": {
+                            "is_active": False,
+                            "updated_by": user_object_id,
+                            "updated_at": datetime.now(timezone.utc),
+                        }
+                    },
+                )
+
+                # Create new assignment
+                new_assignment = AssigneeTaskDetailsModel(
+                    task_id=task_object_id,
+                    assignee_id=assignee_object_id,
+                    relation_type=user_type,
+                    created_by=user_object_id,
+                    updated_by=None,
+                )
+
+                return cls.create(new_assignment)
+        except Exception:
+            return None

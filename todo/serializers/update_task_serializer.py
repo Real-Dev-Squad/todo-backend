@@ -8,7 +8,9 @@ from todo.constants.messages import ValidationErrors
 
 class UpdateTaskSerializer(serializers.Serializer):
     title = serializers.CharField(required=False, allow_blank=True, max_length=255, help_text="Title of the task")
-    description = serializers.CharField(required=False, allow_blank=True, allow_null=True, help_text="Description of the task")
+    description = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, help_text="Description of the task"
+    )
     priority = serializers.ChoiceField(
         required=False,
         choices=[priority.name for priority in TaskPriority],
@@ -21,16 +23,24 @@ class UpdateTaskSerializer(serializers.Serializer):
         allow_null=True,
         help_text="Status of the task (TODO, IN_PROGRESS, DONE)",
     )
-    assignee_id = serializers.CharField(required=False, allow_null=True, help_text="User or team ID to assign the task to")
-    user_type = serializers.ChoiceField(required=False, choices=["user", "team"], allow_null=True, help_text="Type of assignee: 'user' or 'team'")
+    assignee_id = serializers.CharField(
+        required=False, allow_null=True, help_text="User or team ID to assign the task to"
+    )
+    user_type = serializers.ChoiceField(
+        required=False, choices=["user", "team"], allow_null=True, help_text="Type of assignee: 'user' or 'team'"
+    )
     labels = serializers.ListField(
         child=serializers.CharField(),
         required=False,
         allow_null=True,
         help_text="List of label IDs",
     )
-    dueAt = serializers.DateTimeField(required=False, allow_null=True, help_text="Due date and time in ISO format (UTC)")
-    startedAt = serializers.DateTimeField(required=False, allow_null=True, help_text="Start date and time in ISO format (UTC)")
+    dueAt = serializers.DateTimeField(
+        required=False, allow_null=True, help_text="Due date and time in ISO format (UTC)"
+    )
+    startedAt = serializers.DateTimeField(
+        required=False, allow_null=True, help_text="Start date and time in ISO format (UTC)"
+    )
     isAcknowledged = serializers.BooleanField(required=False, help_text="Whether the task is acknowledged")
 
     def validate_title(self, value):
@@ -75,7 +85,9 @@ class UpdateTaskSerializer(serializers.Serializer):
         user_type = data.pop("user_type", None)
         if assignee_id and user_type:
             if not ObjectId.is_valid(assignee_id):
-                raise serializers.ValidationError({"assignee_id": ValidationErrors.INVALID_OBJECT_ID.format(assignee_id)})
+                raise serializers.ValidationError(
+                    {"assignee_id": ValidationErrors.INVALID_OBJECT_ID.format(assignee_id)}
+                )
             if user_type not in ["user", "team"]:
                 raise serializers.ValidationError({"user_type": "user_type must be either 'user' or 'team'"})
             data["assignee"] = {"assignee_id": assignee_id, "user_type": user_type}

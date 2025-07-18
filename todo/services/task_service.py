@@ -168,6 +168,12 @@ class TaskService:
     def _prepare_label_dtos(cls, label_ids: List[str]) -> List[LabelDTO]:
         label_models = LabelRepository.list_by_ids(label_ids)
 
+        def prepare_label_user_dto(user_id: str) -> UserDTO:
+            if user_id == "system":
+                return UserDTO(id="system", name="System")
+            else:
+                return cls.prepare_user_dto(user_id)
+
         return [
             LabelDTO(
                 id=str(label_model.id),
@@ -175,8 +181,8 @@ class TaskService:
                 color=label_model.color,
                 createdAt=label_model.createdAt,
                 updatedAt=label_model.updatedAt if hasattr(label_model, "updatedAt") else None,
-                createdBy=cls.prepare_user_dto(label_model.createdBy),
-                updatedBy=cls.prepare_user_dto(label_model.updatedBy)
+                createdBy=prepare_label_user_dto(label_model.createdBy) if label_model.createdBy else None,
+                updatedBy=prepare_label_user_dto(label_model.updatedBy)
                 if hasattr(label_model, "updatedBy") and label_model.updatedBy
                 else None,
             )
@@ -401,13 +407,15 @@ class TaskService:
                     )
                 )
 
+        task_labels = [PyObjectId(label_id) for label_id in dto.labels] if dto.labels else []
+
         task = TaskModel(
             id=None,
             title=dto.title,
             description=dto.description,
             priority=dto.priority,
             status=dto.status,
-            labels=dto.labels,
+            labels=task_labels,
             dueAt=dto.dueAt,
             startedAt=started_at,
             createdAt=now,

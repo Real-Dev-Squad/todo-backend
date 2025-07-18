@@ -4,6 +4,7 @@ from bson import ObjectId
 
 from todo.models.task_assignment import TaskAssignmentModel
 from todo.repositories.common.mongo_repository import MongoRepository
+from todo.models.common.pyobjectid import PyObjectId
 
 
 class TaskAssignmentRepository(MongoRepository):
@@ -94,12 +95,12 @@ class TaskAssignmentRepository(MongoRepository):
                 },
             )
 
-            # Create new assignment
             new_assignment = TaskAssignmentModel(
-                task_id=ObjectId(task_id),
-                assignee_id=ObjectId(assignee_id),
+                _id=PyObjectId(),
+                task_id=PyObjectId(task_id),
+                assignee_id=PyObjectId(assignee_id),
                 user_type=user_type,
-                created_by=ObjectId(user_id),
+                created_by=PyObjectId(user_id),
                 updated_by=None,
             )
 

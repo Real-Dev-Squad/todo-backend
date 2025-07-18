@@ -1,9 +1,6 @@
 from http import HTTPStatus
 from django.urls import reverse
-from bson import ObjectId
 from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
-from datetime import datetime, timezone
-from todo.dto.task_assignment_dto import TaskAssignmentDTO
 
 
 class TaskProfileAPIIntegrationTest(AuthenticatedMongoTestCase):

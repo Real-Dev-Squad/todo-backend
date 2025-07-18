@@ -9,8 +9,6 @@ from todo.constants.task import (
     SORT_ORDER_ASC,
     SORT_ORDER_DESC,
 )
-from todo.dto.task_assignment_dto import TaskAssignmentDTO
-from datetime import datetime
 
 
 class TaskSortingIntegrationTest(AuthenticatedMongoTestCase):

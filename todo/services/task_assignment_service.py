@@ -29,12 +29,10 @@ class TaskAssignmentService:
             assignee = UserRepository.get_by_id(dto.assignee_id)
             if not assignee:
                 raise UserNotFoundException(dto.assignee_id)
-            assignee_name = assignee.name
         elif dto.user_type == "team":
             assignee = TeamRepository.get_by_id(dto.assignee_id)
             if not assignee:
                 raise ValueError(f"Team not found: {dto.assignee_id}")
-            assignee_name = assignee.name
         else:
             raise ValueError("Invalid user_type")
 

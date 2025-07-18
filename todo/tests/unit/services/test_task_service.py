@@ -851,6 +851,120 @@ class TaskServiceUpdateWithAssigneeTests(TestCase):
         self.assertEqual(result_dto, mock_dto_response)
 
 
+class TaskServiceUpdateWithAssigneeFromDictTests(TestCase):
+    def setUp(self):
+        self.task_id_str = str(ObjectId())
+        self.user_id_str = str(ObjectId())
+        self.assignee_id_str = str(ObjectId())
+        self.default_task_model = TaskModel(
+            id=ObjectId(self.task_id_str),
+            displayId="#TSK1",
+            title="Original Task Title",
+            description="Original Description",
+            priority=TaskPriority.MEDIUM,
+            status=TaskStatus.TODO,
+            createdBy=self.user_id_str,
+            createdAt=datetime.now(timezone.utc) - timedelta(days=2),
+        )
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskRepository.update")
+    @patch("todo.services.task_service.TaskAssignmentRepository.update_assignment")
+    @patch("todo.services.task_service.UserRepository.get_by_id")
+    @patch("todo.services.task_service.TaskService.prepare_task_dto")
+    def test_update_task_with_assignee_from_dict_success(
+        self, mock_prepare_dto, mock_user_get_by_id, mock_update_assignment, mock_repo_update, mock_repo_get_by_id
+    ):
+        mock_user_get_by_id.return_value = MagicMock()
+        mock_repo_get_by_id.return_value = self.default_task_model
+
+        updated_task_model = self.default_task_model.model_copy(deep=True)
+        updated_task_model.title = "Updated Title"
+        updated_task_model.status = TaskStatus.IN_PROGRESS
+        mock_repo_update.return_value = updated_task_model
+
+        mock_update_assignment.return_value = MagicMock()
+
+        mock_dto_response = MagicMock(spec=TaskDTO)
+        mock_prepare_dto.return_value = mock_dto_response
+
+        # Validated data with task and assignee updates
+        validated_data = {
+            "title": "Updated Title",
+            "status": TaskStatus.IN_PROGRESS.name,
+            "assignee": {"assignee_id": self.assignee_id_str, "user_type": "user"},
+        }
+
+        result_dto = TaskService.update_task_with_assignee_from_dict(self.task_id_str, validated_data, self.user_id_str)
+
+        mock_repo_get_by_id.assert_called_once_with(self.task_id_str)
+        mock_user_get_by_id.assert_called_once_with(self.assignee_id_str)
+        mock_repo_update.assert_called_once()
+        mock_update_assignment.assert_called_once_with(self.task_id_str, self.assignee_id_str, "user", self.user_id_str)
+        mock_prepare_dto.assert_called_once_with(updated_task_model, self.user_id_str)
+
+        self.assertEqual(result_dto, mock_dto_response)
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.UserRepository.get_by_id")
+    @patch("todo.services.task_service.TaskService.prepare_task_dto")
+    def test_update_task_with_assignee_from_dict_partial_update_only_assignee(
+        self, mock_prepare_dto, mock_user_get_by_id, mock_repo_get_by_id
+    ):
+        mock_repo_get_by_id.return_value = self.default_task_model
+        mock_user_get_by_id.return_value = MagicMock()
+        mock_dto_response = MagicMock(spec=TaskDTO)
+        mock_prepare_dto.return_value = mock_dto_response
+
+        # Only update assignee, no task fields
+        validated_data = {
+            "assignee": {"assignee_id": self.assignee_id_str, "user_type": "user"},
+        }
+
+        result_dto = TaskService.update_task_with_assignee_from_dict(self.task_id_str, validated_data, self.user_id_str)
+
+        # Should not call update since no task fields changed
+        mock_prepare_dto.assert_called_once_with(self.default_task_model, self.user_id_str)
+        self.assertEqual(result_dto, mock_dto_response)
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    @patch("todo.services.task_service.TaskRepository.update")
+    @patch("todo.services.task_service.TaskService.prepare_task_dto")
+    def test_update_task_with_assignee_from_dict_partial_update_only_title(
+        self, mock_prepare_dto, mock_repo_update, mock_repo_get_by_id
+    ):
+        mock_repo_get_by_id.return_value = self.default_task_model
+
+        updated_task_model = self.default_task_model.model_copy(deep=True)
+        updated_task_model.title = "New Title"
+        mock_repo_update.return_value = updated_task_model
+
+        mock_dto_response = MagicMock(spec=TaskDTO)
+        mock_prepare_dto.return_value = mock_dto_response
+
+        # Only update title, no assignee
+        validated_data = {
+            "title": "New Title",
+        }
+
+        result_dto = TaskService.update_task_with_assignee_from_dict(self.task_id_str, validated_data, self.user_id_str)
+
+        mock_repo_update.assert_called_once()
+        mock_prepare_dto.assert_called_once_with(updated_task_model, self.user_id_str)
+        self.assertEqual(result_dto, mock_dto_response)
+
+    @patch("todo.services.task_service.TaskRepository.get_by_id")
+    def test_update_task_with_assignee_from_dict_task_not_found(self, mock_repo_get_by_id):
+        mock_repo_get_by_id.return_value = None
+
+        validated_data = {"title": "Updated Title"}
+
+        with self.assertRaises(TaskNotFoundException) as context:
+            TaskService.update_task_with_assignee_from_dict(self.task_id_str, validated_data, self.user_id_str)
+
+        self.assertEqual(str(context.exception), ApiErrors.TASK_NOT_FOUND.format(self.task_id_str))
+
+
 class TaskServiceDeferTests(TestCase):
     def setUp(self):
         self.task_id = str(ObjectId())

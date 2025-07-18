@@ -71,7 +71,7 @@ class UsersView(APIView):
                 )
             userData = userData.model_dump(mode="json", exclude_none=True)
             userResponse = {
-                "userId": userData["id"],
+                "id": userData["id"],
                 "email": userData["email_id"],
                 "name": userData.get("name"),
                 "picture": userData.get("picture"),

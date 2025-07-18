@@ -12,7 +12,7 @@ class TaskDeleteAPIIntegrationTest(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.db.tasks.delete_many({})
-        self.db.assignee_task_details.delete_many({})
+        self.db.task_details.delete_many({})
 
         task_doc = tasks_db_data[0].copy()
         task_doc["_id"] = task_doc.pop("id")
@@ -36,7 +36,7 @@ class TaskDeleteAPIIntegrationTest(AuthenticatedMongoTestCase):
             "created_at": datetime.now(timezone.utc),
             "updated_at": None,
         }
-        self.db.assignee_task_details.insert_one(assignee_details)
+        self.db.task_details.insert_one(assignee_details)
 
         self.existing_task_id = str(task_doc["_id"])
         self.non_existent_id = str(ObjectId())

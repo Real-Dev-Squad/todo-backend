@@ -5,7 +5,7 @@ from bson import ObjectId
 from datetime import datetime, timezone
 
 from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
-from todo.dto.task_assignment_dto import TaskAssignmentResponseDTO
+from todo.dto.task_assignment_dto import TaskAssignmentDTO
 from todo.dto.responses.create_task_assignment_response import CreateTaskAssignmentResponse
 
 
@@ -28,17 +28,14 @@ class TaskAssignmentViewTests(AuthenticatedMongoTestCase):
     @patch("todo.services.task_assignment_service.TaskAssignmentService.create_task_assignment")
     def test_create_user_assignment_success(self, mock_create_assignment):
         # Mock service response
-        response_dto = TaskAssignmentResponseDTO(
+        response_dto = TaskAssignmentDTO(
             id=str(ObjectId()),
             task_id=self.task_id,
             assignee_id=str(self.user_id),
             user_type="user",
-            assignee_name="Test User",
             is_active=True,
             created_by=str(self.user_id),
-            updated_by=None,
             created_at=datetime.now(timezone.utc),
-            updated_at=None,
         )
         mock_create_assignment.return_value = CreateTaskAssignmentResponse(data=response_dto)
 
@@ -53,17 +50,14 @@ class TaskAssignmentViewTests(AuthenticatedMongoTestCase):
     @patch("todo.services.task_assignment_service.TaskAssignmentService.create_task_assignment")
     def test_create_team_assignment_success(self, mock_create_assignment):
         # Mock service response
-        response_dto = TaskAssignmentResponseDTO(
+        response_dto = TaskAssignmentDTO(
             id=str(ObjectId()),
             task_id=self.task_id,
             assignee_id=self.team_id,
             user_type="team",
-            assignee_name="Test Team",
             is_active=True,
             created_by=str(self.user_id),
-            updated_by=None,
             created_at=datetime.now(timezone.utc),
-            updated_at=None,
         )
         mock_create_assignment.return_value = CreateTaskAssignmentResponse(data=response_dto)
 
@@ -112,17 +106,14 @@ class TaskAssignmentDetailViewTests(AuthenticatedMongoTestCase):
     @patch("todo.services.task_assignment_service.TaskAssignmentService.get_task_assignment")
     def test_get_task_assignment_success(self, mock_get_assignment):
         # Mock service response
-        response_dto = TaskAssignmentResponseDTO(
+        response_dto = TaskAssignmentDTO(
             id=str(ObjectId()),
             task_id=self.task_id,
             assignee_id=str(self.user_id),
             user_type="user",
-            assignee_name="Test User",
             is_active=True,
             created_by=str(self.user_id),
-            updated_by=None,
             created_at=datetime.now(timezone.utc),
-            updated_at=None,
         )
         mock_get_assignment.return_value = response_dto
 

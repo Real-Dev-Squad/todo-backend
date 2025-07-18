@@ -173,3 +173,37 @@ class TaskAssignmentRepository(MongoRepository):
             return result.modified_count > 0
         except Exception:
             return False
+
+    @classmethod
+    def deactivate_by_task_id(cls, task_id: str, user_id: str) -> bool:
+        """
+        Deactivate all assignments for a specific task by setting is_active to False.
+        """
+        collection = cls.get_collection()
+        try:
+            # Try with ObjectId first
+            result = collection.update_many(
+                {"task_id": ObjectId(task_id), "is_active": True},
+                {
+                    "$set": {
+                        "is_active": False,
+                        "updated_by": ObjectId(user_id),
+                        "updated_at": datetime.now(timezone.utc),
+                    }
+                },
+            )
+            if result.modified_count == 0:
+                # Try with string if ObjectId doesn't work
+                result = collection.update_many(
+                    {"task_id": task_id, "is_active": True},
+                    {
+                        "$set": {
+                            "is_active": False,
+                            "updated_by": ObjectId(user_id),
+                            "updated_at": datetime.now(timezone.utc),
+                        }
+                    },
+                )
+            return result.modified_count > 0
+        except Exception:
+            return False

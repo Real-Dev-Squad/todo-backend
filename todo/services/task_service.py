@@ -291,13 +291,13 @@ class TaskService:
         if validated_data.get("assignee"):
             assignee_info = validated_data["assignee"]
             assignee_id = assignee_info.get("assignee_id")
-            relation_type = assignee_info.get("relation_type")
+            user_type = assignee_info.get("user_type")
 
-            if relation_type == "user":
+            if user_type == "user":
                 assignee_data = UserRepository.get_by_id(assignee_id)
                 if not assignee_data:
                     raise UserNotFoundException(assignee_id)
-            elif relation_type == "team":
+            elif user_type == "team":
                 team_data = TeamRepository.get_by_id(assignee_id)
                 if not team_data:
                     raise ValueError(f"Team not found: {assignee_id}")
@@ -321,7 +321,7 @@ class TaskService:
             TaskAssignmentRepository.update_assignee(
                 task_id,
                 assignee_info["assignee_id"],
-                assignee_info["relation_type"],
+                assignee_info["user_type"],
                 user_id,
             )
 
@@ -396,13 +396,13 @@ class TaskService:
         # Validate assignee
         if dto.assignee:
             assignee_id = dto.assignee.get("assignee_id")
-            relation_type = dto.assignee.get("relation_type")
+            user_type = dto.assignee.get("user_type")
 
-            if relation_type == "user":
+            if user_type == "user":
                 user = UserRepository.get_by_id(assignee_id)
                 if not user:
                     raise UserNotFoundException(assignee_id)
-            elif relation_type == "team":
+            elif user_type == "team":
                 team = TeamRepository.get_by_id(assignee_id)
                 if not team:
                     raise ValueError(f"Team not found: {assignee_id}")
@@ -432,7 +432,7 @@ class TaskService:
                 assignee_relationship = TaskAssignmentModel(
                     assignee_id=PyObjectId(dto.assignee["assignee_id"]),
                     task_id=created_task.id,
-                    user_type=dto.assignee["relation_type"],
+                    user_type=dto.assignee["user_type"],
                     created_by=PyObjectId(dto.createdBy),
                     updated_by=None,
                 )

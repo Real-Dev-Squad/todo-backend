@@ -285,7 +285,9 @@ class TaskService:
 
         for field, value in validated_data.items():
             if field == "labels":
-                update_payload[field] = cls._process_labels_for_update(value)
+                update_payload[field] = cls._process_labels_for_update(
+                    value
+                )  # Only convert to ObjectId, do not check existence
             elif field in enum_fields:
                 update_payload[field] = cls._process_enum_for_update(enum_fields[field], value)
             elif field in cls.DIRECT_ASSIGNMENT_FIELDS:
@@ -380,26 +382,7 @@ class TaskService:
                 if not team:
                     raise ValueError(f"Team not found: {assignee_id}")
 
-        if dto.labels:
-            label_object_ids = [PyObjectId(label_id) for label_id in dto.labels]
-            existing_labels = LabelRepository.list_by_ids(label_object_ids)
-            if len(existing_labels) != len(dto.labels):
-                found_ids = [str(label.id) for label in existing_labels]
-                missing_ids = [label_id for label_id in dto.labels if label_id not in found_ids]
-
-                raise ValueError(
-                    ApiErrorResponse(
-                        statusCode=400,
-                        message=ApiErrors.INVALID_LABELS,
-                        errors=[
-                            ApiErrorDetail(
-                                source={ApiErrorSource.PARAMETER: "labels"},
-                                title=ApiErrors.INVALID_LABEL_IDS,
-                                detail=ValidationErrors.MISSING_LABEL_IDS.format(", ".join(missing_ids)),
-                            )
-                        ],
-                    )
-                )
+        # Removed label existence check
 
         task = TaskModel(
             id=None,

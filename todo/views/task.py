@@ -335,7 +335,7 @@ class AssignTaskToUserView(APIView):
 
         try:
             dto = CreateTaskAssignmentDTO(
-                task_id=task_id, assignee_id=serializer.validated_data["assignee_id"], relation_type="user"
+                task_id=task_id, assignee_id=serializer.validated_data["assignee_id"], user_type="user"
             )
             response: CreateTaskAssignmentResponse = TaskAssignmentService.create_task_assignment(dto, user["user_id"])
             return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)

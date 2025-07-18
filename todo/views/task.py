@@ -7,6 +7,7 @@ from rest_framework.exceptions import AuthenticationFailed, ValidationError
 from django.conf import settings
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
+from todo.dto.assignee_task_details_dto import CreateAssigneeTaskDetailsDTO
 from todo.middlewares.jwt_auth import get_current_user_info
 from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer
 from todo.serializers.create_task_serializer import CreateTaskSerializer
@@ -26,8 +27,7 @@ from todo.constants.messages import ValidationErrors
 from todo.dto.responses.get_tasks_response import GetTasksResponse
 from todo.serializers.create_task_assignment_serializer import AssignTaskToUserSerializer
 from todo.services.task_assignment_service import TaskAssignmentService
-from todo.dto.task_assignment_dto import CreateTaskAssignmentDTO
-from todo.dto.responses.create_task_assignment_response import CreateTaskAssignmentResponse
+from todo.dto.responses.create_task_assignment_response import CreateTaskAssignmentResponse 
 
 
 class TaskListView(APIView):
@@ -334,8 +334,8 @@ class AssignTaskToUserView(APIView):
             return Response(data={"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            dto = CreateTaskAssignmentDTO(
-                task_id=task_id, assignee_id=serializer.validated_data["assignee_id"], user_type="user"
+            dto = CreateAssigneeTaskDetailsDTO(
+                task_id=task_id, assignee_id=serializer.validated_data["assignee_id"], relation_type="user"
             )
             response: CreateTaskAssignmentResponse = TaskAssignmentService.create_task_assignment(dto, user["user_id"])
             return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)

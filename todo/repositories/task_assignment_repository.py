@@ -153,8 +153,9 @@ class TaskAssignmentRepository(MongoRepository):
                 {"task_id": ObjectId(task_id), "is_active": True},
                 {
                     "$set": {
-                        "assignee_id": ObjectId(executor_id),
-                        "updated_by": ObjectId(user_id),
+                        "assignee_id": executor_id,
+                        "user_type": "user",
+                        "updated_by": user_id,
                         "updated_at": datetime.now(timezone.utc),
                     }
                 },
@@ -165,8 +166,9 @@ class TaskAssignmentRepository(MongoRepository):
                     {"task_id": task_id, "is_active": True},
                     {
                         "$set": {
-                            "assignee_id": ObjectId(executor_id),
-                            "updated_by": ObjectId(user_id),
+                            "assignee_id": executor_id,
+                            "user_type": "user",
+                            "updated_by": user_id,
                             "updated_at": datetime.now(timezone.utc),
                         }
                     },

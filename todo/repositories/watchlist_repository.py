@@ -137,10 +137,9 @@ class WatchlistRepository(MongoRepository):
                                                 "$cond": {
                                                     "if": {"$gt": [{"$size": "$assignee_user"}, 0]},
                                                     "then": {
-                                                        "id": {"$toString": {"$arrayElemAt": ["$assignee_user._id", 0]}},
-                                                        "name": {"$arrayElemAt": ["$assignee_user.name", 0]},
-                                                        "email": {"$arrayElemAt": ["$assignee_user.email_id", 0]},
-                                                        "type": "user"
+                                                        "assignee_id": {"$toString": {"$arrayElemAt": ["$assignee_user._id", 0]}},
+                                                        "assignee_name": {"$arrayElemAt": ["$assignee_user.name", 0]},
+                                                        "user_type": "user"
                                                     },
                                                     "else": {
                                                         "$cond": {
@@ -211,20 +210,18 @@ class WatchlistRepository(MongoRepository):
                 user = UserRepository.get_by_id(assignee_id)
                 if user:
                     return {
-                        "id": assignee_id,
-                        "name": user.name,
-                        "email": user.email_id,
-                        "type": "user"
+                        "assignee_id": assignee_id,
+                        "assignee_name": user.name,
+                        "user_type": "user"
                     }
             elif user_type == "team":
                 # Get team details
                 team = TeamRepository.get_by_id(assignee_id)
                 if team:
                     return {
-                        "id": assignee_id,
-                        "name": team.name,
-                        "email": f"{team.name}@team",
-                        "type": "team"
+                        "assignee_id": assignee_id,
+                        "assignee_name": team.name,
+                        "user_type": "team"
                     }
                     
         except Exception:

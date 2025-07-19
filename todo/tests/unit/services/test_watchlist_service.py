@@ -46,14 +46,10 @@ class TestWatchlistService(TestCase):
         user_id = str(ObjectId())
         task_id = str(ObjectId())
         assignee_id = str(ObjectId())
-        
+
         # Create mock assignee data (who the task belongs to)
-        assignee_dto = AssigneeDTO(
-            assignee_id=assignee_id,
-            assignee_name="John Doe",
-            user_type="user"
-        )
-        
+        assignee_dto = AssigneeDTO(assignee_id=assignee_id, assignee_name="John Doe", user_type="user")
+
         # Create mock watchlist task with assignee
         mock_watchlist_task = WatchlistDTO(
             taskId=task_id,
@@ -69,31 +65,30 @@ class TestWatchlistService(TestCase):
             createdAt=datetime.now(timezone.utc),
             createdBy=user_id,
             watchlistId=str(ObjectId()),
-            assignee=assignee_dto
+            assignee=assignee_dto,
         )
 
         with patch("todo.services.watchlist_service.WatchlistRepository.get_watchlisted_tasks") as mock_get:
             mock_get.return_value = (1, [mock_watchlist_task])
-            
+
             result = WatchlistService.get_watchlisted_tasks(page=1, limit=10, user_id=user_id)
-            
+
             self.assertIsInstance(result, GetWatchlistTasksResponse)
             self.assertEqual(len(result.tasks), 1)
             self.assertEqual(result.tasks[0].taskId, task_id)
             self.assertEqual(result.tasks[0].title, "Test Task")
-            
+
             # Verify assignee details are included (who the task belongs to)
             self.assertIsNotNone(result.tasks[0].assignee)
-            self.assertEqual(result.tasks[0].assignee.id, assignee_id)
-            self.assertEqual(result.tasks[0].assignee.name, "John Doe")
-            self.assertEqual(result.tasks[0].assignee.email, "john@example.com")
-            self.assertEqual(result.tasks[0].assignee.type, "user")
+            self.assertEqual(result.tasks[0].assignee.assignee_id, assignee_id)
+            self.assertEqual(result.tasks[0].assignee.assignee_name, "John Doe")
+            self.assertEqual(result.tasks[0].assignee.user_type, "user")
 
     def test_get_watchlisted_tasks_without_assignee(self):
         """Test getting watchlisted tasks without assignee details (unassigned task)"""
         user_id = str(ObjectId())
         task_id = str(ObjectId())
-        
+
         # Create mock watchlist task without assignee (unassigned task)
         mock_watchlist_task = WatchlistDTO(
             taskId=task_id,
@@ -109,19 +104,19 @@ class TestWatchlistService(TestCase):
             createdAt=datetime.now(timezone.utc),
             createdBy=user_id,
             watchlistId=str(ObjectId()),
-            assignee=None
+            assignee=None,
         )
 
         with patch("todo.services.watchlist_service.WatchlistRepository.get_watchlisted_tasks") as mock_get:
             mock_get.return_value = (1, [mock_watchlist_task])
-            
+
             result = WatchlistService.get_watchlisted_tasks(page=1, limit=10, user_id=user_id)
-            
+
             self.assertIsInstance(result, GetWatchlistTasksResponse)
             self.assertEqual(len(result.tasks), 1)
             self.assertEqual(result.tasks[0].taskId, task_id)
             self.assertEqual(result.tasks[0].title, "Unassigned Task")
-            
+
             # Verify assignee is None (task belongs to no one)
             self.assertIsNone(result.tasks[0].assignee)
 

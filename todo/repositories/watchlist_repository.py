@@ -78,7 +78,7 @@ class WatchlistRepository(MongoRepository):
                                             "$expr": {
                                                 "$and": [
                                                     {"$eq": ["$task_id", {"$toObjectId": "$$taskIdStr"}]},
-                                                    {"$eq": ["$is_active", True]}
+                                                    {"$eq": ["$is_active", True]},
                                                 ]
                                             }
                                         }
@@ -97,7 +97,7 @@ class WatchlistRepository(MongoRepository):
                                             "$expr": {
                                                 "$and": [
                                                     {"$eq": ["$_id", "$$assigneeId"]},
-                                                    {"$eq": [{"$arrayElemAt": ["$assignment.user_type", 0]}, "user"]}
+                                                    {"$eq": [{"$arrayElemAt": ["$assignment.user_type", 0]}, "user"]},
                                                 ]
                                             }
                                         }
@@ -116,7 +116,7 @@ class WatchlistRepository(MongoRepository):
                                             "$expr": {
                                                 "$and": [
                                                     {"$eq": ["$_id", "$$assigneeId"]},
-                                                    {"$eq": [{"$arrayElemAt": ["$assignment.user_type", 0]}, "team"]}
+                                                    {"$eq": [{"$arrayElemAt": ["$assignment.user_type", 0]}, "team"]},
                                                 ]
                                             }
                                         }
@@ -137,24 +137,31 @@ class WatchlistRepository(MongoRepository):
                                                 "$cond": {
                                                     "if": {"$gt": [{"$size": "$assignee_user"}, 0]},
                                                     "then": {
-                                                        "assignee_id": {"$toString": {"$arrayElemAt": ["$assignee_user._id", 0]}},
+                                                        "assignee_id": {
+                                                            "$toString": {"$arrayElemAt": ["$assignee_user._id", 0]}
+                                                        },
                                                         "assignee_name": {"$arrayElemAt": ["$assignee_user.name", 0]},
-                                                        "user_type": "user"
+                                                        "user_type": "user",
                                                     },
                                                     "else": {
                                                         "$cond": {
                                                             "if": {"$gt": [{"$size": "$assignee_team"}, 0]},
                                                             "then": {
-                                                                "id": {"$toString": {"$arrayElemAt": ["$assignee_team._id", 0]}},
-                                                                "name": {"$arrayElemAt": ["$assignee_team.name", 0]},
-                                                                "email": {"$concat": [{"$arrayElemAt": ["$assignee_team.name", 0]}, "@team"]},
-                                                                "type": "team"
+                                                                "assignee_id": {
+                                                                    "$toString": {
+                                                                        "$arrayElemAt": ["$assignee_team._id", 0]
+                                                                    }
+                                                                },
+                                                                "assignee_name": {
+                                                                    "$arrayElemAt": ["$assignee_team.name", 0]
+                                                                },
+                                                                "user_type": "team",
                                                             },
-                                                            "else": None
+                                                            "else": None,
                                                         }
-                                                    }
+                                                    },
                                                 }
-                                            }
+                                            },
                                         },
                                     ]
                                 }
@@ -174,7 +181,7 @@ class WatchlistRepository(MongoRepository):
         count = result.get("total", 0)
 
         tasks = [_convert_objectids_to_str(doc) for doc in result.get("data", [])]
-        
+
         # If assignee is null, try to fetch it separately
         for task in tasks:
             if not task.get("assignee"):
@@ -191,43 +198,35 @@ class WatchlistRepository(MongoRepository):
         """
         if not task_id:
             return None
-            
+
         try:
             from todo.repositories.task_assignment_repository import TaskAssignmentRepository
             from todo.repositories.user_repository import UserRepository
             from todo.repositories.team_repository import TeamRepository
-            
+
             # Get task assignment
             assignment = TaskAssignmentRepository.get_by_task_id(task_id)
             if not assignment:
                 return None
-                
+
             assignee_id = str(assignment.assignee_id)
             user_type = assignment.user_type
-            
+
             if user_type == "user":
                 # Get user details
                 user = UserRepository.get_by_id(assignee_id)
                 if user:
-                    return {
-                        "assignee_id": assignee_id,
-                        "assignee_name": user.name,
-                        "user_type": "user"
-                    }
+                    return {"assignee_id": assignee_id, "assignee_name": user.name, "user_type": "user"}
             elif user_type == "team":
                 # Get team details
                 team = TeamRepository.get_by_id(assignee_id)
                 if team:
-                    return {
-                        "assignee_id": assignee_id,
-                        "assignee_name": team.name,
-                        "user_type": "team"
-                    }
-                    
+                    return {"assignee_id": assignee_id, "assignee_name": team.name, "user_type": "team"}
+
         except Exception:
             # If any error occurs, return None
             return None
-            
+
         return None
 
     @classmethod

@@ -37,6 +37,7 @@ class TaskAssignmentDTO(BaseModel):
     assignee_id: str
     assignee_name: Optional[str] = None
     user_type: Literal["user", "team"]
+    executor_id: Optional[str] = None  # User ID executing the task (for team assignments)
     is_active: bool
     created_by: str
     updated_by: Optional[str] = None
@@ -50,6 +51,7 @@ class TaskAssignmentResponseDTO(BaseModel):
     assignee_id: str
     user_type: Literal["user", "team"]
     assignee_name: Optional[str] = None
+    executor_id: Optional[str] = None  # User ID executing the task (for team assignments)
     is_active: bool
     created_by: str
     updated_by: Optional[str] = None

@@ -175,6 +175,7 @@ class TaskAssignmentDetailView(APIView):
     def patch(self, request: Request, task_id: str):
         """
         Set or update the executor for a team-assigned task. Only the SPOC can perform this action.
+        For user assignments, this endpoint is not applicable.
         """
         user = get_current_user_info(request)
         if not user:
@@ -187,11 +188,19 @@ class TaskAssignmentDetailView(APIView):
         # Fetch the assignment and check if it's a team assignment
         from todo.repositories.task_assignment_repository import TaskAssignmentRepository
         from todo.repositories.team_repository import TeamRepository
+        from todo.repositories.user_repository import UserRepository
 
         assignment = TaskAssignmentRepository.get_by_task_id(task_id)
-        if not assignment or assignment.user_type != "team":
+        if not assignment:
             return Response(
-                {"error": "Task is not assigned to a team or does not exist."}, status=status.HTTP_404_NOT_FOUND
+                {"error": "Task assignment not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check if it's a team assignment
+        if assignment.user_type != "team":
+            return Response(
+                {"error": "This endpoint is only for team assignments. For user assignments, the assignee is the executor."}, 
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         # Only SPOC can update executor
@@ -200,12 +209,33 @@ class TaskAssignmentDetailView(APIView):
                 {"error": "Only the SPOC can update executor for this team task."}, status=status.HTTP_403_FORBIDDEN
             )
 
-        # Update executor_id
-        from todo.repositories.task_assignment_repository import TaskAssignmentRepository
+        # Validate that the executor_id user exists
+        executor_user = UserRepository.get_by_id(executor_id)
+        if not executor_user:
+            return Response(
+                {"error": f"User with ID {executor_id} does not exist."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
-        updated = TaskAssignmentRepository.update_executor(task_id, executor_id, user["user_id"])
-        if not updated:
-            return Response({"error": "Failed to update executor."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # Validate that the executor is a member of the team
+        if not TeamRepository.is_user_team_member(str(assignment.assignee_id), executor_id):
+            return Response(
+                {"error": f"User {executor_id} is not a member of the team."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update executor_id
+        try:
+            updated = TaskAssignmentRepository.update_executor(task_id, executor_id, user["user_id"])
+            if not updated:
+                # Get more details about why it failed
+                import traceback
+                print(f"DEBUG: update_executor failed for task_id={task_id}, executor_id={executor_id}, user_id={user['user_id']}")
+                print(f"DEBUG: assignment details: {assignment}")
+                return Response({"error": "Failed to update executor. Check server logs for details."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            print(f"DEBUG: Exception in update_executor: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response({"error": f"Exception during update: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Audit log
         from todo.models.audit_log import AuditLogModel

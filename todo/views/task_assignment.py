@@ -192,15 +192,15 @@ class TaskAssignmentDetailView(APIView):
 
         assignment = TaskAssignmentRepository.get_by_task_id(task_id)
         if not assignment:
-            return Response(
-                {"error": "Task assignment not found."}, status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"error": "Task assignment not found."}, status=status.HTTP_404_NOT_FOUND)
 
         # Check if it's a team assignment
         if assignment.user_type != "team":
             return Response(
-                {"error": "This endpoint is only for team assignments. For user assignments, the assignee is the executor."}, 
-                status=status.HTTP_400_BAD_REQUEST
+                {
+                    "error": "This endpoint is only for team assignments. For user assignments, the assignee is the executor."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Only SPOC can update executor
@@ -228,14 +228,23 @@ class TaskAssignmentDetailView(APIView):
             if not updated:
                 # Get more details about why it failed
                 import traceback
-                print(f"DEBUG: update_executor failed for task_id={task_id}, executor_id={executor_id}, user_id={user['user_id']}")
+
+                print(
+                    f"DEBUG: update_executor failed for task_id={task_id}, executor_id={executor_id}, user_id={user['user_id']}"
+                )
                 print(f"DEBUG: assignment details: {assignment}")
-                return Response({"error": "Failed to update executor. Check server logs for details."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response(
+                    {"error": "Failed to update executor. Check server logs for details."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
         except Exception as e:
             print(f"DEBUG: Exception in update_executor: {str(e)}")
             import traceback
+
             traceback.print_exc()
-            return Response({"error": f"Exception during update: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": f"Exception during update: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
         # Audit log
         from todo.models.audit_log import AuditLogModel

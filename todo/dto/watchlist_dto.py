@@ -6,10 +6,9 @@ from todo.constants.task import TaskPriority, TaskStatus
 
 
 class AssigneeDTO(BaseModel):
-    id: str
-    name: str
-    email: str
-    type: str  # "user" or "team"
+    assignee_id: str
+    assignee_name: str
+    user_type: str  # "user" or "team"
 
 
 class WatchlistDTO(BaseModel):

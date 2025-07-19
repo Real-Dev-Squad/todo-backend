@@ -49,10 +49,9 @@ class TestWatchlistService(TestCase):
         
         # Create mock assignee data (who the task belongs to)
         assignee_dto = AssigneeDTO(
-            id=assignee_id,
-            name="John Doe",
-            email="john@example.com",
-            type="user"
+            assignee_id=assignee_id,
+            assignee_name="John Doe",
+            user_type="user"
         )
         
         # Create mock watchlist task with assignee

@@ -24,11 +24,11 @@ class PostgreSQLDatabaseManager:
     def _get_connection_params(self) -> Dict[str, Any]:
         """Get PostgreSQL connection parameters from Django settings."""
         return {
+            "user": settings.POSTGRES_CONFIG["USER"],
+            "password": settings.POSTGRES_CONFIG["PASSWORD"],
             "host": settings.POSTGRES_CONFIG["HOST"],
             "port": settings.POSTGRES_CONFIG["PORT"],
             "database": settings.POSTGRES_CONFIG["DATABASE"],
-            "user": settings.POSTGRES_CONFIG["USER"],
-            "password": settings.POSTGRES_CONFIG["PASSWORD"],
         }
 
     def get_connection(self) -> psycopg2.extensions.connection:

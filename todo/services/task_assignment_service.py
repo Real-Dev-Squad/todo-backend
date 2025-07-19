@@ -1,8 +1,7 @@
 from typing import Optional
 
-from todo.dto.task_assignment_dto import CreateTaskAssignmentDTO, TaskAssignmentResponseDTO
+from todo.dto.task_assignment_dto import TaskAssignmentResponseDTO, CreateTaskAssignmentDTO
 from todo.dto.responses.create_task_assignment_response import CreateTaskAssignmentResponse
-from todo.models.task_assignment import TaskAssignmentModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_assignment_repository import TaskAssignmentRepository
 from todo.repositories.task_repository import TaskRepository
@@ -10,8 +9,8 @@ from todo.repositories.user_repository import UserRepository
 from todo.repositories.team_repository import TeamRepository
 from todo.exceptions.user_exceptions import UserNotFoundException
 from todo.exceptions.task_exceptions import TaskNotFoundException
-from todo.repositories.assignee_task_details_repository import AssigneeTaskDetailsRepository
-from todo.models.assignee_task_details import AssigneeTaskDetailsModel
+from todo.models.task_assignment import TaskAssignmentModel
+from todo.dto.task_assignment_dto import TaskAssignmentDTO
 
 
 class TaskAssignmentService:
@@ -30,12 +29,10 @@ class TaskAssignmentService:
             assignee = UserRepository.get_by_id(dto.assignee_id)
             if not assignee:
                 raise UserNotFoundException(dto.assignee_id)
-            assignee_name = assignee.name
         elif dto.user_type == "team":
             assignee = TeamRepository.get_by_id(dto.assignee_id)
             if not assignee:
                 raise ValueError(f"Team not found: {dto.assignee_id}")
-            assignee_name = assignee.name
         else:
             raise ValueError("Invalid user_type")
 
@@ -62,27 +59,26 @@ class TaskAssignmentService:
 
             assignment = TaskAssignmentRepository.create(task_assignment)
 
-        # Also insert into assignee_task_details if this is a team assignment
-        if dto.user_type == "team":
-            AssigneeTaskDetailsRepository.create(
-                AssigneeTaskDetailsModel(
-                    assignee_id=PyObjectId(dto.assignee_id),
-                    task_id=PyObjectId(dto.task_id),
-                    relation_type="team",
-                    is_action_taken=False,
-                    is_active=True,
-                    created_by=PyObjectId(user_id),
-                    updated_by=None,
-                )
-            )
+        # Also insert into assignee_task_details if this is a team assignment (legacy, can be removed if not needed)
+        # if dto.user_type == "team":
+        #     TaskAssignmentRepository.create(
+        #         TaskAssignmentModel(
+        #             assignee_id=PyObjectId(dto.assignee_id),
+        #             task_id=PyObjectId(dto.task_id),
+        #             user_type="team",
+        #             is_active=True,
+        #             created_by=PyObjectId(user_id),
+        #             updated_by=None,
+        #         )
+        #     )
 
         # Prepare response
-        response_dto = TaskAssignmentResponseDTO(
+        response_dto = TaskAssignmentDTO(
             id=str(assignment.id),
             task_id=str(assignment.task_id),
             assignee_id=str(assignment.assignee_id),
             user_type=assignment.user_type,
-            assignee_name=assignee_name,
+            executor_id=str(assignment.executor_id) if assignment.executor_id else None,
             is_active=assignment.is_active,
             created_by=str(assignment.created_by),
             updated_by=str(assignment.updated_by) if assignment.updated_by else None,
@@ -117,6 +113,7 @@ class TaskAssignmentService:
             assignee_id=str(assignment.assignee_id),
             user_type=assignment.user_type,
             assignee_name=assignee_name,
+            executor_id=str(assignment.executor_id) if assignment.executor_id else None,
             is_active=assignment.is_active,
             created_by=str(assignment.created_by),
             updated_by=str(assignment.updated_by) if assignment.updated_by else None,

@@ -4,6 +4,7 @@ from bson import ObjectId
 
 from todo.models.task_assignment import TaskAssignmentModel
 from todo.repositories.common.mongo_repository import MongoRepository
+from todo.models.common.pyobjectid import PyObjectId
 
 
 class TaskAssignmentRepository(MongoRepository):
@@ -94,12 +95,12 @@ class TaskAssignmentRepository(MongoRepository):
                 },
             )
 
-            # Create new assignment
             new_assignment = TaskAssignmentModel(
-                task_id=ObjectId(task_id),
-                assignee_id=ObjectId(assignee_id),
+                _id=PyObjectId(),
+                task_id=PyObjectId(task_id),
+                assignee_id=PyObjectId(assignee_id),
                 user_type=user_type,
-                created_by=ObjectId(user_id),
+                created_by=PyObjectId(user_id),
                 updated_by=None,
             )
 
@@ -128,6 +129,75 @@ class TaskAssignmentRepository(MongoRepository):
             if result.modified_count == 0:
                 # Try with string if ObjectId doesn't work
                 result = collection.update_one(
+                    {"task_id": task_id, "is_active": True},
+                    {
+                        "$set": {
+                            "is_active": False,
+                            "updated_by": ObjectId(user_id),
+                            "updated_at": datetime.now(timezone.utc),
+                        }
+                    },
+                )
+            return result.modified_count > 0
+        except Exception:
+            return False
+
+    @classmethod
+    def update_executor(cls, task_id: str, executor_id: str, user_id: str) -> bool:
+        """
+        Update the executor_id for the active assignment of the given task_id.
+        """
+        collection = cls.get_collection()
+        try:
+            result = collection.update_one(
+                {"task_id": ObjectId(task_id), "is_active": True},
+                {
+                    "$set": {
+                        "assignee_id": executor_id,
+                        "user_type": "user",
+                        "updated_by": user_id,
+                        "updated_at": datetime.now(timezone.utc),
+                    }
+                },
+            )
+            if result.modified_count == 0:
+                # Try with string if ObjectId doesn't work
+                result = collection.update_one(
+                    {"task_id": task_id, "is_active": True},
+                    {
+                        "$set": {
+                            "assignee_id": executor_id,
+                            "user_type": "user",
+                            "updated_by": user_id,
+                            "updated_at": datetime.now(timezone.utc),
+                        }
+                    },
+                )
+            return result.modified_count > 0
+        except Exception:
+            return False
+
+    @classmethod
+    def deactivate_by_task_id(cls, task_id: str, user_id: str) -> bool:
+        """
+        Deactivate all assignments for a specific task by setting is_active to False.
+        """
+        collection = cls.get_collection()
+        try:
+            # Try with ObjectId first
+            result = collection.update_many(
+                {"task_id": ObjectId(task_id), "is_active": True},
+                {
+                    "$set": {
+                        "is_active": False,
+                        "updated_by": ObjectId(user_id),
+                        "updated_at": datetime.now(timezone.utc),
+                    }
+                },
+            )
+            if result.modified_count == 0:
+                # Try with string if ObjectId doesn't work
+                result = collection.update_many(
                     {"task_id": task_id, "is_active": True},
                     {
                         "$set": {

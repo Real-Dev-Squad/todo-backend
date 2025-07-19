@@ -4,23 +4,26 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from urllib.parse import urlencode
 from datetime import datetime, timezone, timedelta
-from rest_framework.exceptions import ValidationError as DRFValidationError
 from todo.dto.deferred_details_dto import DeferredDetailsDTO
 from todo.dto.label_dto import LabelDTO
 from todo.dto.task_dto import TaskDTO, CreateTaskDTO
 from todo.dto.user_dto import UserDTO
-from todo.dto.assignee_task_details_dto import AssigneeInfoDTO
 from todo.dto.responses.get_tasks_response import GetTasksResponse
 from todo.dto.responses.create_task_response import CreateTaskResponse
-from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
+from todo.dto.responses.error_response import (
+    ApiErrorResponse,
+    ApiErrorDetail,
+    ApiErrorSource,
+)
 from todo.dto.responses.paginated_response import LinksData
 from todo.exceptions.user_exceptions import UserNotFoundException
 from todo.models.task import TaskModel, DeferredDetailsModel
-from todo.models.assignee_task_details import AssigneeTaskDetailsModel
+from todo.models.task_assignment import TaskAssignmentModel
+from todo.repositories.task_assignment_repository import TaskAssignmentRepository
+from todo.dto.task_assignment_dto import TaskAssignmentDTO
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.label_repository import LabelRepository
-from todo.repositories.assignee_task_details_repository import AssigneeTaskDetailsRepository
 from todo.repositories.team_repository import TeamRepository
 from todo.constants.task import (
     TaskStatus,
@@ -49,7 +52,13 @@ class PaginationConfig:
 
 
 class TaskService:
-    DIRECT_ASSIGNMENT_FIELDS = {"title", "description", "dueAt", "startedAt", "isAcknowledged"}
+    DIRECT_ASSIGNMENT_FIELDS = {
+        "title",
+        "description",
+        "dueAt",
+        "startedAt",
+        "isAcknowledged",
+    }
 
     @classmethod
     def get_tasks(
@@ -64,6 +73,20 @@ class TaskService:
         try:
             cls._validate_pagination_params(page, limit)
 
+            # If team_id is provided, only allow team members to fetch tasks
+            if team_id:
+                from todo.repositories.team_repository import TeamRepository
+
+                if not TeamRepository.is_user_team_member(team_id, user_id):
+                    return GetTasksResponse(
+                        tasks=[],
+                        links=None,
+                        error={
+                            "message": "Only team members can view team tasks.",
+                            "code": "FORBIDDEN",
+                        },
+                    )
+
             tasks = TaskRepository.list(page, limit, sort_by, order, user_id, team_id=team_id)
             total_count = TaskRepository.count(user_id, team_id=team_id)
 
@@ -77,11 +100,20 @@ class TaskService:
             return GetTasksResponse(tasks=task_dtos, links=links)
 
         except ValidationError as e:
-            return GetTasksResponse(tasks=[], links=None, error={"message": str(e), "code": "VALIDATION_ERROR"})
+            return GetTasksResponse(
+                tasks=[],
+                links=None,
+                error={"message": str(e), "code": "VALIDATION_ERROR"},
+            )
 
         except Exception:
             return GetTasksResponse(
-                tasks=[], links=None, error={"message": ApiErrors.UNEXPECTED_ERROR_OCCURRED, "code": "INTERNAL_ERROR"}
+                tasks=[],
+                links=None,
+                error={
+                    "message": ApiErrors.UNEXPECTED_ERROR_OCCURRED,
+                    "code": "INTERNAL_ERROR",
+                },
             )
 
     @classmethod
@@ -126,7 +158,7 @@ class TaskService:
             cls.prepare_deferred_details_dto(task_model.deferredDetails) if task_model.deferredDetails else None
         )
 
-        assignee_details = AssigneeTaskDetailsRepository.get_by_task_id(str(task_model.id))
+        assignee_details = TaskAssignmentRepository.get_by_task_id(str(task_model.id))
         assignee_dto = cls._prepare_assignee_dto(assignee_details) if assignee_details else None
 
         # Check if task is in user's watchlist
@@ -165,25 +197,19 @@ class TaskService:
                 id=str(label_model.id),
                 name=label_model.name,
                 color=label_model.color,
-                createdAt=label_model.createdAt,
-                updatedAt=label_model.updatedAt if hasattr(label_model, "updatedAt") else None,
-                createdBy=cls.prepare_user_dto(label_model.createdBy),
-                updatedBy=cls.prepare_user_dto(label_model.updatedBy)
-                if hasattr(label_model, "updatedBy") and label_model.updatedBy
-                else None,
             )
             for label_model in label_models
         ]
 
     @classmethod
-    def _prepare_assignee_dto(cls, assignee_details: AssigneeTaskDetailsModel) -> AssigneeInfoDTO:
+    def _prepare_assignee_dto(cls, assignee_details: TaskAssignmentModel) -> TaskAssignmentDTO:
         """Prepare assignee DTO from assignee task details."""
         assignee_id = str(assignee_details.assignee_id)
 
-        # Get assignee details based on relation type
-        if assignee_details.relation_type == "user":
+        # Get assignee details based on user_type
+        if assignee_details.user_type == "user":
             assignee = UserRepository.get_by_id(assignee_id)
-        elif assignee_details.relation_type == "team":
+        elif assignee_details.user_type == "team":
             assignee = TeamRepository.get_by_id(assignee_id)
         else:
             return None
@@ -191,12 +217,17 @@ class TaskService:
         if not assignee:
             return None
 
-        return AssigneeInfoDTO(
-            id=assignee_id,
-            name=assignee.name,
-            relation_type=assignee_details.relation_type,
-            is_action_taken=assignee_details.is_action_taken,
+        return TaskAssignmentDTO(
+            id=str(assignee_details.id),
+            task_id=str(assignee_details.task_id),
+            assignee_id=assignee_id,
+            assignee_name=assignee.name,
+            user_type=assignee_details.user_type,
             is_active=assignee_details.is_active,
+            created_by=str(assignee_details.created_by),
+            updated_by=str(assignee_details.updated_by) if assignee_details.updated_by else None,
+            created_at=assignee_details.created_at,
+            updated_at=assignee_details.updated_at,
         )
 
     @classmethod
@@ -235,15 +266,6 @@ class TaskService:
             return []
 
         label_object_ids = [PyObjectId(label_id_str) for label_id_str in raw_labels]
-
-        if label_object_ids:
-            existing_labels = LabelRepository.list_by_ids(label_object_ids)
-            if len(existing_labels) != len(label_object_ids):
-                found_db_ids_str = {str(label.id) for label in existing_labels}
-                missing_ids_str = [str(py_id) for py_id in label_object_ids if str(py_id) not in found_db_ids_str]
-                raise DRFValidationError(
-                    {"labels": [ValidationErrors.MISSING_LABEL_IDS.format(", ".join(missing_ids_str))]}
-                )
         return label_object_ids
 
     @classmethod
@@ -270,13 +292,13 @@ class TaskService:
         if validated_data.get("assignee"):
             assignee_info = validated_data["assignee"]
             assignee_id = assignee_info.get("assignee_id")
-            relation_type = assignee_info.get("relation_type")
+            user_type = assignee_info.get("user_type")
 
-            if relation_type == "user":
+            if user_type == "user":
                 assignee_data = UserRepository.get_by_id(assignee_id)
                 if not assignee_data:
                     raise UserNotFoundException(assignee_id)
-            elif relation_type == "team":
+            elif user_type == "team":
                 team_data = TeamRepository.get_by_id(assignee_id)
                 if not team_data:
                     raise ValueError(f"Team not found: {assignee_id}")
@@ -286,7 +308,9 @@ class TaskService:
 
         for field, value in validated_data.items():
             if field == "labels":
-                update_payload[field] = cls._process_labels_for_update(value)
+                update_payload[field] = cls._process_labels_for_update(
+                    value
+                )  # Only convert to ObjectId, do not check existence
             elif field in enum_fields:
                 update_payload[field] = cls._process_enum_for_update(enum_fields[field], value)
             elif field in cls.DIRECT_ASSIGNMENT_FIELDS:
@@ -295,8 +319,11 @@ class TaskService:
         # Handle assignee updates separately
         if "assignee" in validated_data:
             assignee_info = validated_data["assignee"]
-            AssigneeTaskDetailsRepository.update_assignee(
-                task_id, assignee_info["assignee_id"], assignee_info["relation_type"], user_id
+            TaskAssignmentRepository.update_assignee(
+                task_id,
+                assignee_info["assignee_id"],
+                assignee_info["user_type"],
+                user_id,
             )
 
         if not update_payload:
@@ -307,6 +334,168 @@ class TaskService:
 
         if not updated_task:
             raise TaskNotFoundException(task_id)
+
+        return cls.prepare_task_dto(updated_task, user_id)
+
+    @classmethod
+    def update_task_with_assignee_from_dict(cls, task_id: str, validated_data: dict, user_id: str) -> TaskDTO:
+        """
+        Update both task details and assignee information in a single operation using validated data dict.
+        This allows for true partial updates without requiring all fields.
+        """
+        current_task = TaskRepository.get_by_id(task_id)
+
+        if not current_task:
+            raise TaskNotFoundException(task_id)
+
+        # Check if user is the creator
+        if current_task.createdBy != user_id:
+            # Check if user is assigned to this task
+            assigned_task_ids = TaskRepository._get_assigned_task_ids_for_user(user_id)
+            if current_task.id not in assigned_task_ids:
+                raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+
+        # Validate assignee if provided
+        if validated_data.get("assignee"):
+            assignee_info = validated_data["assignee"]
+            assignee_id = assignee_info.get("assignee_id")
+            user_type = assignee_info.get("user_type")
+
+            if user_type == "user":
+                user_data = UserRepository.get_by_id(assignee_id)
+                if not user_data:
+                    raise UserNotFoundException(assignee_id)
+            elif user_type == "team":
+                team_data = TeamRepository.get_by_id(assignee_id)
+                if not team_data:
+                    raise ValueError(f"Team not found: {assignee_id}")
+
+        # Prepare update payload for task fields
+        update_payload = {}
+        enum_fields = {"priority": TaskPriority, "status": TaskStatus}
+
+        # Process task fields from validated_data
+        for field, value in validated_data.items():
+            if field == "assignee":
+                continue  # Handle assignee separately
+
+            # Skip if the value is the same as current task
+            current_value = getattr(current_task, field, None)
+            if current_value == value:
+                continue
+
+            if field == "labels":
+                update_payload[field] = cls._process_labels_for_update(value)
+            elif field in enum_fields:
+                # For enums, we need to get the name if it's an enum instance, or process as string
+                if hasattr(value, "name"):
+                    update_payload[field] = value.value
+                else:
+                    update_payload[field] = cls._process_enum_for_update(enum_fields[field], value)
+            elif field in cls.DIRECT_ASSIGNMENT_FIELDS:
+                update_payload[field] = value
+
+        # Handle startedAt logic
+        if validated_data.get("status") == TaskStatus.IN_PROGRESS and not current_task.startedAt:
+            update_payload["startedAt"] = datetime.now(timezone.utc)
+
+        # Update task if there are changes
+        if update_payload:
+            update_payload["updatedBy"] = user_id
+            updated_task = TaskRepository.update(task_id, update_payload)
+            if not updated_task:
+                raise TaskNotFoundException(task_id)
+        else:
+            updated_task = current_task
+
+        # Handle assignee updates
+        if validated_data.get("assignee"):
+            TaskAssignmentRepository.update_assignment(
+                task_id,
+                validated_data["assignee"]["assignee_id"],
+                validated_data["assignee"]["user_type"],
+                user_id,
+            )
+
+        return cls.prepare_task_dto(updated_task, user_id)
+
+    @classmethod
+    def update_task_with_assignee(cls, task_id: str, dto: CreateTaskDTO, user_id: str) -> TaskDTO:
+        """
+        Update both task details and assignee information in a single operation.
+        Similar to create_task but for updates.
+        """
+        current_task = TaskRepository.get_by_id(task_id)
+
+        if not current_task:
+            raise TaskNotFoundException(task_id)
+
+        # Check if user is the creator
+        if current_task.createdBy != user_id:
+            # Check if user is assigned to this task
+            assigned_task_ids = TaskRepository._get_assigned_task_ids_for_user(user_id)
+            if current_task.id not in assigned_task_ids:
+                raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+
+        # Validate assignee if provided
+        if dto.assignee:
+            assignee_id = dto.assignee.get("assignee_id")
+            user_type = dto.assignee.get("user_type")
+
+            if user_type == "user":
+                user_data = UserRepository.get_by_id(assignee_id)
+                if not user_data:
+                    raise UserNotFoundException(assignee_id)
+            elif user_type == "team":
+                team_data = TeamRepository.get_by_id(assignee_id)
+                if not team_data:
+                    raise ValueError(f"Team not found: {assignee_id}")
+
+        # Prepare update payload for task fields
+        update_payload = {}
+        enum_fields = {"priority": TaskPriority, "status": TaskStatus}
+
+        # Process task fields from DTO
+        dto_data = dto.model_dump(exclude_none=True, exclude={"assignee", "createdBy"})
+
+        for field, value in dto_data.items():
+            # Skip if the value is the same as current task
+            current_value = getattr(current_task, field, None)
+            if current_value == value:
+                continue
+
+            if field == "labels":
+                update_payload[field] = cls._process_labels_for_update(value)
+            elif field in enum_fields:
+                # For enums, we need to get the name if it's an enum instance, or process as string
+                if hasattr(value, "name"):
+                    update_payload[field] = value.value
+                else:
+                    update_payload[field] = cls._process_enum_for_update(enum_fields[field], value)
+            elif field in cls.DIRECT_ASSIGNMENT_FIELDS:
+                update_payload[field] = value
+
+        # Handle startedAt logic
+        if dto.status == TaskStatus.IN_PROGRESS and not current_task.startedAt:
+            update_payload["startedAt"] = datetime.now(timezone.utc)
+
+        # Update task if there are changes
+        if update_payload:
+            update_payload["updatedBy"] = user_id
+            updated_task = TaskRepository.update(task_id, update_payload)
+            if not updated_task:
+                raise TaskNotFoundException(task_id)
+        else:
+            updated_task = current_task
+
+        # Handle assignee updates
+        if dto.assignee:
+            TaskAssignmentRepository.update_assignment(
+                task_id,
+                dto.assignee["assignee_id"],
+                dto.assignee["user_type"],
+                user_id,
+            )
 
         return cls.prepare_task_dto(updated_task, user_id)
 
@@ -370,36 +559,18 @@ class TaskService:
         # Validate assignee
         if dto.assignee:
             assignee_id = dto.assignee.get("assignee_id")
-            relation_type = dto.assignee.get("relation_type")
+            user_type = dto.assignee.get("user_type")
 
-            if relation_type == "user":
+            if user_type == "user":
                 user = UserRepository.get_by_id(assignee_id)
                 if not user:
                     raise UserNotFoundException(assignee_id)
-            elif relation_type == "team":
+            elif user_type == "team":
                 team = TeamRepository.get_by_id(assignee_id)
                 if not team:
                     raise ValueError(f"Team not found: {assignee_id}")
 
-        if dto.labels:
-            existing_labels = LabelRepository.list_by_ids(dto.labels)
-            if len(existing_labels) != len(dto.labels):
-                found_ids = [str(label.id) for label in existing_labels]
-                missing_ids = [label_id for label_id in dto.labels if label_id not in found_ids]
-
-                raise ValueError(
-                    ApiErrorResponse(
-                        statusCode=400,
-                        message=ApiErrors.INVALID_LABELS,
-                        errors=[
-                            ApiErrorDetail(
-                                source={ApiErrorSource.PARAMETER: "labels"},
-                                title=ApiErrors.INVALID_LABEL_IDS,
-                                detail=ValidationErrors.MISSING_LABEL_IDS.format(", ".join(missing_ids)),
-                            )
-                        ],
-                    )
-                )
+        # Removed label existence check
 
         task = TaskModel(
             id=None,
@@ -421,14 +592,14 @@ class TaskService:
 
             # Create assignee relationship if assignee is provided
             if dto.assignee:
-                assignee_relationship = AssigneeTaskDetailsModel(
+                assignee_relationship = TaskAssignmentModel(
                     assignee_id=PyObjectId(dto.assignee["assignee_id"]),
                     task_id=created_task.id,
-                    relation_type=dto.assignee["relation_type"],
+                    user_type=dto.assignee["user_type"],
                     created_by=PyObjectId(dto.createdBy),
                     updated_by=None,
                 )
-                AssigneeTaskDetailsRepository.create(assignee_relationship)
+                TaskAssignmentRepository.create(assignee_relationship)
 
             task_dto = cls.prepare_task_dto(created_task, dto.createdBy)
             return CreateTaskResponse(data=task_dto)
@@ -443,7 +614,7 @@ class TaskService:
                         ApiErrorDetail(
                             source={ApiErrorSource.PARAMETER: "task_repository"},
                             title=ApiErrors.UNEXPECTED_ERROR,
-                            detail=str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR,
+                            detail=(str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR),
                         )
                     ],
                 )
@@ -457,7 +628,7 @@ class TaskService:
                         ApiErrorDetail(
                             source={ApiErrorSource.PARAMETER: "server"},
                             title=ApiErrors.UNEXPECTED_ERROR,
-                            detail=str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR,
+                            detail=(str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR),
                         )
                     ],
                 )
@@ -472,7 +643,10 @@ class TaskService:
 
     @classmethod
     def get_tasks_for_user(
-        cls, user_id: str, page: int = PaginationConfig.DEFAULT_PAGE, limit: int = PaginationConfig.DEFAULT_LIMIT
+        cls,
+        user_id: str,
+        page: int = PaginationConfig.DEFAULT_PAGE,
+        limit: int = PaginationConfig.DEFAULT_LIMIT,
     ) -> GetTasksResponse:
         cls._validate_pagination_params(page, limit)
         tasks = TaskRepository.get_tasks_for_user(user_id, page, limit)

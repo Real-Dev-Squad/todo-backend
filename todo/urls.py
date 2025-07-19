@@ -1,5 +1,5 @@
 from django.urls import path
-from todo.views.task import TaskListView, TaskDetailView
+from todo.views.task import TaskListView, TaskDetailView, TaskUpdateView
 from todo.views.health import HealthView
 from todo.views.user import UsersView
 from todo.views.auth import GoogleLoginView, GoogleCallbackView, LogoutView
@@ -9,6 +9,8 @@ from todo.views.team import TeamListView, TeamDetailView, JoinTeamByInviteCodeVi
 from todo.views.watchlist import WatchlistListView, WatchlistDetailView, WatchlistCheckView
 from todo.views.task_assignment import TaskAssignmentView, TaskAssignmentDetailView
 from todo.views.postgres_health import PostgresHealthView
+from todo.views.task import AssignTaskToUserView
+
 
 urlpatterns = [
     path("teams", TeamListView.as_view(), name="teams"),
@@ -17,6 +19,8 @@ urlpatterns = [
     path("teams/<str:team_id>/members", AddTeamMembersView.as_view(), name="add_team_members"),
     path("tasks", TaskListView.as_view(), name="tasks"),
     path("tasks/<str:task_id>", TaskDetailView.as_view(), name="task_detail"),
+    path("tasks/<str:task_id>/update", TaskUpdateView.as_view(), name="update_task_and_assignee"),
+    path("tasks/<str:task_id>/assign", AssignTaskToUserView.as_view(), name="assign_task_to_user"),
     path("task-assignments", TaskAssignmentView.as_view(), name="task_assignments"),
     path("task-assignments/<str:task_id>", TaskAssignmentDetailView.as_view(), name="task_assignment_detail"),
     path("roles", RoleListView.as_view(), name="roles"),

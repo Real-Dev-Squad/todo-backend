@@ -12,7 +12,7 @@ class TaskUpdateAPIIntegrationTest(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.db.tasks.delete_many({})
-        self.db.assignee_task_details.delete_many({})
+        self.db.task_details.delete_many({})
 
         doc = tasks_db_data[0].copy()
         self.task_id = ObjectId()
@@ -30,7 +30,7 @@ class TaskUpdateAPIIntegrationTest(AuthenticatedMongoTestCase):
             "_id": ObjectId(),
             "assignee_id": ObjectId(self.user_id),
             "task_id": self.task_id,
-            "relation_type": "user",
+            "user_type": "user",
             "is_action_taken": False,
             "is_active": True,
             "created_by": ObjectId(self.user_id),
@@ -38,7 +38,7 @@ class TaskUpdateAPIIntegrationTest(AuthenticatedMongoTestCase):
             "created_at": datetime.now(timezone.utc),
             "updated_at": None,
         }
-        self.db.assignee_task_details.insert_one(assignee_details)
+        self.db.task_details.insert_one(assignee_details)
 
         self.valid_id = str(self.task_id)
         self.missing_id = str(ObjectId())

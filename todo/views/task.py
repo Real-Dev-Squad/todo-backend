@@ -24,6 +24,11 @@ from todo.dto.responses.error_response import (
 from todo.constants.messages import ApiErrors
 from todo.constants.messages import ValidationErrors
 from todo.dto.responses.get_tasks_response import GetTasksResponse
+from todo.serializers.create_task_assignment_serializer import AssignTaskToUserSerializer
+from todo.services.task_assignment_service import TaskAssignmentService
+from todo.dto.responses.create_task_assignment_response import CreateTaskAssignmentResponse
+from todo.dto.task_assignment_dto import CreateTaskAssignmentDTO
+from todo.exceptions.task_exceptions import TaskNotFoundException
 
 
 class TaskListView(APIView):
@@ -250,7 +255,7 @@ class TaskDetailView(APIView):
                 name="action",
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
-                description="Action to perform: 'update' or 'defer'",
+                description="Action to perform: TODO, IN_PROGRESS, DONE",
             ),
         ],
         request=UpdateTaskSerializer,
@@ -292,3 +297,145 @@ class TaskDetailView(APIView):
             raise ValidationError({"action": ValidationErrors.UNSUPPORTED_ACTION.format(action)})
 
         return Response(data=updated_task_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
+
+
+class TaskUpdateView(APIView):
+    @extend_schema(
+        operation_id="update_task_and_assignee",
+        summary="Update task and assignee details",
+        description="Update both task details and assignee information in a single request. Similar to task creation but for updates.",
+        tags=["tasks"],
+        parameters=[
+            OpenApiParameter(
+                name="task_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the task to update",
+                required=True,
+            ),
+        ],
+        request=UpdateTaskSerializer,
+        responses={
+            200: OpenApiResponse(description="Task and assignee updated successfully"),
+            400: OpenApiResponse(description="Bad request"),
+            404: OpenApiResponse(description="Task not found"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+    )
+    def patch(self, request: Request, task_id: str):
+        """
+        Update both task details and assignee information in a single request.
+        Similar to task creation but for updates.
+        """
+        user = get_current_user_info(request)
+        if not user:
+            raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
+
+        serializer = UpdateTaskSerializer(data=request.data, partial=True)
+
+        if not serializer.is_valid():
+            return self._handle_validation_errors(serializer.errors)
+
+        try:
+            # Update the task using the service with validated data
+            updated_task_dto = TaskService.update_task_with_assignee_from_dict(
+                task_id=task_id, validated_data=serializer.validated_data, user_id=user["user_id"]
+            )
+
+            return Response(data=updated_task_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
+
+        except (ValueError, TaskNotFoundException, PermissionError) as e:
+            if isinstance(e, ValueError) and e.args and isinstance(e.args[0], ApiErrorResponse):
+                error_response = e.args[0]
+                return Response(
+                    data=error_response.model_dump(mode="json"),
+                    status=error_response.statusCode,
+                )
+
+            fallback_response = ApiErrorResponse(
+                statusCode=500,
+                message=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
+                errors=[{"detail": (str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR)}],
+            )
+            return Response(
+                data=fallback_response.model_dump(mode="json"),
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def _handle_validation_errors(self, errors):
+        formatted_errors = []
+        for field, messages in errors.items():
+            if isinstance(messages, list):
+                for message in messages:
+                    formatted_errors.append(
+                        ApiErrorDetail(
+                            source={ApiErrorSource.PARAMETER: field},
+                            title=ApiErrors.VALIDATION_ERROR,
+                            detail=str(message),
+                        )
+                    )
+            else:
+                formatted_errors.append(
+                    ApiErrorDetail(
+                        source={ApiErrorSource.PARAMETER: field},
+                        title=ApiErrors.VALIDATION_ERROR,
+                        detail=str(messages),
+                    )
+                )
+
+        error_response = ApiErrorResponse(statusCode=400, message=ApiErrors.VALIDATION_ERROR, errors=formatted_errors)
+
+        return Response(
+            data=error_response.model_dump(mode="json"),
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class AssignTaskToUserView(APIView):
+    @extend_schema(
+        operation_id="assign_task_to_user",
+        summary="Assign task to a user",
+        description="Assign a task to a user by user ID. Only authorized users can perform this action.",
+        tags=["task-assignments"],
+        request=AssignTaskToUserSerializer,
+        parameters=[
+            OpenApiParameter(
+                name="task_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the task",
+                required=True,
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(response=CreateTaskAssignmentResponse, description="Task assigned successfully"),
+            400: OpenApiResponse(
+                response=ApiErrorResponse, description="Bad request - validation error or assignee not found"
+            ),
+            404: OpenApiResponse(response=ApiErrorResponse, description="Task not found"),
+            401: OpenApiResponse(response=ApiErrorResponse, description="Unauthorized"),
+            500: OpenApiResponse(response=ApiErrorResponse, description="Internal server error"),
+        },
+    )
+    def patch(self, request: Request, task_id: str):
+        user = get_current_user_info(request)
+        if not user:
+            raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
+
+        serializer = AssignTaskToUserSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(data={"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            dto = CreateTaskAssignmentDTO(
+                task_id=task_id, assignee_id=serializer.validated_data["assignee_id"], user_type="user"
+            )
+            response: CreateTaskAssignmentResponse = TaskAssignmentService.create_task_assignment(dto, user["user_id"])
+            return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
+        except Exception as e:
+            error_response = ApiErrorResponse(
+                statusCode=500,
+                message=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
+                errors=[{"detail": str(e)}],
+            )
+            return Response(data=error_response.model_dump(mode="json"), status=status.HTTP_500_INTERNAL_SERVER_ERROR)

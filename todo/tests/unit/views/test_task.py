@@ -29,7 +29,7 @@ from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from todo.dto.deferred_details_dto import DeferredDetailsDTO
 from rest_framework.test import APIClient
-from todo.dto.assignee_task_details_dto import AssigneeInfoDTO
+from todo.dto.task_assignment_dto import TaskAssignmentDTO
 
 
 class TaskViewTests(AuthenticatedMongoTestCase):
@@ -338,7 +338,7 @@ class CreateTaskViewTests(AuthenticatedMongoTestCase):
             "description": "Cover all core paths",
             "priority": "HIGH",
             "status": "IN_PROGRESS",
-            "assignee": {"assignee_id": self.user_id, "relation_type": "user"},
+            "assignee": {"assignee_id": self.user_id, "user_type": "user"},
             "labels": [],
             "dueAt": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat().replace("+00:00", "Z"),
         }
@@ -352,8 +352,15 @@ class CreateTaskViewTests(AuthenticatedMongoTestCase):
             description=self.valid_payload["description"],
             priority=TaskPriority[self.valid_payload["priority"]],
             status=TaskStatus[self.valid_payload["status"]],
-            assignee=AssigneeInfoDTO(
-                id=self.user_id, name="SYSTEM", relation_type="user", is_action_taken=False, is_active=True
+            assignee=TaskAssignmentDTO(
+                id="assignment-1",
+                task_id="task-1",
+                assignee_id="user-1",
+                user_type="user",
+                is_active=True,
+                created_by="user-1",
+                created_at=datetime.now(timezone.utc),
+                assignee_name="SYSTEM",
             ),
             isAcknowledged=False,
             labels=[],
@@ -471,6 +478,149 @@ class TaskDeleteViewTests(AuthenticatedMongoTestCase):
         self.assertIn(ValidationErrors.INVALID_TASK_ID_FORMAT, response.data["message"])
 
 
+class TaskUpdateViewTests(AuthenticatedMongoTestCase):
+    def setUp(self):
+        super().setUp()
+        self.task_id_str = str(ObjectId())
+        self.task_url = f"/v1/tasks/{self.task_id_str}/update"
+
+        # Create a mock task DTO for testing
+        self.updated_task_dto_fixture = TaskDTO(
+            id=self.task_id_str,
+            displayId="#TSK1",
+            title="Updated Task Title",
+            description="Updated Description",
+            priority=TaskPriority.HIGH,
+            status=TaskStatus.IN_PROGRESS,
+            labels=[],
+            dueAt=datetime.now(timezone.utc) + timedelta(days=5),
+            startedAt=datetime.now(timezone.utc),
+            isAcknowledged=True,
+            createdAt=datetime.now(timezone.utc),
+            updatedAt=datetime.now(timezone.utc),
+            createdBy=UserDTO(id=str(self.user_id), name="Test User"),
+            updatedBy=UserDTO(id=str(self.user_id), name="Test User"),
+            assignee=TaskAssignmentDTO(
+                id=str(ObjectId()),
+                task_id=self.task_id_str,
+                assignee_id=str(ObjectId()),
+                user_type="user",
+                is_active=True,
+                created_by=str(self.user_id),
+                updated_by=None,
+                created_at=datetime.now(timezone.utc),
+                updated_at=None,
+            ),
+            deferredDetails=None,
+            in_watchlist=None,
+        )
+
+    @patch("todo.views.task.UpdateTaskSerializer")
+    @patch("todo.views.task.TaskService.update_task_with_assignee_from_dict")
+    def test_patch_task_and_assignee_success(self, mock_service_update_task, mock_update_serializer_class):
+        future_date = datetime.now(timezone.utc) + timedelta(days=5)
+        assignee_id = str(ObjectId())
+
+        valid_payload = {
+            "title": "Updated Task Title",
+            "description": "Updated Description",
+            "priority": TaskPriority.HIGH.name,
+            "status": TaskStatus.IN_PROGRESS.name,
+            "assignee": {"assignee_id": assignee_id, "user_type": "user"},
+            "dueAt": future_date.isoformat(),
+        }
+
+        mock_serializer_instance = Mock()
+        mock_serializer_instance.is_valid.return_value = True
+        mock_serializer_instance.validated_data = {
+            "title": "Updated Task Title",
+            "description": "Updated Description",
+            "priority": TaskPriority.HIGH.name,
+            "status": TaskStatus.IN_PROGRESS.name,
+            "assignee": {"assignee_id": assignee_id, "user_type": "user"},
+            "dueAt": future_date,
+        }
+        mock_update_serializer_class.return_value = mock_serializer_instance
+
+        mock_service_update_task.return_value = self.updated_task_dto_fixture
+
+        response = self.client.patch(self.task_url, data=valid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Check that the serializer was called with the correct data
+        mock_update_serializer_class.assert_called_once()
+        call_args = mock_update_serializer_class.call_args
+        self.assertEqual(call_args[1]["partial"], True)
+
+        mock_serializer_instance.is_valid.assert_called_once()
+        mock_service_update_task.assert_called_once()
+
+        expected_response_data = self.updated_task_dto_fixture.model_dump(mode="json")
+        self.assertEqual(response.data, expected_response_data)
+
+    @patch("todo.views.task.UpdateTaskSerializer")
+    def test_patch_task_and_assignee_validation_error(self, mock_update_serializer_class):
+        invalid_payload = {
+            "title": "",  # Invalid: empty title
+            "priority": "INVALID_PRIORITY",  # Invalid priority
+        }
+
+        mock_serializer_instance = Mock()
+        mock_serializer_instance.is_valid.return_value = False
+        mock_serializer_instance.errors = {
+            "title": ["Title cannot be blank"],
+            "priority": ["Invalid priority value"],
+        }
+        mock_update_serializer_class.return_value = mock_serializer_instance
+
+        response = self.client.patch(self.task_url, data=invalid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("errors", response.data)
+        self.assertEqual(response.data["statusCode"], 400)
+
+    @patch("todo.views.task.UpdateTaskSerializer")
+    @patch("todo.views.task.TaskService.update_task_with_assignee_from_dict")
+    def test_patch_task_and_assignee_task_not_found(self, mock_service_update_task, mock_update_serializer_class):
+        valid_payload = {"title": "Updated Title"}
+
+        mock_serializer_instance = Mock()
+        mock_serializer_instance.is_valid.return_value = True
+        mock_serializer_instance.validated_data = {"title": "Updated Title"}
+        mock_update_serializer_class.return_value = mock_serializer_instance
+
+        mock_service_update_task.side_effect = TaskNotFoundException(self.task_id_str)
+
+        response = self.client.patch(self.task_url, data=valid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn("errors", response.data)
+
+    @patch("todo.views.task.UpdateTaskSerializer")
+    @patch("todo.views.task.TaskService.update_task_with_assignee_from_dict")
+    def test_patch_task_and_assignee_permission_denied(self, mock_service_update_task, mock_update_serializer_class):
+        valid_payload = {"title": "Updated Title"}
+
+        mock_serializer_instance = Mock()
+        mock_serializer_instance.is_valid.return_value = True
+        mock_serializer_instance.validated_data = {"title": "Updated Title"}
+        mock_update_serializer_class.return_value = mock_serializer_instance
+
+        mock_service_update_task.side_effect = PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+
+        response = self.client.patch(self.task_url, data=valid_payload, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertIn("errors", response.data)
+
+    def test_patch_task_and_assignee_unauthenticated(self):
+        # Create a new client without authentication
+        unauthenticated_client = APIClient()
+        response = unauthenticated_client.patch(self.task_url, data={}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
 class TaskDetailViewPatchTests(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
@@ -485,8 +635,15 @@ class TaskDetailViewPatchTests(AuthenticatedMongoTestCase):
             description="Updated description.",
             priority=TaskPriority.HIGH.value,
             status=TaskStatus.IN_PROGRESS.value,
-            assignee=AssigneeInfoDTO(
-                id="user_assignee_id", name="SYSTEM", relation_type="user", is_action_taken=False, is_active=True
+            assignee=TaskAssignmentDTO(
+                id="assignment-1",
+                task_id="task-1",
+                assignee_id="user-1",
+                user_type="user",
+                is_active=True,
+                created_by="user-1",
+                created_at=datetime.now(timezone.utc) - timedelta(days=2),
+                assignee_name="SYSTEM",
             ),
             isAcknowledged=True,
             labels=[],

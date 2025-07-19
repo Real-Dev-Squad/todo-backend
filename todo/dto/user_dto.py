@@ -18,8 +18,13 @@ class UserSearchDTO(BaseModel):
     updated_at: datetime | None = None
 
 
+class UsersDTO(BaseModel):
+    id: str
+    name: str
+
+
 class UserSearchResponseDTO(BaseModel):
-    users: List[UserSearchDTO]
+    users: List[UsersDTO]
     total_count: int
     page: int
     limit: int

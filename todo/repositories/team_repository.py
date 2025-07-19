@@ -79,6 +79,24 @@ class TeamRepository(MongoRepository):
         except Exception:
             return None
 
+    @classmethod
+    def is_user_spoc(cls, team_id: str, user_id: str) -> bool:
+        """
+        Check if the given user is the SPOC (poc_id) for the given team.
+        """
+        team = cls.get_by_id(team_id)
+        if not team or not team.poc_id:
+            return False
+        return str(team.poc_id) == str(user_id)
+
+    @classmethod
+    def is_user_team_member(cls, team_id: str, user_id: str) -> bool:
+        """
+        Check if the given user is a member of the given team.
+        """
+        team_members = UserTeamDetailsRepository.get_users_by_team_id(team_id)
+        return user_id in team_members
+
 
 class UserTeamDetailsRepository(MongoRepository):
     collection_name = UserTeamDetailsModel.collection_name

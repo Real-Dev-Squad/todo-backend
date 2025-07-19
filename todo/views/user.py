@@ -6,7 +6,7 @@ from todo.services.user_service import UserService
 from rest_framework import status
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
-from todo.dto.user_dto import UserSearchDTO, UserSearchResponseDTO
+from todo.dto.user_dto import UserSearchResponseDTO, UsersDTO
 from todo.dto.responses.error_response import ApiErrorResponse
 
 
@@ -71,14 +71,13 @@ class UsersView(APIView):
                 )
             userData = userData.model_dump(mode="json", exclude_none=True)
             userResponse = {
-                "userId": userData["id"],
+                "id": userData["id"],
                 "email": userData["email_id"],
                 "name": userData.get("name"),
                 "picture": userData.get("picture"),
             }
             return Response(
                 {
-                    "statusCode": 200,
                     "message": "Current user details fetched successfully",
                     "data": userResponse,
                 },
@@ -91,31 +90,15 @@ class UsersView(APIView):
         limit = int(request.query_params.get("limit", 10))
 
         # If no search parameter provided, return 404
-        if not search:
-            return Response(
-                {"statusCode": 404, "message": "Route does not exist.", "data": None},
-                status=404,
-            )
-
-        users, total_count = UserService.search_users(search, page, limit)
-
-        if not users:
-            return Response(
-                {
-                    "statusCode": status.HTTP_204_NO_CONTENT,
-                    "message": "No users found",
-                    "data": None,
-                },
-                status=status.HTTP_204_NO_CONTENT,
-            )
+        if search:
+            users, total_count = UserService.search_users(search, page, limit)
+        else:
+            users, total_count = UserService.get_all_users(page, limit)
 
         user_dtos = [
-            UserSearchDTO(
+            UsersDTO(
                 id=str(user.id),
                 name=user.name,
-                email_id=user.email_id,
-                created_at=user.created_at,
-                updated_at=user.updated_at,
             )
             for user in users
         ]
@@ -129,8 +112,7 @@ class UsersView(APIView):
 
         return Response(
             {
-                "statusCode": status.HTTP_200_OK,
-                "message": "Users searched successfully",
+                "message": "Users fetched successfully",
                 "data": response_data.model_dump(),
             },
             status=status.HTTP_200_OK,

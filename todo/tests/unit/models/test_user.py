@@ -17,9 +17,10 @@ class UserModelTest(TestCase):
         self.assertEqual(user.name, self.valid_user_data["name"])
         self.assertEqual(user.created_at, self.valid_user_data["created_at"])
         self.assertEqual(user.updated_at, self.valid_user_data["updated_at"])
+        self.assertEqual(user.picture, self.valid_user_data["picture"])
 
     def test_user_model_throws_error_when_missing_required_fields(self):
-        required_fields = ["google_id", "email_id", "name", "picture"]
+        required_fields = ["google_id", "email_id", "name"]
 
         for field in required_fields:
             with self.subTest(f"missing field: {field}"):

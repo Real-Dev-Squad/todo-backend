@@ -88,3 +88,15 @@ class UserRepository:
         cursor = collection.find(search_filter).sort("name", ASCENDING).skip(skip).limit(limit)
         users = [UserModel(**doc) for doc in cursor]
         return users, total_count
+
+    @classmethod
+    def get_all_users(cls, page: int = 1, limit: int = 10) -> tuple[List[UserModel], int]:
+        """
+        Get all users with pagination
+        """
+        collection = cls._get_collection()
+        skip = (page - 1) * limit
+        total_count = collection.count_documents({})
+        cursor = collection.find().sort("name", ASCENDING).skip(skip).limit(limit)
+        users = [UserModel(**doc) for doc in cursor]
+        return users, total_count

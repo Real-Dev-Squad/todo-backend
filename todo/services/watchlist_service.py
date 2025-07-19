@@ -4,12 +4,14 @@ from django.urls import reverse_lazy
 from urllib.parse import urlencode
 import math
 
+from todo.dto.label_dto import LabelDTO
 from todo.dto.responses.paginated_response import LinksData
 from todo.dto.watchlist_dto import CreateWatchlistDTO, UpdateWatchlistDTO, WatchlistDTO
 from todo.dto.responses.create_watchlist_response import CreateWatchlistResponse
 from todo.dto.responses.get_watchlist_task_response import GetWatchlistTasksResponse
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.watchlist import WatchlistModel
+from todo.repositories.label_repository import LabelRepository
 from todo.repositories.watchlist_repository import WatchlistRepository
 from todo.constants.messages import ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
@@ -135,7 +137,28 @@ class WatchlistService:
             raise TaskNotFoundException(taskId)
 
     @classmethod
+    def _prepare_label_dtos(cls, label_ids: list[str]) -> list[LabelDTO]:
+        object_ids = [ObjectId(id) for id in label_ids]  # Convert here!
+        label_models = LabelRepository.list_by_ids(object_ids)
+
+        return [
+            LabelDTO(
+                id=str(label_model.id),
+                name=label_model.name,
+                color=label_model.color,
+            )
+            for label_model in label_models
+        ]
+
+    @classmethod
     def prepare_watchlisted_task_dto(cls, watchlist_model: WatchlistDTO) -> WatchlistDTO:
+        labels = cls._prepare_label_dtos(watchlist_model.labels) if watchlist_model.labels else []
+
+        # Handle assignee data if present
+        assignee = None
+        if hasattr(watchlist_model, "assignee") and watchlist_model.assignee:
+            assignee = watchlist_model.assignee
+
         return WatchlistDTO(
             taskId=str(watchlist_model.taskId),
             displayId=watchlist_model.displayId,
@@ -143,13 +166,14 @@ class WatchlistService:
             description=watchlist_model.description,
             isAcknowledged=watchlist_model.isAcknowledged,
             isDeleted=watchlist_model.isDeleted,
-            labels=watchlist_model.labels,
+            labels=labels,
             dueAt=watchlist_model.dueAt,
             status=watchlist_model.status,
             priority=watchlist_model.priority,
             createdAt=watchlist_model.createdAt,
             createdBy=watchlist_model.createdBy,
             watchlistId=watchlist_model.watchlistId,
+            assignee=assignee,
         )
 
     @classmethod

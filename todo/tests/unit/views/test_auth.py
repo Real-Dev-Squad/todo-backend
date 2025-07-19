@@ -250,13 +250,6 @@ class UserViewProfileTrueTests(APITestCase):
         self.client.cookies[settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME")] = tokens["access_token"]
         self.client.cookies[settings.COOKIE_SETTINGS.get("REFRESH_COOKIE_NAME")] = tokens["refresh_token"]
 
-    @patch("todo.services.user_service.UserService.get_user_by_id")
-    def test_requires_profile_true(self, mock_get_user):
-        # Without profile=true and without search parameter, it should return 404
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(response.data["message"], "Route does not exist.")
-
     def test_returns_401_if_not_authenticated(self):
         client = APIClient()
         response = client.get(self.url + "?profile=true")
@@ -277,5 +270,5 @@ class UserViewProfileTrueTests(APITestCase):
 
         response = self.client.get(self.url + "?profile=true")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["data"]["userId"], self.user_data["user_id"])
+        self.assertEqual(response.data["data"]["id"], self.user_data["user_id"])
         self.assertEqual(response.data["data"]["email"], self.user_data["email"])

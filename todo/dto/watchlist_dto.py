@@ -5,6 +5,13 @@ from typing import Optional
 from todo.constants.task import TaskPriority, TaskStatus
 
 
+class AssigneeDTO(BaseModel):
+    id: str
+    name: str
+    email: str
+    type: str  # "user" or "team"
+
+
 class WatchlistDTO(BaseModel):
     taskId: str
     displayId: str
@@ -19,6 +26,7 @@ class WatchlistDTO(BaseModel):
     createdAt: datetime
     createdBy: str
     watchlistId: str
+    assignee: Optional[AssigneeDTO] = None
 
     class Config:
         json_encoders = {TaskPriority: lambda x: x.name}

@@ -153,6 +153,12 @@ class WatchlistService:
     @classmethod
     def prepare_watchlisted_task_dto(cls, watchlist_model: WatchlistDTO) -> WatchlistDTO:
         labels = cls._prepare_label_dtos(watchlist_model.labels) if watchlist_model.labels else []
+        
+        # Handle assignee data if present
+        assignee = None
+        if hasattr(watchlist_model, 'assignee') and watchlist_model.assignee:
+            assignee = watchlist_model.assignee
+        
         return WatchlistDTO(
             taskId=str(watchlist_model.taskId),
             displayId=watchlist_model.displayId,
@@ -167,6 +173,7 @@ class WatchlistService:
             createdAt=watchlist_model.createdAt,
             createdBy=watchlist_model.createdBy,
             watchlistId=watchlist_model.watchlistId,
+            assignee=assignee,
         )
 
     @classmethod

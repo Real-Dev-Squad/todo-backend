@@ -4,11 +4,12 @@ from bson import ObjectId
 from django.test import TestCase, override_settings
 
 from todo.services.watchlist_service import WatchlistService
-from todo.dto.watchlist_dto import CreateWatchlistDTO
+from todo.dto.watchlist_dto import CreateWatchlistDTO, WatchlistDTO, AssigneeDTO
 from todo.models.task import TaskModel
 from todo.models.watchlist import WatchlistModel
 from todo.constants.messages import ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse
+from todo.dto.responses.get_watchlist_task_response import GetWatchlistTasksResponse
 
 
 @override_settings(REST_FRAMEWORK={"DEFAULT_PAGINATION_SETTINGS": {"DEFAULT_PAGE_LIMIT": 10, "MAX_PAGE_LIMIT": 100}})
@@ -39,6 +40,91 @@ class TestWatchlistService(TestCase):
             self.assertEqual(result.data.taskId, task_id)
             self.assertEqual(result.data.userId, user_id)
             self.assertEqual(result.data.createdBy, created_by)
+
+    def test_get_watchlisted_tasks_with_assignee(self):
+        """Test getting watchlisted tasks with assignee details (who the task belongs to)"""
+        user_id = str(ObjectId())
+        task_id = str(ObjectId())
+        assignee_id = str(ObjectId())
+        
+        # Create mock assignee data (who the task belongs to)
+        assignee_dto = AssigneeDTO(
+            id=assignee_id,
+            name="John Doe",
+            email="john@example.com",
+            type="user"
+        )
+        
+        # Create mock watchlist task with assignee
+        mock_watchlist_task = WatchlistDTO(
+            taskId=task_id,
+            displayId="TASK-001",
+            title="Test Task",
+            description="Test Description",
+            priority=None,
+            status=None,
+            isAcknowledged=False,
+            isDeleted=False,
+            labels=[],
+            dueAt=None,
+            createdAt=datetime.now(timezone.utc),
+            createdBy=user_id,
+            watchlistId=str(ObjectId()),
+            assignee=assignee_dto
+        )
+
+        with patch("todo.services.watchlist_service.WatchlistRepository.get_watchlisted_tasks") as mock_get:
+            mock_get.return_value = (1, [mock_watchlist_task])
+            
+            result = WatchlistService.get_watchlisted_tasks(page=1, limit=10, user_id=user_id)
+            
+            self.assertIsInstance(result, GetWatchlistTasksResponse)
+            self.assertEqual(len(result.tasks), 1)
+            self.assertEqual(result.tasks[0].taskId, task_id)
+            self.assertEqual(result.tasks[0].title, "Test Task")
+            
+            # Verify assignee details are included (who the task belongs to)
+            self.assertIsNotNone(result.tasks[0].assignee)
+            self.assertEqual(result.tasks[0].assignee.id, assignee_id)
+            self.assertEqual(result.tasks[0].assignee.name, "John Doe")
+            self.assertEqual(result.tasks[0].assignee.email, "john@example.com")
+            self.assertEqual(result.tasks[0].assignee.type, "user")
+
+    def test_get_watchlisted_tasks_without_assignee(self):
+        """Test getting watchlisted tasks without assignee details (unassigned task)"""
+        user_id = str(ObjectId())
+        task_id = str(ObjectId())
+        
+        # Create mock watchlist task without assignee (unassigned task)
+        mock_watchlist_task = WatchlistDTO(
+            taskId=task_id,
+            displayId="TASK-002",
+            title="Unassigned Task",
+            description="Task without assignee",
+            priority=None,
+            status=None,
+            isAcknowledged=False,
+            isDeleted=False,
+            labels=[],
+            dueAt=None,
+            createdAt=datetime.now(timezone.utc),
+            createdBy=user_id,
+            watchlistId=str(ObjectId()),
+            assignee=None
+        )
+
+        with patch("todo.services.watchlist_service.WatchlistRepository.get_watchlisted_tasks") as mock_get:
+            mock_get.return_value = (1, [mock_watchlist_task])
+            
+            result = WatchlistService.get_watchlisted_tasks(page=1, limit=10, user_id=user_id)
+            
+            self.assertIsInstance(result, GetWatchlistTasksResponse)
+            self.assertEqual(len(result.tasks), 1)
+            self.assertEqual(result.tasks[0].taskId, task_id)
+            self.assertEqual(result.tasks[0].title, "Unassigned Task")
+            
+            # Verify assignee is None (task belongs to no one)
+            self.assertIsNone(result.tasks[0].assignee)
 
     def test_add_task_validation_fails_invalid_task_id(self):
         """Test that validation fails with invalid task ID"""

@@ -22,7 +22,7 @@ class WatchlistListView(APIView):
     @extend_schema(
         operation_id="get_watchlist_tasks",
         summary="Get paginated list of watchlisted tasks",
-        description="Retrieve a paginated list of tasks that are added to the authenticated user's watchlist.",
+        description="Retrieve a paginated list of tasks that are added to the authenticated user's watchlist. Each task includes assignee details showing who the task belongs to (who is responsible for completing the task).",
         tags=["watchlist"],
         parameters=[
             OpenApiParameter(
@@ -43,7 +43,7 @@ class WatchlistListView(APIView):
         responses={
             200: OpenApiResponse(
                 response=GetWatchlistTasksResponse,
-                description="Paginated list of watchlisted tasks returned successfully",
+                description="Paginated list of watchlisted tasks with assignee details (task ownership) returned successfully",
             ),
             400: OpenApiResponse(response=ApiErrorResponse, description="Bad request - validation error"),
             500: OpenApiResponse(response=ApiErrorResponse, description="Internal server error"),

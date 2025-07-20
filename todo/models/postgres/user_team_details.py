@@ -10,9 +10,9 @@ class UserTeamDetails(models.Model):
     is_active = models.BooleanField(default=True)  # type: ignore[arg-type]
     role_id = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
     created_by = models.UUIDField()
-    updated_by = models.UUIDField()
+    updated_by = models.UUIDField(null=True, blank=True)
     objects: Manager = models.Manager()
 
     class Meta:

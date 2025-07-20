@@ -2,6 +2,11 @@ from datetime import datetime, timezone
 from typing import Optional
 from bson import ObjectId
 from pymongo import ReturnDocument
+from concurrent.futures import ThreadPoolExecutor, ALL_COMPLETED, wait
+from todo.utils.retry_utils import retry
+from django.db import transaction
+from todo.models.postgres.team import Team as PostgresTeam
+import uuid
 
 from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.repositories.common.mongo_repository import MongoRepository
@@ -31,7 +36,7 @@ class TeamRepository(MongoRepository):
         """
         teams_collection = cls.get_collection()
         try:
-            team_data = teams_collection.find_one({"_id": ObjectId(team_id), "is_deleted": False})
+            team_data = teams_collection.find_one({"_id": team_id, "is_deleted": False})
             if team_data:
                 return TeamModel(**team_data)
             return None
@@ -96,6 +101,70 @@ class TeamRepository(MongoRepository):
         """
         team_members = UserTeamDetailsRepository.get_users_by_team_id(team_id)
         return user_id in team_members
+
+    @classmethod
+    def create_parallel(cls, team: TeamModel) -> TeamModel:
+        teams_collection = cls.get_collection()
+        new_team_id = str(uuid.uuid4())
+        team.created_at = datetime.now(timezone.utc)
+        team.updated_at = datetime.now(timezone.utc)
+        team_dict = team.model_dump(mode="json", by_alias=True, exclude_none=True)
+        team_dict["_id"] = new_team_id
+
+        def write_mongo():
+            client = cls.get_client()
+            with client.start_session() as session:
+                with session.start_transaction():
+                    insert_result = teams_collection.insert_one(team_dict, session=session)
+                    return insert_result.inserted_id
+
+        def write_postgres():
+            with transaction.atomic():
+                PostgresTeam.objects.create(
+                    id=new_team_id,
+                    name=team.name,
+                    description=team.description,
+                    poc_id=team.poc_id,
+                    invite_code=team.invite_code,
+                    created_by=team.created_by,
+                    created_at=team.created_at,
+                    is_deleted=team.is_deleted,
+                )
+                return "postgres_success"
+
+        exceptions = []
+        mongo_id = None
+        postgres_done = False
+
+        with ThreadPoolExecutor() as executor:
+            future_mongo = executor.submit(lambda: retry(write_mongo, max_attempts=3))
+            future_postgres = executor.submit(lambda: retry(write_postgres, max_attempts=3))
+            wait([future_mongo, future_postgres], return_when=ALL_COMPLETED)
+
+            for future in (future_mongo, future_postgres):
+                try:
+                    res = future.result()
+                    if isinstance(res, str) and res == "postgres_success":
+                        postgres_done = True
+                    else:
+                        mongo_id = res
+                except Exception as exc:
+                    exceptions.append(exc)
+                    print(f"[ERROR] Write failed: {exc}")
+
+        # Compensation logic
+        if exceptions:
+            if mongo_id and not postgres_done:
+                teams_collection.delete_one({"_id": new_team_id})
+                print(f"[COMPENSATION] Rolled back Mongo for team {new_team_id}")
+            if postgres_done and not mongo_id:
+                with transaction.atomic():
+                    PostgresTeam.objects.filter(id=new_team_id).delete()
+                print(f"[COMPENSATION] Rolled back Postgres for team {new_team_id}")
+            raise Exception(f"Team creation failed: {exceptions}")
+
+        team.id = mongo_id
+        return team
 
 
 class UserTeamDetailsRepository(MongoRepository):

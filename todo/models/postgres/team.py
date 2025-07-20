@@ -10,9 +10,9 @@ class Team(models.Model):
     poc_id = models.UUIDField(null=True, blank=True)
     invite_code = models.CharField(max_length=100)
     created_by = models.UUIDField()
-    updated_by = models.UUIDField()
+    updated_by = models.UUIDField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
     is_deleted = models.BooleanField(default=False)  # type: ignore[arg-type]
     objects: Manager = models.Manager()
 

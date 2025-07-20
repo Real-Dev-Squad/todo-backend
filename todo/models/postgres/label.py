@@ -12,6 +12,7 @@ class Label(models.Model):
     updated_at = models.DateTimeField(null=True, blank=True)
     created_by = models.UUIDField()
     updated_by = models.UUIDField(null=True, blank=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
     objects: Manager = models.Manager()
 
     class Meta:

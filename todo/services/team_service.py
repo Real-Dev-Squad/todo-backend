@@ -39,13 +39,13 @@ class TeamService:
             team = TeamModel(
                 name=dto.name,
                 description=dto.description if dto.description else None,
-                poc_id=PyObjectId(dto.poc_id) if dto.poc_id else None,
+                poc_id=dto.poc_id if dto.poc_id else None,
                 invite_code=invite_code,
-                created_by=PyObjectId(created_by_user_id),
-                updated_by=PyObjectId(created_by_user_id),
+                created_by=created_by_user_id,
+                updated_by=created_by_user_id,
             )
 
-            created_team = TeamRepository.create(team)
+            created_team = TeamRepository.create_parallel(team)
 
             # Create user-team relationships
             user_teams = []
@@ -53,36 +53,36 @@ class TeamService:
             # Add members to the team
             for member_id in member_ids:
                 user_team = UserTeamDetailsModel(
-                    user_id=PyObjectId(member_id),
+                    user_id=member_id,
                     team_id=created_team.id,
                     role_id=DEFAULT_ROLE_ID,
                     is_active=True,
-                    created_by=PyObjectId(created_by_user_id),
-                    updated_by=PyObjectId(created_by_user_id),
+                    created_by=created_by_user_id,
+                    updated_by=created_by_user_id,
                 )
                 user_teams.append(user_team)
 
             # Add POC to the team if specified and not already in members
             if dto.poc_id and dto.poc_id not in member_ids:
                 user_team = UserTeamDetailsModel(
-                    user_id=PyObjectId(dto.poc_id),
+                    user_id=dto.poc_id,
                     team_id=created_team.id,
                     role_id=DEFAULT_ROLE_ID,
                     is_active=True,
-                    created_by=PyObjectId(created_by_user_id),
-                    updated_by=PyObjectId(created_by_user_id),
+                    created_by=created_by_user_id,
+                    updated_by=created_by_user_id,
                 )
                 user_teams.append(user_team)
 
             # Always add the creator as a member if not already in member_ids or as POC
             if created_by_user_id not in member_ids and created_by_user_id != dto.poc_id:
                 user_team = UserTeamDetailsModel(
-                    user_id=PyObjectId(created_by_user_id),
+                    user_id=created_by_user_id,
                     team_id=created_team.id,
                     role_id=DEFAULT_ROLE_ID,
                     is_active=True,
-                    created_by=PyObjectId(created_by_user_id),
-                    updated_by=PyObjectId(created_by_user_id),
+                    created_by=created_by_user_id,
+                    updated_by=created_by_user_id,
                 )
                 user_teams.append(user_team)
 

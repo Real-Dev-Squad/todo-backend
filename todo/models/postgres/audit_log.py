@@ -12,6 +12,8 @@ class AuditLog(models.Model):
     spoc_id = models.UUIDField()
     action = models.CharField(max_length=50, default="reassign_executor")
     timestamp = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+    updated_by = models.UUIDField(null=True, blank=True)
     objects: Manager = models.Manager()
 
     class Meta:

@@ -6,4 +6,4 @@ def retry(func, max_attempts=3, *args, **kwargs):
         except Exception as exc:
             last_exc = exc
             print(f"[RETRY] Attempt {attempt+1} failed: {exc}")
-    raise last_exc 
+    raise last_exc

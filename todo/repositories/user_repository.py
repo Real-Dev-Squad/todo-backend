@@ -11,8 +11,9 @@ from todo.exceptions.auth_exceptions import UserNotFoundException, APIException
 import uuid
 from todo.models.postgres.user import User as PostgresUser
 from django.db import transaction
-from concurrent.futures import ThreadPoolExecutor, ALL_COMPLETED,wait
+from concurrent.futures import ThreadPoolExecutor, ALL_COMPLETED, wait
 from todo.utils.retry_utils import retry
+
 
 class UserRepository:
     @classmethod

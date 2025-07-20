@@ -57,12 +57,6 @@ class UserRepository:
             now = datetime.now(timezone.utc)
             google_id = user_data["google_id"]
 
-            try:
-                existing_user = PostgresUser.objects.get(google_id=google_id)
-                user_id = str(existing_user.id)
-            except PostgresUser.DoesNotExist:
-                user_id = str(uuid.uuid4())
-
             result = collection.find_one_and_update(
                 {"google_id": google_id},
                 {
@@ -73,7 +67,6 @@ class UserRepository:
                         "updated_at": now,
                     },
                     "$setOnInsert": {
-                        "_id": user_id,
                         "google_id": google_id,
                         "created_at": now,
                     },
@@ -83,26 +76,8 @@ class UserRepository:
             )
 
             if not result:
-                print("[ERROR] No result returned from find_one_and_update")
                 raise APIException(RepositoryErrors.USER_OPERATION_FAILED)
 
-            try:
-                PostgresUser.objects.update_or_create(
-                    id=user_id,
-                    defaults={
-                        "google_id": result["google_id"],
-                        "email_id": result["email_id"],
-                        "name": result["name"],
-                        "picture": result.get("picture"),
-                    },
-                )
-            except Exception as orm_exc:
-                if user_id:
-                    collection.delete_one({"_id": user_id})
-                print(
-                    f"[ERROR] Postgres upsert failed for user_id: {user_id}, rolled back MongoDB insert/update, error: {orm_exc}"
-                )
-                raise
             return UserModel(**result)
 
         except Exception as e:

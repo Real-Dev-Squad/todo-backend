@@ -119,14 +119,84 @@ def migrate_fixed_labels() -> bool:
                 continue
 
         total_labels = len(fixed_labels)
-        logger.info(
-            f"Fixed labels migration completed - Total: {total_labels}, Created: {created_count}, Skipped: {skipped_count}"
-        )
+        logger.info(f"Fixed labels migration completed - {created_count} created, {skipped_count} skipped, {total_labels} total")
 
         return True
 
     except Exception as e:
-        logger.error(f"Fixed labels migration failed with error: {str(e)}")
+        logger.error(f"Fixed labels migration failed: {str(e)}")
+        return False
+
+
+def migrate_predefined_roles() -> bool:
+    """Migration to add predefined roles to the system."""
+    logger.info("Starting predefined roles migration")
+
+    predefined_roles = [
+        {
+            "name": "moderator",
+            "scope": "GLOBAL", 
+            "description": "Global system moderator",
+            "is_active": True
+        },
+        {
+            "name": "owner",
+            "scope": "TEAM",
+            "description": "Team owner with full privileges", 
+            "is_active": True
+        },
+        {
+            "name": "admin", 
+            "scope": "TEAM",
+            "description": "Team administrator",
+            "is_active": True
+        },
+        {
+            "name": "member",
+            "scope": "TEAM", 
+            "description": "Team member",
+            "is_active": True
+        }
+    ]
+
+    try:
+        db_manager = DatabaseManager()
+        roles_collection = db_manager.get_collection("roles")
+
+        current_time = datetime.now(timezone.utc)
+        created_count = 0
+        skipped_count = 0
+
+        for role_data in predefined_roles:
+            existing = roles_collection.find_one({
+                "name": role_data["name"],
+                "scope": role_data["scope"]
+            })
+
+            if existing:
+                logger.info(f"Role '{role_data['name']}' ({role_data['scope']}) already exists, skipping")
+                skipped_count += 1
+                continue
+
+            role_doc = {
+                "name": role_data["name"],
+                "scope": role_data["scope"],
+                "description": role_data["description"],
+                "is_active": role_data["is_active"],
+                "created_at": current_time,
+                "created_by": "system"
+            }
+
+            result = roles_collection.insert_one(role_doc)
+            if result.inserted_id:
+                logger.info(f"Created role: {role_data['name']} ({role_data['scope']})")
+                created_count += 1
+
+        logger.info(f"Roles migration completed - {created_count} created, {skipped_count} skipped")
+        return True
+
+    except Exception as e:
+        logger.error(f"Roles migration failed: {str(e)}")
         return False
 
 
@@ -139,7 +209,10 @@ def run_all_migrations() -> bool:
     """
     logger.info("Starting database migrations")
 
-    migrations = [("Fixed Labels Migration", migrate_fixed_labels)]
+    migrations = [
+        ("Fixed Labels Migration", migrate_fixed_labels),
+        ("Predefined Roles Migration", migrate_predefined_roles),
+    ]
 
     success_count = 0
 

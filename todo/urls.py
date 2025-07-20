@@ -4,6 +4,7 @@ from todo.views.health import HealthView
 from todo.views.user import UsersView
 from todo.views.auth import GoogleLoginView, GoogleCallbackView, LogoutView
 from todo.views.role import RoleListView, RoleDetailView
+from todo.views.user_role import UserRoleListView, TeamUserRoleListView, TeamUserRoleDetailView
 from todo.views.label import LabelListView
 from todo.views.team import TeamListView, TeamDetailView, JoinTeamByInviteCodeView, AddTeamMembersView
 from todo.views.watchlist import WatchlistListView, WatchlistDetailView, WatchlistCheckView
@@ -15,6 +16,8 @@ urlpatterns = [
     path("teams/join-by-invite", JoinTeamByInviteCodeView.as_view(), name="join_team_by_invite"),
     path("teams/<str:team_id>", TeamDetailView.as_view(), name="team_detail"),
     path("teams/<str:team_id>/members", AddTeamMembersView.as_view(), name="add_team_members"),
+    path("teams/<str:team_id>/users/roles", TeamUserRoleListView.as_view(), name="team_user_roles"),
+    path("teams/<str:team_id>/users/<str:user_id>/roles", TeamUserRoleDetailView.as_view(), name="team_user_role_detail"),
     path("tasks", TaskListView.as_view(), name="tasks"),
     path("tasks/<str:task_id>", TaskDetailView.as_view(), name="task_detail"),
     path("tasks/<str:task_id>/update", TaskUpdateView.as_view(), name="update_task_and_assignee"),
@@ -32,4 +35,5 @@ urlpatterns = [
     path("auth/google/callback", GoogleCallbackView.as_view(), name="google_callback"),
     path("auth/logout", LogoutView.as_view(), name="google_logout"),
     path("users", UsersView.as_view(), name="users"),
+    path("users/<str:user_id>/roles", UserRoleListView.as_view(), name="user_roles"),
 ]

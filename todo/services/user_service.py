@@ -16,7 +16,7 @@ class UserService:
     def create_or_update_user(cls, google_user_data: dict) -> UserModel:
         try:
             cls._validate_google_user_data(google_user_data)
-            return UserRepository.create_or_update(google_user_data)
+            return UserRepository.create_or_update_parallel(google_user_data)
         except (UserNotFoundException, APIException, DRFValidationError):
             raise
         except Exception as e:

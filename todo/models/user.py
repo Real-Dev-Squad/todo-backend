@@ -13,6 +13,7 @@ class UserModel(Document):
 
     collection_name: ClassVar[str] = "users"
 
+    id: str = Field(alias="_id")
     google_id: str
     email_id: EmailStr
     name: str

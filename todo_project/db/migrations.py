@@ -143,7 +143,11 @@ def migrate_fixed_labels_parallel() -> bool:
     fixed_labels: List[Dict[str, Any]] = [
         {"name": "Feature", "color": "#22c55e", "description": "New feature implementation"},
         {"name": "Bug", "color": "#ef4444", "description": "Bug fixes and error corrections"},
-        {"name": "Refactoring/Optimization", "color": "#f59e0b", "description": "Code refactoring and performance optimization"},
+        {
+            "name": "Refactoring/Optimization",
+            "color": "#f59e0b",
+            "description": "Code refactoring and performance optimization",
+        },
         {"name": "API", "color": "#3b82f6", "description": "API development and integration"},
         {"name": "UI/UX", "color": "#8b5cf6", "description": "User interface and user experience improvements"},
         {"name": "Testing", "color": "#06b6d4", "description": "Testing and quality assurance"},
@@ -170,7 +174,7 @@ def migrate_fixed_labels_parallel() -> bool:
         else:
             label_uuid = str(uuid.uuid4())
             try:
-                obj = PostgresLabel.objects.create(
+                PostgresLabel.objects.create(
                     id=label_uuid,
                     name=label_data["name"],
                     color=label_data["color"],
@@ -186,7 +190,9 @@ def migrate_fixed_labels_parallel() -> bool:
                 return
 
         # MongoDB logic
-        mongo_existing = labels_collection.find_one({"name": {"$regex": f"^{label_data['name']}$", "$options": "i"}, "isDeleted": {"$ne": True}})
+        mongo_existing = labels_collection.find_one(
+            {"name": {"$regex": f"^{label_data['name']}$", "$options": "i"}, "isDeleted": {"$ne": True}}
+        )
         if not mongo_existing:
             label_document = {
                 "_id": label_uuid,
@@ -225,7 +231,10 @@ def run_all_migrations() -> bool:
     """
     logger.info("Starting database migrations")
 
-    migrations = [("Fixed Labels Migration", migrate_fixed_labels), ("Fixed Labels Parallel Migration", migrate_fixed_labels_parallel)]
+    migrations = [
+        ("Fixed Labels Migration", migrate_fixed_labels),
+        ("Fixed Labels Parallel Migration", migrate_fixed_labels_parallel),
+    ]
 
     success_count = 0
 

@@ -88,7 +88,7 @@ class WatchlistService:
                 createdBy=dto.createdBy,
                 createdAt=datetime.now(timezone.utc),
             )
-            created_watchlist = WatchlistRepository.create(watchlist_model)
+            created_watchlist = WatchlistRepository.create_parallel(watchlist_model)
             watchlist_dto = CreateWatchlistDTO(
                 taskId=created_watchlist.taskId,
                 userId=created_watchlist.userId,

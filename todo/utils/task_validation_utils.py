@@ -1,5 +1,3 @@
-from bson import ObjectId
-
 from todo.repositories.task_repository import TaskRepository
 from todo.models.task import TaskModel
 from todo.constants.messages import ApiErrors
@@ -19,24 +17,6 @@ def validate_task_exists(task_id: str) -> TaskModel:
     Raises:
         ValueError: If task doesn't exist, with ApiErrorResponse
     """
-    try:
-        # Validate ObjectId format
-        ObjectId(task_id)
-    except Exception:
-        raise ValueError(
-            ApiErrorResponse(
-                statusCode=400,
-                message=ApiErrors.INVALID_TASK_ID,
-                errors=[
-                    ApiErrorDetail(
-                        source={ApiErrorSource.PARAMETER: "taskId"},
-                        title=ApiErrors.VALIDATION_ERROR,
-                        detail=ApiErrors.INVALID_TASK_ID,
-                    )
-                ],
-            )
-        )
-
     task = TaskRepository.get_by_id(task_id)
     if not task:
         raise ValueError(

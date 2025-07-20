@@ -146,7 +146,7 @@ class TaskRepository(MongoRepository):
     @classmethod
     def get_by_id(cls, task_id: str) -> TaskModel | None:
         tasks_collection = cls.get_collection()
-        task_data = tasks_collection.find_one({"_id": ObjectId(task_id)})
+        task_data = tasks_collection.find_one({"_id": task_id})
         if task_data:
             return TaskModel(**task_data)
         return None

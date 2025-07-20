@@ -1,27 +1,12 @@
 from pydantic import BaseModel, validator
 from typing import Optional, Literal
 from datetime import datetime
-from bson import ObjectId
 
 
 class CreateTaskAssignmentDTO(BaseModel):
     task_id: str
     assignee_id: str
     user_type: Literal["user", "team"]
-
-    @validator("task_id")
-    def validate_task_id(cls, value):
-        """Validate that the task ID is a valid ObjectId."""
-        if not ObjectId.is_valid(value):
-            raise ValueError(f"Invalid task ID: {value}")
-        return value
-
-    @validator("assignee_id")
-    def validate_assignee_id(cls, value):
-        """Validate that the assignee ID is a valid ObjectId."""
-        if not ObjectId.is_valid(value):
-            raise ValueError(f"Invalid assignee ID: {value}")
-        return value
 
     @validator("user_type")
     def validate_user_type(cls, value):

@@ -1,10 +1,8 @@
 from pydantic import Field, validator
 from typing import ClassVar, Literal
 from datetime import datetime, timezone
-from bson import ObjectId
 
 from todo.models.common.document import Document
-from todo.models.common.pyobjectid import PyObjectId
 
 
 class TaskAssignmentModel(Document):
@@ -14,24 +12,16 @@ class TaskAssignmentModel(Document):
 
     collection_name: ClassVar[str] = "task_details"
 
-    id: PyObjectId | None = Field(None, alias="_id")
-    task_id: PyObjectId
-    assignee_id: PyObjectId  # Can be either team_id or user_id
+    id: str | None = Field(None, alias="_id")
+    task_id: str
+    assignee_id: str  # Can be either team_id or user_id
     user_type: Literal["user", "team"]  # Changed from relation_type to user_type as requested
     is_active: bool = True
-    created_by: PyObjectId
-    updated_by: PyObjectId | None = None
+    created_by: str
+    updated_by: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime | None = None
-    executor_id: PyObjectId | None = None  # User within the team who is executing the task
-
-    @validator("task_id", "assignee_id", "created_by", "updated_by")
-    def validate_object_ids(cls, v):
-        if v is None:
-            return v
-        if not ObjectId.is_valid(v):
-            raise ValueError(f"Invalid ObjectId: {v}")
-        return ObjectId(v)
+    executor_id: str | None = None  # User within the team who is executing the task
 
     @validator("user_type")
     def validate_user_type(cls, v):

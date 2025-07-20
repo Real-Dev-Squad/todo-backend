@@ -12,6 +12,7 @@ class TeamModel(Document):
 
     collection_name: ClassVar[str] = "teams"
 
+    id: str = Field(alias="_id")
     name: str = Field(..., min_length=1, max_length=100)
     description: str | None = None
     poc_id: str | None = None

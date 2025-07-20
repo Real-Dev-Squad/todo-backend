@@ -2,7 +2,6 @@ from typing import Optional
 
 from todo.dto.task_assignment_dto import TaskAssignmentResponseDTO, CreateTaskAssignmentDTO
 from todo.dto.responses.create_task_assignment_response import CreateTaskAssignmentResponse
-from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_assignment_repository import TaskAssignmentRepository
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.user_repository import UserRepository
@@ -50,14 +49,14 @@ class TaskAssignmentService:
         else:
             # Create new assignment
             task_assignment = TaskAssignmentModel(
-                task_id=PyObjectId(dto.task_id),
-                assignee_id=PyObjectId(dto.assignee_id),
+                task_id=dto.task_id,
+                assignee_id=dto.assignee_id,
                 user_type=dto.user_type,
-                created_by=PyObjectId(user_id),
+                created_by=user_id,
                 updated_by=None,
             )
 
-            assignment = TaskAssignmentRepository.create(task_assignment)
+            assignment = TaskAssignmentRepository.create_parallel(task_assignment)
 
         # Also insert into assignee_task_details if this is a team assignment (legacy, can be removed if not needed)
         # if dto.user_type == "team":

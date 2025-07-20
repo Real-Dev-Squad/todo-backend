@@ -3,6 +3,9 @@ from typing import List
 from bson import ObjectId
 from pymongo import ReturnDocument
 import logging
+from concurrent.futures import ThreadPoolExecutor, ALL_COMPLETED, wait
+from todo.utils.retry_utils import retry
+from django.db import transaction
 
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.task import TaskModel
@@ -10,6 +13,8 @@ from todo.repositories.common.mongo_repository import MongoRepository
 from todo.repositories.task_assignment_repository import TaskAssignmentRepository
 from todo.constants.messages import ApiErrors, RepositoryErrors
 from todo.constants.task import SORT_FIELD_PRIORITY, SORT_FIELD_ASSIGNEE, SORT_ORDER_DESC
+from todo.models.postgres.task import Task as PostgresTask
+import uuid
 
 
 class TaskRepository(MongoRepository):
@@ -214,3 +219,88 @@ class TaskRepository(MongoRepository):
         query = {"_id": {"$in": assigned_task_ids}}
         tasks_cursor = tasks_collection.find(query).skip((page - 1) * limit).limit(limit)
         return [TaskModel(**task) for task in tasks_cursor]
+
+    @classmethod
+    def create_parallel(cls, task: TaskModel) -> TaskModel:
+        tasks_collection = cls.get_collection()
+        new_task_id = str(uuid.uuid4())
+        task.createdAt = datetime.now(timezone.utc)
+        task.updatedAt = None
+        task_dict = task.model_dump(mode="json", by_alias=True, exclude_none=True)
+        task_dict["_id"] = new_task_id
+
+        def write_mongo():
+            client = cls.get_client()
+            with client.start_session() as session:
+                with session.start_transaction():
+                    db = cls.get_database()
+                    counter_result = db.counters.find_one_and_update(
+                        {"_id": "taskDisplayId"}, {"$inc": {"seq": 1}}, return_document=True, session=session
+                    )
+                    if not counter_result:
+                        db.counters.insert_one({"_id": "taskDisplayId", "seq": 1}, session=session)
+                        next_number = 1
+                    else:
+                        next_number = counter_result["seq"]
+
+                    task.displayId = f"#{next_number}"
+                    task_dict["displayId"] = task.displayId
+                    insert_result = tasks_collection.insert_one(task_dict, session=session)
+                    return insert_result.inserted_id
+
+        def write_postgres():
+            with transaction.atomic():
+                deferred_at = task.deferredDetails.deferredAt if task.deferredDetails else None
+                deferred_till = task.deferredDetails.deferredTill if task.deferredDetails else None
+                deferred_by = task.deferredDetails.deferredBy if task.deferredDetails else None
+                PostgresTask.objects.create(
+                    id=new_task_id,
+                    title=task.title,
+                    description=task.description,
+                    priority=task.priority,
+                    status=task.status,
+                    is_acknowledged=task.isAcknowledged,
+                    labels=task.labels,
+                    is_deleted=task.isDeleted,
+                    deferred_at=deferred_at,
+                    deferred_till=deferred_till,
+                    deferred_by=deferred_by,
+                    started_at=task.startedAt,
+                    due_at=task.dueAt,
+                    created_at=task.createdAt,
+                    created_by=task.createdBy,
+                )
+                return "postgres_success"
+
+        exceptions = []
+        mongo_id = None
+        postgres_done = False
+
+        with ThreadPoolExecutor() as executor:
+            future_mongo = executor.submit(lambda: retry(write_mongo, max_attempts=3))
+            future_postgres = executor.submit(lambda: retry(write_postgres, max_attempts=3))
+            wait([future_mongo, future_postgres], return_when=ALL_COMPLETED)
+
+            for future in (future_mongo, future_postgres):
+                try:
+                    res = future.result()
+                    if isinstance(res, str) and res == "postgres_success":
+                        postgres_done = True
+                    else:
+                        mongo_id = res
+                except Exception as exc:
+                    exceptions.append(exc)
+                    print(f"[ERROR] Write failed: {exc}")
+
+        if exceptions:
+            if mongo_id and not postgres_done:
+                tasks_collection.delete_one({"_id": new_task_id})
+                print(f"[COMPENSATION] Rolled back Mongo for task {new_task_id}")
+            if postgres_done and not mongo_id:
+                with transaction.atomic():
+                    PostgresTask.objects.filter(id=new_task_id).delete()
+                print(f"[COMPENSATION] Rolled back Postgres for task {new_task_id}")
+            raise Exception(f"Task creation failed: {exceptions}")
+
+        task.id = mongo_id
+        return task

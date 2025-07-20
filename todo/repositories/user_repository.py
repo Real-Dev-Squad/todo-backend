@@ -28,8 +28,7 @@ class UserRepository:
     def get_by_id(cls, user_id: str) -> Optional[UserModel]:
         try:
             collection = cls._get_collection()
-            object_id = PyObjectId(user_id)
-            doc = collection.find_one({"_id": object_id})
+            doc = collection.find_one({"_id": user_id})
             return UserModel(**doc) if doc else None
         except Exception as e:
             raise UserNotFoundException() from e

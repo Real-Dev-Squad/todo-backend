@@ -1,9 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
-from bson import ObjectId
 from pydantic import BaseModel, field_validator
 
-from todo.constants.messages import ValidationErrors
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.dto.deferred_details_dto import DeferredDetailsDTO
 from todo.dto.label_dto import LabelDTO
@@ -54,10 +52,4 @@ class CreateTaskDTO(BaseModel):
     def parse_status(cls, value):
         if isinstance(value, str):
             return TaskStatus[value]
-        return value
-
-    @field_validator("createdBy")
-    def validate_created_by(cls, value: str) -> str:
-        if not ObjectId.is_valid(value):
-            raise ValueError(ValidationErrors.INVALID_OBJECT_ID.format(value))
         return value

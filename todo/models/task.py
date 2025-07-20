@@ -23,7 +23,7 @@ class DeferredDetailsModel(BaseModel):
 class TaskModel(Document):
     collection_name: ClassVar[str] = "tasks"
 
-    id: PyObjectId | None = Field(None, alias="_id")
+    id: str | None = Field(None, alias="_id")
     displayId: str | None = None
     title: str
     description: str | None = None

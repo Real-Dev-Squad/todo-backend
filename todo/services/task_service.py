@@ -588,7 +588,7 @@ class TaskService:
         )
 
         try:
-            created_task = TaskRepository.create(task)
+            created_task = TaskRepository.create_parallel(task)
 
             # Create assignee relationship if assignee is provided
             if dto.assignee:

@@ -259,7 +259,7 @@ class TaskAssignmentDetailView(APIView):
             spoc_id=user["user_id"],
             action="reassign_executor",
         )
-        AuditLogRepository.create(audit_log)
+        AuditLogRepository.create_parallel(audit_log)
 
         return Response({"message": "Executor updated successfully."}, status=status.HTTP_200_OK)
 

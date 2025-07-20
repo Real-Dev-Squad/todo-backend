@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.db.models.manager import Manager
 
 
 class Team(models.Model):
@@ -13,6 +14,7 @@ class Team(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_deleted = models.BooleanField(default=False)  # type: ignore[arg-type]
+    objects: Manager = models.Manager()
 
     class Meta:
         db_table = "teams"

@@ -2,6 +2,7 @@ import uuid
 from django.db import models
 from .task import Task
 from .user import User
+from django.db.models.manager import Manager
 
 
 class Watchlist(models.Model):
@@ -13,6 +14,7 @@ class Watchlist(models.Model):
     created_by = models.UUIDField()
     updated_at = models.DateTimeField(null=True, blank=True)
     updated_by = models.UUIDField(null=True, blank=True)
+    objects: Manager = models.Manager()
 
     class Meta:
         db_table = "watchlist"

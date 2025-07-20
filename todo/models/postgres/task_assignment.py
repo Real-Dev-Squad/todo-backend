@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from .task import Task
+from django.db.models.manager import Manager
 
 
 class TaskAssignment(models.Model):
@@ -13,6 +14,7 @@ class TaskAssignment(models.Model):
     updated_by = models.UUIDField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(null=True, blank=True)
+    objects: Manager = models.Manager()
 
     class Meta:
         db_table = "task_assignment"

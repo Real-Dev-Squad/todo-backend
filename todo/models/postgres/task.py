@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.db.models.manager import Manager
 
 
 class Task(models.Model):
@@ -21,6 +22,7 @@ class Task(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.CharField(max_length=255)
     updated_by = models.CharField(max_length=255, null=True, blank=True)
+    objects: Manager = models.Manager()
 
     class Meta:
         db_table = "tasks"

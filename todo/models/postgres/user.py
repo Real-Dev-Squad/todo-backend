@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.core.validators import EmailValidator
+from django.db.models.manager import Manager
 
 
 class User(models.Model):
@@ -11,6 +12,7 @@ class User(models.Model):
     picture = models.URLField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    objects: Manager = models.Manager()
 
     class Meta:
         db_table = "users"

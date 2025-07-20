@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.db.models.manager import Manager
 
 
 class UserTeamDetails(models.Model):
@@ -12,6 +13,7 @@ class UserTeamDetails(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.UUIDField()
     updated_by = models.UUIDField()
+    objects: Manager = models.Manager()
 
     class Meta:
         db_table = "user_team_details"

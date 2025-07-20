@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.db.models.manager import Manager
 
 
 class Role(models.Model):
@@ -12,6 +13,7 @@ class Role(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_by = models.UUIDField(null=True, blank=True)
     updated_at = models.DateTimeField(null=True, blank=True)
+    objects: Manager = models.Manager()
 
     class Meta:
         db_table = "roles"

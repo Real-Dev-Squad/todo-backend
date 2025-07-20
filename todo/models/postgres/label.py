@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.db.models.manager import Manager
 
 
 class Label(models.Model):
@@ -11,6 +12,7 @@ class Label(models.Model):
     updated_at = models.DateTimeField(null=True, blank=True)
     created_by = models.UUIDField()
     updated_by = models.UUIDField(null=True, blank=True)
+    objects: Manager = models.Manager()
 
     class Meta:
         db_table = "labels"

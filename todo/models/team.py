@@ -1,5 +1,5 @@
 from pydantic import Field
-from typing import ClassVar
+from typing import ClassVar, Optional
 from datetime import datetime, timezone
 
 from todo.models.common.document import Document
@@ -12,7 +12,7 @@ class TeamModel(Document):
 
     collection_name: ClassVar[str] = "teams"
 
-    id: str = Field(alias="_id")
+    id: Optional[str] = Field(default=None, alias="_id")
     name: str = Field(..., min_length=1, max_length=100)
     description: str | None = None
     poc_id: str | None = None
@@ -31,6 +31,7 @@ class UserTeamDetailsModel(Document):
 
     collection_name: ClassVar[str] = "user_team_details"
 
+    id: Optional[str] = Field(default=None, alias="_id")
     user_id: str
     team_id: str
     is_active: bool = True

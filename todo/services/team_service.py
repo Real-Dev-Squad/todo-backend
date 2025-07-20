@@ -88,7 +88,7 @@ class TeamService:
 
             # Create all user-team relationships
             if user_teams:
-                UserTeamDetailsRepository.create_many(user_teams)
+                UserTeamDetailsRepository.create_many_parallel(user_teams)
 
             # Convert to DTO
             team_dto = TeamDTO(
@@ -224,7 +224,7 @@ class TeamService:
             created_by=PyObjectId(user_id),
             updated_by=PyObjectId(user_id),
         )
-        UserTeamDetailsRepository.create(user_team)
+        UserTeamDetailsRepository.create_parallel(user_team)
 
         # 4. Return team details
         return TeamDTO(
@@ -362,7 +362,7 @@ class TeamService:
                 new_user_teams.append(user_team)
 
             if new_user_teams:
-                UserTeamDetailsRepository.create_many(new_user_teams)
+                UserTeamDetailsRepository.create_many_parallel(new_user_teams)
 
             # Return updated team details
             return TeamDTO(

@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, ALL_COMPLETED, wait
 from todo.utils.retry_utils import retry
 from django.db import transaction
 from todo.models.postgres.team import Team as PostgresTeam
+from todo.models.postgres.user_team_details import UserTeamDetails as PostgresUserTeamDetails
 import uuid
 
 from todo.models.team import TeamModel, UserTeamDetailsModel
@@ -358,3 +359,76 @@ class UserTeamDetailsRepository(MongoRepository):
             return True
         except Exception:
             return False
+
+    @classmethod
+    def create_parallel(cls, user_team: UserTeamDetailsModel) -> UserTeamDetailsModel:
+        collection = cls.get_collection()
+        new_user_team_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc)
+        user_team.created_at = now
+        user_team.updated_at = None
+        user_team_dict = user_team.model_dump(mode="json", by_alias=True, exclude_none=True)
+        user_team_dict["_id"] = new_user_team_id
+
+        def write_mongo():
+            client = cls.get_client()
+            with client.start_session() as session:
+                with session.start_transaction():
+                    insert_result = collection.insert_one(user_team_dict, session=session)
+                    return insert_result.inserted_id
+
+        def write_postgres():
+            with transaction.atomic():
+                PostgresUserTeamDetails.objects.create(
+                    id=new_user_team_id,
+                    user_id=user_team.user_id,
+                    team_id=user_team.team_id,
+                    is_active=user_team.is_active,
+                    role_id=user_team.role_id,
+                    created_at=now,
+                    updated_at=None,
+                    created_by=user_team.created_by,
+                    updated_by=None,
+                )
+                return "postgres_success"
+
+        exceptions = []
+        mongo_id = None
+        postgres_done = False
+
+        with ThreadPoolExecutor() as executor:
+            future_mongo = executor.submit(lambda: retry(write_mongo, max_attempts=3))
+            future_postgres = executor.submit(lambda: retry(write_postgres, max_attempts=3))
+            wait([future_mongo, future_postgres], return_when=ALL_COMPLETED)
+
+            for future in (future_mongo, future_postgres):
+                try:
+                    res = future.result()
+                    if isinstance(res, str) and res == "postgres_success":
+                        postgres_done = True
+                    else:
+                        mongo_id = res
+                except Exception as exc:
+                    exceptions.append(exc)
+                    print(f"[ERROR] Write failed: {exc}")
+
+        # Compensation logic
+        if exceptions:
+            if mongo_id and not postgres_done:
+                collection.delete_one({"_id": new_user_team_id})
+                print(f"[COMPENSATION] Rolled back Mongo for user_team_details {new_user_team_id}")
+            if postgres_done and not mongo_id:
+                with transaction.atomic():
+                    PostgresUserTeamDetails.objects.filter(id=new_user_team_id).delete()
+                print(f"[COMPENSATION] Rolled back Postgres for user_team_details {new_user_team_id}")
+            raise Exception(f"UserTeamDetails creation failed: {exceptions}")
+
+        user_team.id = mongo_id
+        return user_team
+
+    @classmethod
+    def create_many_parallel(cls, user_teams: list[UserTeamDetailsModel]) -> list[UserTeamDetailsModel]:
+        results = []
+        for user_team in user_teams:
+            results.append(cls.create_parallel(user_team))
+        return results

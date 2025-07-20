@@ -13,4 +13,4 @@ class Command(BaseCommand):
         if success:
             self.stdout.write("All database migrations completed successfully!")
         else:
-            self.stdout.write("Some database migrations failed!") 
+            self.stdout.write("Some database migrations failed!")

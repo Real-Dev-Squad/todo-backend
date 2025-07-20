@@ -17,7 +17,9 @@ urlpatterns = [
     path("teams/<str:team_id>", TeamDetailView.as_view(), name="team_detail"),
     path("teams/<str:team_id>/members", AddTeamMembersView.as_view(), name="add_team_members"),
     path("teams/<str:team_id>/users/roles", TeamUserRoleListView.as_view(), name="team_user_roles"),
-    path("teams/<str:team_id>/users/<str:user_id>/roles", TeamUserRoleDetailView.as_view(), name="team_user_role_detail"),
+    path(
+        "teams/<str:team_id>/users/<str:user_id>/roles", TeamUserRoleDetailView.as_view(), name="team_user_role_detail"
+    ),
     path("tasks", TaskListView.as_view(), name="tasks"),
     path("tasks/<str:task_id>", TaskDetailView.as_view(), name="task_detail"),
     path("tasks/<str:task_id>/update", TaskUpdateView.as_view(), name="update_task_and_assignee"),

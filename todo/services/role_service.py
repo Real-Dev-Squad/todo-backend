@@ -1,6 +1,5 @@
 from typing import List, Dict, Any, Optional
 
-from todo.models.role import RoleModel
 from todo.repositories.role_repository import RoleRepository
 from todo.dto.role_dto import RoleDTO
 from todo.exceptions.role_exceptions import (

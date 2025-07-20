@@ -92,15 +92,15 @@ class TeamService:
 
             # NEW: Assign roles using the new role system (after successful team creation)
             team_id_str = str(created_team.id)
-            
+
             # Assign roles to members
             for member_id in member_ids:
                 cls._assign_user_role(member_id, team_id_str, "member")
-            
+
             # Assign role to POC
             if dto.poc_id and dto.poc_id not in member_ids:
                 cls._assign_user_role(dto.poc_id, team_id_str, "owner")
-            
+
             # Assign role to creator
             if created_by_user_id not in member_ids and created_by_user_id != dto.poc_id:
                 creator_role = "owner" if not dto.poc_id else "member"
@@ -132,10 +132,12 @@ class TeamService:
         """Helper method to assign user roles using the new role system."""
         try:
             from todo.services.user_role_service import UserRoleService
+
             UserRoleService.assign_role(user_id, role_name, "TEAM", team_id)
         except Exception:
             # Don't fail team creation if role assignment fails
             import logging
+
             logger = logging.getLogger(__name__)
             logger.warning(f"Failed to assign role {role_name} to user {user_id} in team {team_id}")
 
@@ -394,7 +396,7 @@ class TeamService:
 
             if new_user_teams:
                 UserTeamDetailsRepository.create_many(new_user_teams)
-                
+
                 # NEW: Assign default member roles using new role system
                 for member_id in member_ids:
                     cls._assign_user_role(member_id, team_id, "member")

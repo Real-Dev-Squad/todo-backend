@@ -1,8 +1,10 @@
 from enum import Enum
 
+
 class RoleScope(Enum):
     GLOBAL = "GLOBAL"
     TEAM = "TEAM"
+
 
 class RoleName(Enum):
     MODERATOR = "moderator"
@@ -10,8 +12,9 @@ class RoleName(Enum):
     ADMIN = "admin"
     MEMBER = "member"
 
+
 ROLE_MODERATOR = "moderator"
-ROLE_OWNER = "owner" 
+ROLE_OWNER = "owner"
 ROLE_ADMIN = "admin"
 ROLE_MEMBER = "member"
 

@@ -15,16 +15,18 @@ class UserRoleRepository(MongoRepository):
     @classmethod
     def create(cls, user_role: UserRoleModel) -> UserRoleModel:
         collection = cls.get_collection()
-        
+
         # Check if already exists and is active
-        existing = collection.find_one({
-            "user_id": user_role.user_id,
-            "role_name": user_role.role_name.value,  # Compare with enum value
-            "scope": user_role.scope.value,
-            "team_id": user_role.team_id,
-            "is_active": True
-        })
-        
+        existing = collection.find_one(
+            {
+                "user_id": user_role.user_id,
+                "role_name": user_role.role_name.value,  # Compare with enum value
+                "scope": user_role.scope.value,
+                "team_id": user_role.team_id,
+                "is_active": True,
+            }
+        )
+
         if existing:
             return UserRoleModel(**existing)
 
@@ -35,15 +37,16 @@ class UserRoleRepository(MongoRepository):
         return user_role
 
     @classmethod
-    def get_user_roles(cls, user_id: str, scope: Optional['RoleScope'] = None, 
-                      team_id: Optional[str] = None) -> List[UserRoleModel]:
+    def get_user_roles(
+        cls, user_id: str, scope: Optional["RoleScope"] = None, team_id: Optional[str] = None
+    ) -> List[UserRoleModel]:
         collection = cls.get_collection()
-        
+
         query = {"user_id": user_id, "is_active": True}
-        
+
         if scope:
             query["scope"] = scope.value
-            
+
         if team_id:
             query["team_id"] = team_id
         elif scope and scope.value == "GLOBAL":
@@ -55,39 +58,27 @@ class UserRoleRepository(MongoRepository):
         return roles
 
     @classmethod
-    def assign_role(cls, user_id: str, role_name: 'RoleName', scope: 'RoleScope', 
-                   team_id: Optional[str] = None) -> UserRoleModel:
+    def assign_role(
+        cls, user_id: str, role_name: "RoleName", scope: "RoleScope", team_id: Optional[str] = None
+    ) -> UserRoleModel:
         """Assign a role to a user - simple and clean."""
-        user_role = UserRoleModel(
-            user_id=user_id,
-            role_name=role_name,
-            scope=scope,
-            team_id=team_id,
-            is_active=True
-        )
+        user_role = UserRoleModel(user_id=user_id, role_name=role_name, scope=scope, team_id=team_id, is_active=True)
         return cls.create(user_role)
 
     @classmethod
-    def remove_role(cls, user_id: str, role_name: 'RoleName', scope: 'RoleScope', 
-                   team_id: Optional[str] = None) -> bool:
+    def remove_role(
+        cls, user_id: str, role_name: "RoleName", scope: "RoleScope", team_id: Optional[str] = None
+    ) -> bool:
         """Remove a role from a user - simple deactivation."""
         collection = cls.get_collection()
-        
-        query = {
-            "user_id": user_id,
-            "role_name": role_name.value,
-            "scope": scope.value,
-            "is_active": True
-        }
-        
+
+        query = {"user_id": user_id, "role_name": role_name.value, "scope": scope.value, "is_active": True}
+
         if scope.value == "TEAM" and team_id:
             query["team_id"] = team_id
         elif scope.value == "GLOBAL":
             query["team_id"] = None
 
-        result = collection.update_many(
-            query,
-            {"$set": {"is_active": False}}
-        )
-        
-        return result.modified_count > 0 
+        result = collection.update_many(query, {"$set": {"is_active": False}})
+
+        return result.modified_count > 0

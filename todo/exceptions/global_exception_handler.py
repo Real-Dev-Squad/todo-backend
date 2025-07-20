@@ -7,7 +7,6 @@ from django.conf import settings
 
 from todo.exceptions.role_exceptions import (
     RoleNotFoundException,
-    RoleAlreadyExistsException,
     RoleOperationException,
 )
 
@@ -26,9 +25,6 @@ def handle_exceptions(func: Callable) -> Callable:
         except RoleNotFoundException as e:
             logger.error(f"RoleNotFoundException: {e}")
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
-        except RoleAlreadyExistsException as e:
-            logger.error(f"RoleAlreadyExistsException: {e}")
-            return Response({"error": str(e)}, status=status.HTTP_409_CONFLICT)
         except RoleOperationException as e:
             logger.error(f"RoleOperationException: {e}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -51,12 +47,6 @@ class GlobalExceptionHandler:
         """Handle RoleNotFoundException"""
         logger.error(f"Role not found: {exc}")
         return {"error": str(exc), "status_code": status.HTTP_404_NOT_FOUND}
-
-    @staticmethod
-    def handle_role_already_exists(exc: RoleAlreadyExistsException) -> Dict[str, Any]:
-        """Handle RoleAlreadyExistsException"""
-        logger.error(f"Role already exists: {exc}")
-        return {"error": str(exc), "status_code": status.HTTP_409_CONFLICT}
 
     @staticmethod
     def handle_role_operation_error(exc: RoleOperationException) -> Dict[str, Any]:

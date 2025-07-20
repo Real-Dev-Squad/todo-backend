@@ -23,22 +23,22 @@ class UserRoleModel(Document):
 
     model_config = ConfigDict(ser_enum="value", from_attributes=True, populate_by_name=True, use_enum_values=True)
 
-    @validator('role_name')
+    @validator("role_name")
     def validate_role_name(cls, v, values):
         """Validate role_name is valid for the given scope."""
-        scope = values.get('scope')
+        scope = values.get("scope")
         if scope and scope.value in VALID_ROLE_NAMES_BY_SCOPE:
             valid_roles = VALID_ROLE_NAMES_BY_SCOPE[scope.value]
             if v.value not in valid_roles:
                 raise ValueError(f"Invalid role '{v.value}' for scope '{scope.value}'. Valid roles: {valid_roles}")
         return v
 
-    @validator('team_id')
+    @validator("team_id")
     def validate_team_id(cls, v, values):
         """Validate team_id requirements based on scope."""
-        scope = values.get('scope')
+        scope = values.get("scope")
         if scope == RoleScope.TEAM and not v:
             raise ValueError("team_id is required for TEAM scope roles")
         if scope == RoleScope.GLOBAL and v:
             raise ValueError("team_id should not be provided for GLOBAL scope roles")
-        return v 
+        return v

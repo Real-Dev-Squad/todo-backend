@@ -119,7 +119,9 @@ def migrate_fixed_labels() -> bool:
                 continue
 
         total_labels = len(fixed_labels)
-        logger.info(f"Fixed labels migration completed - {created_count} created, {skipped_count} skipped, {total_labels} total")
+        logger.info(
+            f"Fixed labels migration completed - {created_count} created, {skipped_count} skipped, {total_labels} total"
+        )
 
         return True
 
@@ -133,30 +135,10 @@ def migrate_predefined_roles() -> bool:
     logger.info("Starting predefined roles migration")
 
     predefined_roles = [
-        {
-            "name": "moderator",
-            "scope": "GLOBAL", 
-            "description": "Global system moderator",
-            "is_active": True
-        },
-        {
-            "name": "owner",
-            "scope": "TEAM",
-            "description": "Team owner with full privileges", 
-            "is_active": True
-        },
-        {
-            "name": "admin", 
-            "scope": "TEAM",
-            "description": "Team administrator",
-            "is_active": True
-        },
-        {
-            "name": "member",
-            "scope": "TEAM", 
-            "description": "Team member",
-            "is_active": True
-        }
+        {"name": "moderator", "scope": "GLOBAL", "description": "Global system moderator", "is_active": True},
+        {"name": "owner", "scope": "TEAM", "description": "Team owner with full privileges", "is_active": True},
+        {"name": "admin", "scope": "TEAM", "description": "Team administrator", "is_active": True},
+        {"name": "member", "scope": "TEAM", "description": "Team member", "is_active": True},
     ]
 
     try:
@@ -168,10 +150,7 @@ def migrate_predefined_roles() -> bool:
         skipped_count = 0
 
         for role_data in predefined_roles:
-            existing = roles_collection.find_one({
-                "name": role_data["name"],
-                "scope": role_data["scope"]
-            })
+            existing = roles_collection.find_one({"name": role_data["name"], "scope": role_data["scope"]})
 
             if existing:
                 logger.info(f"Role '{role_data['name']}' ({role_data['scope']}) already exists, skipping")
@@ -184,7 +163,7 @@ def migrate_predefined_roles() -> bool:
                 "description": role_data["description"],
                 "is_active": role_data["is_active"],
                 "created_at": current_time,
-                "created_by": "system"
+                "created_by": "system",
             }
 
             result = roles_collection.insert_one(role_doc)

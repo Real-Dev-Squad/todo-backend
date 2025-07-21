@@ -598,7 +598,7 @@ class TaskService:
                     created_by=dto.createdBy,
                     updated_by=None,
                 )
-                TaskAssignmentRepository.create(assignee_relationship)
+                TaskAssignmentRepository.create_parallel(assignee_relationship)
 
             task_dto = cls.prepare_task_dto(created_task, dto.createdBy)
             return CreateTaskResponse(data=task_dto)

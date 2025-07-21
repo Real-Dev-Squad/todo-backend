@@ -1,7 +1,5 @@
 from rest_framework import serializers
 
-from todo.constants.messages import ValidationErrors
-
 
 class UpdateTeamSerializer(serializers.Serializer):
     """

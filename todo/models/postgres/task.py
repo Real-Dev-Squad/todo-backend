@@ -8,7 +8,7 @@ class Task(models.Model):
     display_id = models.CharField(max_length=50, null=True, blank=True)
     title = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
-    priority = models.CharField(max_length=20)
+    priority = models.IntegerField()
     status = models.CharField(max_length=20)
     assignee = models.CharField(max_length=255, null=True, blank=True)
     is_acknowledged = models.BooleanField(default=False)  # type: ignore[arg-type]

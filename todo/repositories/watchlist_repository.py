@@ -179,6 +179,9 @@ class WatchlistRepository(MongoRepository):
         for task in tasks:
             if not task.get("assignee"):
                 task["assignee"] = cls._get_assignee_for_task(task.get("taskId"))
+            if "watchlistId" in task:
+                task["id"] = task["watchlistId"]
+                task["displayId"] = task["watchlistId"]
 
         tasks = [WatchlistDTO(**doc) for doc in tasks]
 
@@ -229,7 +232,7 @@ class WatchlistRepository(MongoRepository):
         """
         watchlist_collection = cls.get_collection()
         update_result = watchlist_collection.update_one(
-            {"userId": str(userId), "taskId": str(taskId)},
+            {"userId": userId, "taskId": taskId},
             {
                 "$set": {
                     "isActive": isActive,

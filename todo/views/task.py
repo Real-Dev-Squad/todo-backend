@@ -1,4 +1,3 @@
-from bson import ObjectId
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -70,16 +69,6 @@ class TaskListView(APIView):
         """
         query = GetTaskQueryParamsSerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
-        if query.validated_data["profile"]:
-            user = get_current_user_info(request)
-            if not user:
-                raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
-            response = TaskService.get_tasks_for_user(
-                user_id=user["user_id"],
-                page=query.validated_data["page"],
-                limit=query.validated_data["limit"],
-            )
-            return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
 
         user = get_current_user_info(request)
         if query.validated_data["profile"]:
@@ -94,6 +83,7 @@ class TaskListView(APIView):
             )
 
         team_id = query.validated_data.get("teamId")
+        print(team_id)
         response = TaskService.get_tasks(
             page=query.validated_data["page"],
             limit=query.validated_data["limit"],
@@ -235,7 +225,7 @@ class TaskDetailView(APIView):
     )
     def delete(self, request: Request, task_id: str):
         user = get_current_user_info(request)
-        task_id = ObjectId(task_id)
+        task_id = task_id
         TaskService.delete_task(task_id, user["user_id"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 

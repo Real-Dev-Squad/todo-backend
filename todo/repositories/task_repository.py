@@ -194,7 +194,7 @@ class TaskRepository(MongoRepository):
             raise ValueError("update_data must be a dictionary.")
 
         try:
-            obj_id = ObjectId(task_id)
+            obj_id = task_id
         except Exception:
             return None
 
@@ -218,6 +218,7 @@ class TaskRepository(MongoRepository):
         assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
         query = {"_id": {"$in": assigned_task_ids}}
         tasks_cursor = tasks_collection.find(query).skip((page - 1) * limit).limit(limit)
+        print(tasks_cursor)
         return [TaskModel(**task) for task in tasks_cursor]
 
     @classmethod

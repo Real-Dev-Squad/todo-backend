@@ -1,7 +1,5 @@
-from bson.errors import InvalidId
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
-from bson import ObjectId
 from pymongo import ReturnDocument
 import logging
 
@@ -71,18 +69,13 @@ class RoleRepository(MongoRepository):
     @classmethod
     def get_by_id(cls, role_id: str) -> Optional[RoleModel]:
         roles_collection = cls.get_collection()
-        role_data = roles_collection.find_one({"_id": ObjectId(role_id)})
+        role_data = roles_collection.find_one({"_id": role_id})
         if role_data:
             return cls._document_to_model(role_data)
         return None
 
     @classmethod
     def update(cls, role_id: str, update_data: dict) -> Optional[RoleModel]:
-        try:
-            obj_id = ObjectId(role_id)
-        except InvalidId:
-            return None
-
         if "name" in update_data:
             scope_value = update_data.get("scope", "GLOBAL")
             if isinstance(scope_value, RoleScope):
@@ -102,7 +95,7 @@ class RoleRepository(MongoRepository):
 
         roles_collection = cls.get_collection()
         updated_role_doc = roles_collection.find_one_and_update(
-            {"_id": obj_id}, {"$set": update_data}, return_document=ReturnDocument.AFTER
+            {"_id": role_id}, {"$set": update_data}, return_document=ReturnDocument.AFTER
         )
 
         if updated_role_doc:
@@ -111,13 +104,8 @@ class RoleRepository(MongoRepository):
 
     @classmethod
     def delete_by_id(cls, role_id: str) -> bool:
-        try:
-            obj_id = ObjectId(role_id)
-        except Exception:
-            return False
-
         roles_collection = cls.get_collection()
-        result = roles_collection.delete_one({"_id": obj_id})
+        result = roles_collection.delete_one({"_id": role_id})
         return result.deleted_count > 0
 
     @classmethod

@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from typing import Optional
-from bson import ObjectId
 from pymongo import ReturnDocument
 from concurrent.futures import ThreadPoolExecutor, ALL_COMPLETED, wait
 from todo.utils.retry_utils import retry
@@ -74,7 +73,7 @@ class TeamRepository(MongoRepository):
 
             # Use find_one_and_update for atomicity - prevents race conditions
             updated_doc = teams_collection.find_one_and_update(
-                {"_id": ObjectId(team_id), "is_deleted": False},
+                {"_id": team_id, "is_deleted": False},
                 {"$set": update_data},
                 return_document=ReturnDocument.AFTER,
             )

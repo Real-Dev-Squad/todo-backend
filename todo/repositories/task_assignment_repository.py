@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from typing import Optional, List
-from bson import ObjectId
 import uuid
 from concurrent.futures import ThreadPoolExecutor, ALL_COMPLETED, wait
 from todo.utils.retry_utils import retry
@@ -8,7 +7,6 @@ from django.db import transaction
 
 from todo.models.task_assignment import TaskAssignmentModel
 from todo.repositories.common.mongo_repository import MongoRepository
-from todo.models.common.pyobjectid import PyObjectId
 from todo.models.postgres.task_assignment import TaskAssignment as PostgresTaskAssignment
 from todo.models.postgres.task import Task as PostgresTask
 
@@ -58,7 +56,7 @@ class TaskAssignmentRepository(MongoRepository):
         try:
             # Try with ObjectId first
             task_assignments_data = collection.find(
-                {"assignee_id": ObjectId(assignee_id), "user_type": user_type, "is_active": True}
+                {"assignee_id": assignee_id, "user_type": user_type, "is_active": True}
             )
             if not list(task_assignments_data):
                 # Try with string if ObjectId doesn't work
@@ -80,11 +78,11 @@ class TaskAssignmentRepository(MongoRepository):
         try:
             # Deactivate current assignment if exists (try both ObjectId and string)
             collection.update_many(
-                {"task_id": ObjectId(task_id), "is_active": True},
+                {"task_id": task_id, "is_active": True},
                 {
                     "$set": {
                         "is_active": False,
-                        "updated_by": ObjectId(user_id),
+                        "updated_by": user_id,
                         "updated_at": datetime.now(timezone.utc),
                     }
                 },
@@ -95,22 +93,22 @@ class TaskAssignmentRepository(MongoRepository):
                 {
                     "$set": {
                         "is_active": False,
-                        "updated_by": ObjectId(user_id),
+                        "updated_by": user_id,
                         "updated_at": datetime.now(timezone.utc),
                     }
                 },
             )
 
             new_assignment = TaskAssignmentModel(
-                _id=PyObjectId(),
-                task_id=PyObjectId(task_id),
-                assignee_id=PyObjectId(assignee_id),
+                _id=None,
+                task_id=task_id,
+                assignee_id=assignee_id,
                 user_type=user_type,
-                created_by=PyObjectId(user_id),
+                created_by=user_id,
                 updated_by=None,
             )
 
-            return cls.create(new_assignment)
+            return cls.create_parallel(new_assignment)
         except Exception:
             return None
 
@@ -123,11 +121,11 @@ class TaskAssignmentRepository(MongoRepository):
         try:
             # Try with ObjectId first
             result = collection.update_one(
-                {"task_id": ObjectId(task_id), "is_active": True},
+                {"task_id": task_id, "is_active": True},
                 {
                     "$set": {
                         "is_active": False,
-                        "updated_by": ObjectId(user_id),
+                        "updated_by": user_id,
                         "updated_at": datetime.now(timezone.utc),
                     }
                 },
@@ -139,7 +137,7 @@ class TaskAssignmentRepository(MongoRepository):
                     {
                         "$set": {
                             "is_active": False,
-                            "updated_by": ObjectId(user_id),
+                            "updated_by": user_id,
                             "updated_at": datetime.now(timezone.utc),
                         }
                     },
@@ -156,7 +154,7 @@ class TaskAssignmentRepository(MongoRepository):
         collection = cls.get_collection()
         try:
             result = collection.update_one(
-                {"task_id": ObjectId(task_id), "is_active": True},
+                {"task_id": task_id, "is_active": True},
                 {
                     "$set": {
                         "assignee_id": executor_id,
@@ -192,11 +190,11 @@ class TaskAssignmentRepository(MongoRepository):
         try:
             # Try with ObjectId first
             result = collection.update_many(
-                {"task_id": ObjectId(task_id), "is_active": True},
+                {"task_id": task_id, "is_active": True},
                 {
                     "$set": {
                         "is_active": False,
-                        "updated_by": ObjectId(user_id),
+                        "updated_by": user_id,
                         "updated_at": datetime.now(timezone.utc),
                     }
                 },
@@ -208,7 +206,7 @@ class TaskAssignmentRepository(MongoRepository):
                     {
                         "$set": {
                             "is_active": False,
-                            "updated_by": ObjectId(user_id),
+                            "updated_by": user_id,
                             "updated_at": datetime.now(timezone.utc),
                         }
                     },

@@ -1,3 +1,4 @@
+import uuid
 from rest_framework import status
 from bson import ObjectId
 from datetime import datetime, timezone
@@ -10,7 +11,7 @@ class WatchlistCheckViewTests(AuthenticatedMongoTestCase):
     def setUp(self):
         super().setUp()
         self.url = "/v1/watchlist/tasks/check"
-        self.task_id = str(ObjectId())
+        self.task_id = str(uuid.uuid4())
 
     def test_check_task_not_in_watchlist(self):
         """Test that a task not in watchlist returns null."""

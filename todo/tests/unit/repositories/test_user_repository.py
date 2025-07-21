@@ -4,7 +4,6 @@ from bson import ObjectId
 
 from todo.repositories.user_repository import UserRepository
 from todo.models.user import UserModel
-from todo.models.common.pyobjectid import PyObjectId
 from todo.exceptions.auth_exceptions import UserNotFoundException, APIException
 from todo.tests.fixtures.user import users_db_data
 from todo.constants.messages import RepositoryErrors
@@ -27,7 +26,7 @@ class UserRepositoryTests(TestCase):
 
         result = UserRepository.get_by_id(user_id)
 
-        self.mock_collection.find_one.assert_called_once_with({"_id": PyObjectId(user_id)})
+        self.mock_collection.find_one.assert_called_once_with({"_id": user_id})
         self.assertIsInstance(result, UserModel)
         self.assertEqual(result.google_id, users_db_data[0]["google_id"])
 

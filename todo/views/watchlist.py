@@ -136,11 +136,11 @@ class WatchlistDetailView(APIView):
         Update the watchlist status of a task.
         """
         user = get_current_user_info(request)
-        task_id = ObjectId(task_id)
+        task_id = task_id
         serializer = UpdateWatchlistSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        WatchlistService.update_task(task_id, serializer.validated_data, ObjectId(user["user_id"]))
+        WatchlistService.update_task(task_id, serializer.validated_data, user["user_id"])
         return Response(status=status.HTTP_200_OK)
 
 

@@ -3,7 +3,6 @@ from todo.dto.update_team_dto import UpdateTeamDTO
 from todo.dto.responses.create_team_response import CreateTeamResponse
 from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.models.team import TeamModel, UserTeamDetailsModel
-from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
 from todo.constants.messages import AppMessages
 from todo.utils.invite_code_utils import generate_invite_code
@@ -213,16 +212,15 @@ class TeamService:
                 raise ValueError("User is already a member of this team.")
 
         # 3. Add user to the team
-        from todo.models.common.pyobjectid import PyObjectId
         from todo.models.team import UserTeamDetailsModel
 
         user_team = UserTeamDetailsModel(
-            user_id=PyObjectId(user_id),
+            user_id=user_id,
             team_id=team.id,
             role_id=DEFAULT_ROLE_ID,
             is_active=True,
-            created_by=PyObjectId(user_id),
-            updated_by=PyObjectId(user_id),
+            created_by=user_id,
+            updated_by=user_id,
         )
         UserTeamDetailsRepository.create_parallel(user_team)
 
@@ -268,7 +266,7 @@ class TeamService:
             if dto.description is not None:
                 update_data["description"] = dto.description
             if dto.poc_id is not None:
-                update_data["poc_id"] = PyObjectId(dto.poc_id)
+                update_data["poc_id"] = dto.poc_id
 
             # Update the team
             updated_team = TeamRepository.update(team_id, update_data, updated_by_user_id)
@@ -347,17 +345,16 @@ class TeamService:
 
             # Add new members to the team
             from todo.models.team import UserTeamDetailsModel
-            from todo.models.common.pyobjectid import PyObjectId
 
             new_user_teams = []
             for member_id in member_ids:
                 user_team = UserTeamDetailsModel(
-                    user_id=PyObjectId(member_id),
+                    user_id=member_id,
                     team_id=team.id,
                     role_id=DEFAULT_ROLE_ID,
                     is_active=True,
-                    created_by=PyObjectId(added_by_user_id),
-                    updated_by=PyObjectId(added_by_user_id),
+                    created_by=added_by_user_id,
+                    updated_by=added_by_user_id,
                 )
                 new_user_teams.append(user_team)
 

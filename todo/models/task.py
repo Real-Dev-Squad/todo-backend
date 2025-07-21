@@ -5,7 +5,6 @@ from datetime import datetime
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.models.common.document import Document
 
-from todo.models.common.pyobjectid import PyObjectId
 from todo_project.db.config import DatabaseManager
 
 database_manager = DatabaseManager()
@@ -30,7 +29,7 @@ class TaskModel(Document):
     priority: TaskPriority | None = TaskPriority.LOW
     status: TaskStatus | None = TaskStatus.TODO
     isAcknowledged: bool = False
-    labels: List[PyObjectId] | None = []
+    labels: List[str] | None = []
     isDeleted: bool = False
     deferredDetails: DeferredDetailsModel | None = None
     startedAt: datetime | None = None

@@ -21,7 +21,6 @@ from todo.models.task import TaskModel, DeferredDetailsModel
 from todo.models.task_assignment import TaskAssignmentModel
 from todo.repositories.task_assignment_repository import TaskAssignmentRepository
 from todo.dto.task_assignment_dto import TaskAssignmentDTO
-from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.label_repository import LabelRepository
 from todo.repositories.team_repository import TeamRepository
@@ -89,6 +88,8 @@ class TaskService:
 
             tasks = TaskRepository.list(page, limit, sort_by, order, user_id, team_id=team_id)
             total_count = TaskRepository.count(user_id, team_id=team_id)
+
+            print(tasks)
 
             if not tasks:
                 return GetTasksResponse(tasks=[], links=None)
@@ -261,11 +262,11 @@ class TaskService:
             raise exc
 
     @classmethod
-    def _process_labels_for_update(cls, raw_labels: list | None) -> list[PyObjectId]:
+    def _process_labels_for_update(cls, raw_labels: list | None) -> list[str]:
         if raw_labels is None:
             return []
 
-        label_object_ids = [PyObjectId(label_id_str) for label_id_str in raw_labels]
+        label_object_ids = list(raw_labels)
         return label_object_ids
 
     @classmethod
@@ -593,10 +594,10 @@ class TaskService:
             # Create assignee relationship if assignee is provided
             if dto.assignee:
                 assignee_relationship = TaskAssignmentModel(
-                    assignee_id=PyObjectId(dto.assignee["assignee_id"]),
+                    assignee_id=dto.assignee["assignee_id"],
                     task_id=created_task.id,
                     user_type=dto.assignee["user_type"],
-                    created_by=PyObjectId(dto.createdBy),
+                    created_by=dto.createdBy,
                     updated_by=None,
                 )
                 TaskAssignmentRepository.create(assignee_relationship)

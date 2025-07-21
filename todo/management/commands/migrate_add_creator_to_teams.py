@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand
 from todo.models.team import UserTeamDetailsModel
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
-from todo.models.common.pyobjectid import PyObjectId
 
 
 class Command(BaseCommand):
@@ -23,12 +22,12 @@ class Command(BaseCommand):
             )
             if not exists:
                 user_team = UserTeamDetailsModel(
-                    user_id=PyObjectId(creator_id),
-                    team_id=PyObjectId(team_id),
+                    user_id=creator_id,
+                    team_id=team_id,
                     role_id="1",
                     is_active=True,
-                    created_by=PyObjectId(creator_id),
-                    updated_by=PyObjectId(creator_id),
+                    created_by=creator_id,
+                    updated_by=creator_id,
                 )
                 UserTeamDetailsRepository.create(user_team)
                 updated += 1

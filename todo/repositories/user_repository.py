@@ -4,7 +4,6 @@ from pymongo.collection import ReturnDocument
 from pymongo import ASCENDING
 
 from todo.models.user import UserModel
-from todo.models.common.pyobjectid import PyObjectId
 from todo_project.db.config import DatabaseManager
 from todo.constants.messages import RepositoryErrors
 from todo.exceptions.auth_exceptions import UserNotFoundException, APIException
@@ -44,7 +43,7 @@ class UserRepository:
                 return []
 
             collection = cls._get_collection()
-            object_ids = [PyObjectId(user_id) for user_id in user_ids]
+            object_ids = list(user_ids)
             cursor = collection.find({"_id": {"$in": object_ids}})
             return [UserModel(**doc) for doc in cursor]
         except Exception as e:

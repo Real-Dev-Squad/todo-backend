@@ -3,11 +3,9 @@ from bson import ObjectId
 
 from pydantic import BaseModel, Field
 
-from todo.models.common.pyobjectid import PyObjectId
-
 
 class Document(BaseModel, ABC):
-    id: PyObjectId | None = Field(None, alias="_id")
+    id: str | None = Field(None, alias="_id")
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)

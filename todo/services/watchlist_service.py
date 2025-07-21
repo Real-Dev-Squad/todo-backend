@@ -138,7 +138,7 @@ class WatchlistService:
 
     @classmethod
     def _prepare_label_dtos(cls, label_ids: list[str]) -> list[LabelDTO]:
-        object_ids = [ObjectId(id) for id in label_ids]  # Convert here!
+        object_ids = list(label_ids)  # Convert here!
         label_models = LabelRepository.list_by_ids(object_ids)
 
         return [

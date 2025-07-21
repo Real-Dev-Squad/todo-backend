@@ -18,6 +18,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiRespon
 from drf_spectacular.types import OpenApiTypes
 from todo.dto.team_dto import TeamDTO
 from todo.services.user_service import UserService
+from todo.repositories.team_repository import TeamRepository
 
 
 class TeamListView(APIView):
@@ -327,3 +328,39 @@ class AddTeamMembersView(APIView):
             errors=[{"detail": str(error)} for error in errors.values()],
         )
         return Response(data=error_response.model_dump(mode="json"), status=400)
+
+
+class TeamInviteCodeView(APIView):
+    @extend_schema(
+        operation_id="get_team_invite_code",
+        summary="Get team invite code (creator or POC only)",
+        description="Return the invite code for a team if the requesting user is the creator or POC of the team.",
+        tags=["teams"],
+        parameters=[
+            OpenApiParameter(
+                name="team_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the team",
+                required=True,
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(description="Invite code returned successfully"),
+            403: OpenApiResponse(description="Forbidden - not creator or POC"),
+            404: OpenApiResponse(description="Team not found"),
+        },
+    )
+    def get(self, request: Request, team_id: str):
+        """
+        Return the invite code for a team if the requesting user is the creator or POC of the team.
+        """
+        user_id = request.user_id
+        team = TeamRepository.get_by_id(team_id)
+        if not team:
+            return Response({"detail": "Team not found."}, status=status.HTTP_404_NOT_FOUND)
+        is_creator = str(team.created_by) == str(user_id)
+        is_poc = str(team.poc_id) == str(user_id)
+        if is_creator or is_poc:
+            return Response({"invite_code": team.invite_code}, status=status.HTTP_200_OK)
+        return Response({"detail": "You are not authorized to view the invite code for this team."}, status=status.HTTP_403_FORBIDDEN)

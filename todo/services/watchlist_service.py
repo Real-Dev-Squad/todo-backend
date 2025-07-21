@@ -131,7 +131,7 @@ class WatchlistService:
     def update_task(cls, taskId: str, dto: UpdateWatchlistDTO, userId: str) -> CreateWatchlistResponse:
         validate_task_exists(str(taskId))
 
-        updated_watchlist = WatchlistRepository.update(taskId, dto["isActive"], userId)
+        updated_watchlist = WatchlistRepository.update_parallel(taskId, dto["isActive"], userId)
         if not updated_watchlist:
             raise TaskNotFoundException(taskId)
 

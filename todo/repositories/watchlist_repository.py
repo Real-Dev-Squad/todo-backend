@@ -311,3 +311,85 @@ class WatchlistRepository(MongoRepository):
 
         watchlist_model.id = mongo_id
         return watchlist_model
+
+    @classmethod
+    def update_parallel(cls, taskId: str, isActive: bool, userId: str) -> dict:
+        """
+        Update the watchlist status of a task in both MongoDB and Postgres in parallel.
+        Compensation logic is applied if one update fails.
+        """
+        watchlist_collection = cls.get_collection()
+        now = datetime.now(timezone.utc)
+        exceptions = []
+        mongo_result = None
+        postgres_done = False
+
+        def update_mongo():
+            update_result = watchlist_collection.update_one(
+                {"userId": userId, "taskId": taskId},
+                {
+                    "$set": {
+                        "isActive": isActive,
+                        "updatedAt": now,
+                        "updatedBy": userId,
+                    }
+                },
+            )
+            if update_result.modified_count == 0:
+                raise Exception("MongoDB update failed: No document updated.")
+            return update_result
+
+        def update_postgres():
+            from todo.models.postgres.watchlist import Watchlist as PostgresWatchlist
+            with transaction.atomic():
+                # Find the Postgres watchlist entry
+                try:
+                    pg_watchlist = PostgresWatchlist.objects.get(user_id=userId, task_id=taskId)
+                except PostgresWatchlist.DoesNotExist:
+                    raise Exception("Postgres update failed: Watchlist entry does not exist.")
+                pg_watchlist.is_active = isActive
+                pg_watchlist.updated_at = now
+                pg_watchlist.updated_by = userId
+                pg_watchlist.save()
+                return "postgres_success"
+
+        with ThreadPoolExecutor() as executor:
+            future_mongo = executor.submit(lambda: retry(update_mongo, max_attempts=3))
+            future_postgres = executor.submit(lambda: retry(update_postgres, max_attempts=3))
+            wait([future_mongo, future_postgres], return_when=ALL_COMPLETED)
+
+            for future in (future_mongo, future_postgres):
+                try:
+                    res = future.result()
+                    if isinstance(res, str) and res == "postgres_success":
+                        postgres_done = True
+                    else:
+                        mongo_result = res
+                except Exception as exc:
+                    exceptions.append(exc)
+                    print(f"[ERROR] Update failed: {exc}")
+
+        # Compensation logic
+        if exceptions:
+            # If Mongo succeeded but Postgres failed, revert Mongo
+            if mongo_result and not postgres_done:
+                watchlist_collection.update_one(
+                    {"userId": userId, "taskId": taskId},
+                    {"$set": {"isActive": not isActive, "updatedAt": now, "updatedBy": userId}},
+                )
+                print(f"[COMPENSATION] Rolled back Mongo update for watchlist userId={userId}, taskId={taskId}")
+            # If Postgres succeeded but Mongo failed, revert Postgres
+            if postgres_done and not mongo_result:
+                with transaction.atomic():
+                    try:
+                        pg_watchlist = PostgresWatchlist.objects.get(user_id=userId, task_id=taskId)
+                        pg_watchlist.is_active = not isActive
+                        pg_watchlist.updated_at = now
+                        pg_watchlist.updated_by = userId
+                        pg_watchlist.save()
+                        print(f"[COMPENSATION] Rolled back Postgres update for watchlist userId={userId}, taskId={taskId}")
+                    except PostgresWatchlist.DoesNotExist:
+                        pass
+            raise Exception(f"Watchlist update failed: {exceptions}")
+
+        return {"mongo_result": mongo_result, "postgres_done": postgres_done}

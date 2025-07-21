@@ -20,7 +20,6 @@ from todo.dto.team_dto import TeamDTO
 from todo.services.user_service import UserService
 from todo.repositories.team_repository import TeamRepository
 from todo.repositories.audit_log_repository import AuditLogRepository
-from todo.models.audit_log import AuditLogModel
 from todo.repositories.user_repository import UserRepository
 from todo.repositories.task_repository import TaskRepository
 

@@ -97,7 +97,7 @@ class TaskRepositoryTests(TestCase):
         result = TaskRepository.count()
 
         self.assertEqual(result, 42)
-        self.mock_collection.count_documents.assert_called_once_with({})
+        self.mock_collection.count_documents.assert_called_once_with({"status": {"$ne": "DONE"}})
 
     def test_get_all_returns_all_tasks(self):
         self.mock_collection.find.return_value = self.task_data

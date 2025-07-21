@@ -363,4 +363,7 @@ class TeamInviteCodeView(APIView):
         is_poc = str(team.poc_id) == str(user_id)
         if is_creator or is_poc:
             return Response({"invite_code": team.invite_code}, status=status.HTTP_200_OK)
-        return Response({"detail": "You are not authorized to view the invite code for this team."}, status=status.HTTP_403_FORBIDDEN)
+        return Response(
+            {"detail": "You are not authorized to view the invite code for this team."},
+            status=status.HTTP_403_FORBIDDEN,
+        )

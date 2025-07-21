@@ -5,7 +5,13 @@ from todo.views.user import UsersView
 from todo.views.auth import GoogleLoginView, GoogleCallbackView, LogoutView
 from todo.views.role import RoleListView, RoleDetailView
 from todo.views.label import LabelListView
-from todo.views.team import TeamListView, TeamDetailView, JoinTeamByInviteCodeView, AddTeamMembersView, TeamInviteCodeView
+from todo.views.team import (
+    TeamListView,
+    TeamDetailView,
+    JoinTeamByInviteCodeView,
+    AddTeamMembersView,
+    TeamInviteCodeView,
+)
 from todo.views.watchlist import WatchlistListView, WatchlistDetailView, WatchlistCheckView
 from todo.views.task_assignment import TaskAssignmentView, TaskAssignmentDetailView
 from todo.views.task import AssignTaskToUserView

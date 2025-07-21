@@ -11,6 +11,8 @@ from todo.exceptions.user_exceptions import UserNotFoundException
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.task_assignment import TaskAssignmentModel
 from todo.dto.task_assignment_dto import TaskAssignmentDTO
+from todo.models.audit_log import AuditLogModel
+from todo.repositories.audit_log_repository import AuditLogRepository
 
 
 class TaskAssignmentService:
@@ -39,13 +41,22 @@ class TaskAssignmentService:
         # Check if task already has an active assignment
         existing_assignment = TaskAssignmentRepository.get_by_task_id(dto.task_id)
         if existing_assignment:
+            # If previous assignment was to a team, log unassignment
+            if existing_assignment.user_type == "team":
+                AuditLogRepository.create(
+                    AuditLogModel(
+                        task_id=existing_assignment.task_id,
+                        team_id=existing_assignment.assignee_id,
+                        action="unassigned_from_team",
+                        performed_by=PyObjectId(user_id),
+                    )
+                )
             # Update existing assignment
             updated_assignment = TaskAssignmentRepository.update_assignment(
                 dto.task_id, dto.assignee_id, dto.user_type, user_id
             )
             if not updated_assignment:
                 raise ValueError("Failed to update task assignment")
-
             assignment = updated_assignment
         else:
             # Create new assignment
@@ -56,8 +67,18 @@ class TaskAssignmentService:
                 created_by=PyObjectId(user_id),
                 updated_by=None,
             )
-
             assignment = TaskAssignmentRepository.create(task_assignment)
+
+        # If new assignment is to a team, log assignment
+        if assignment.user_type == "team":
+            AuditLogRepository.create(
+                AuditLogModel(
+                    task_id=assignment.task_id,
+                    team_id=assignment.assignee_id,
+                    action="assigned_to_team",
+                    performed_by=PyObjectId(user_id),
+                )
+            )
 
         # Also insert into assignee_task_details if this is a team assignment (legacy, can be removed if not needed)
         # if dto.user_type == "team":

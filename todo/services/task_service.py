@@ -42,6 +42,8 @@ from bson.errors import InvalidId as BsonInvalidId
 from todo.repositories.user_repository import UserRepository
 from todo.repositories.watchlist_repository import WatchlistRepository
 import math
+from todo.models.audit_log import AuditLogModel
+from todo.repositories.audit_log_repository import AuditLogRepository
 
 
 @dataclass
@@ -303,6 +305,10 @@ class TaskService:
                 if not team_data:
                     raise ValueError(f"Team not found: {assignee_id}")
 
+        # Track status change for audit log
+        old_status = getattr(current_task, 'status', None)
+        new_status = validated_data.get('status')
+
         update_payload = {}
         enum_fields = {"priority": TaskPriority, "status": TaskStatus}
 
@@ -331,6 +337,18 @@ class TaskService:
 
         update_payload["updatedBy"] = user_id
         updated_task = TaskRepository.update(task_id, update_payload)
+
+        # Audit log for status change
+        if old_status and new_status and old_status != new_status:
+            AuditLogRepository.create(
+                AuditLogModel(
+                    task_id=current_task.id,
+                    action="status_changed",
+                    status_from=old_status,
+                    status_to=new_status,
+                    performed_by=PyObjectId(user_id),
+                )
+            )
 
         if not updated_task:
             raise TaskNotFoundException(task_id)

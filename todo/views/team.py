@@ -28,8 +28,10 @@ class TeamListView(APIView):
         try:
             user_id = request.user_id
             response: GetUserTeamsResponse = TeamService.get_user_teams(user_id)
-
-            return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
+            data = response.model_dump(mode="json")
+            for team in data.get("teams", []):
+                team.pop("invite_code", None)
+            return Response(data=data, status=status.HTTP_200_OK)
 
         except ValueError as e:
             if isinstance(e.args[0], ApiErrorResponse):
@@ -70,8 +72,11 @@ class TeamListView(APIView):
             dto = CreateTeamDTO(**serializer.validated_data)
             created_by_user_id = request.user_id
             response: CreateTeamResponse = TeamService.create_team(dto, created_by_user_id)
-
-            return Response(data=response.model_dump(mode="json"), status=status.HTTP_201_CREATED)
+            data = response.model_dump(mode="json")
+            # Remove invite_code from the created team
+            if "team" in data:
+                data["team"].pop("invite_code", None)
+            return Response(data=data, status=status.HTTP_201_CREATED)
 
         except ValueError as e:
             if isinstance(e.args[0], ApiErrorResponse):
@@ -149,7 +154,9 @@ class TeamDetailView(APIView):
                 users = UserService.get_users_by_team_id(team_id)
                 users_data = [user.dict() for user in users]
                 team_dto.users = users_data
-            return Response(data=team_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
+            data = team_dto.model_dump(mode="json")
+            data.pop("invite_code", None)
+            return Response(data=data, status=status.HTTP_200_OK)
         except ValueError as e:
             fallback_response = ApiErrorResponse(
                 statusCode=404,
@@ -199,8 +206,9 @@ class TeamDetailView(APIView):
             dto = UpdateTeamDTO(**serializer.validated_data)
             updated_by_user_id = request.user_id
             response: TeamDTO = TeamService.update_team(team_id, dto, updated_by_user_id)
-
-            return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
+            data = response.model_dump(mode="json")
+            data.pop("invite_code", None)
+            return Response(data=data, status=status.HTTP_200_OK)
 
         except ValueError as e:
             if isinstance(e.args[0], ApiErrorResponse):
@@ -244,7 +252,9 @@ class JoinTeamByInviteCodeView(APIView):
             user_id = request.user_id
             invite_code = serializer.validated_data["invite_code"]
             team_dto = TeamService.join_team_by_invite_code(invite_code, user_id)
-            return Response(data=team_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
+            data = team_dto.model_dump(mode="json")
+            data.pop("invite_code", None)
+            return Response(data=data, status=status.HTTP_200_OK)
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -286,8 +296,9 @@ class AddTeamMembersView(APIView):
             member_ids = serializer.validated_data["member_ids"]
             added_by_user_id = request.user_id
             response: TeamDTO = TeamService.add_team_members(team_id, member_ids, added_by_user_id)
-
-            return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
+            data = response.model_dump(mode="json")
+            data.pop("invite_code", None)
+            return Response(data=data, status=status.HTTP_200_OK)
 
         except ValueError as e:
             if isinstance(e.args[0], ApiErrorResponse):

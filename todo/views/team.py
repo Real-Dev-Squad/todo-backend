@@ -398,7 +398,7 @@ class TeamActivityTimelineView(APIView):
                         }
                     },
                 },
-                description="Team activity timeline returned successfully"
+                description="Team activity timeline returned successfully",
             ),
             404: OpenApiResponse(description="Team not found"),
         },
@@ -441,7 +441,9 @@ class TeamActivityTimelineView(APIView):
             if log.spoc_id:
                 entry["spoc_name"] = user_map.get(str(log.spoc_id), str(log.spoc_id))
             if log.previous_executor_id:
-                entry["previous_executor_name"] = user_map.get(str(log.previous_executor_id), str(log.previous_executor_id))
+                entry["previous_executor_name"] = user_map.get(
+                    str(log.previous_executor_id), str(log.previous_executor_id)
+                )
             if log.new_executor_id:
                 entry["new_executor_name"] = user_map.get(str(log.new_executor_id), str(log.new_executor_id))
             if log.status_from:

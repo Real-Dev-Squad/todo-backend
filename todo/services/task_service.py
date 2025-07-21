@@ -306,8 +306,8 @@ class TaskService:
                     raise ValueError(f"Team not found: {assignee_id}")
 
         # Track status change for audit log
-        old_status = getattr(current_task, 'status', None)
-        new_status = validated_data.get('status')
+        old_status = getattr(current_task, "status", None)
+        new_status = validated_data.get("status")
 
         update_payload = {}
         enum_fields = {"priority": TaskPriority, "status": TaskStatus}

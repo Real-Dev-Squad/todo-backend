@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from bson import ObjectId
 
 from todo.constants.messages import ValidationErrors
 
@@ -28,14 +27,7 @@ class UpdateTeamSerializer(serializers.Serializer):
     def validate_poc_id(self, value):
         if not value or not value.strip():
             return None
-        if not ObjectId.is_valid(value):
-            raise serializers.ValidationError(ValidationErrors.INVALID_OBJECT_ID.format(value))
-        return value
 
     def validate_member_ids(self, value):
         if value is None:
             return value
-        for member_id in value:
-            if not ObjectId.is_valid(member_id):
-                raise serializers.ValidationError(ValidationErrors.INVALID_OBJECT_ID.format(member_id))
-        return value

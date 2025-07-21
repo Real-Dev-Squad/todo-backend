@@ -16,7 +16,6 @@ from todo.repositories.watchlist_repository import WatchlistRepository
 from todo.constants.messages import ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.utils.task_validation_utils import validate_task_exists
-from bson import ObjectId
 
 
 class PaginationConfig:
@@ -129,7 +128,7 @@ class WatchlistService:
             )
 
     @classmethod
-    def update_task(cls, taskId: ObjectId, dto: UpdateWatchlistDTO, userId: ObjectId) -> CreateWatchlistResponse:
+    def update_task(cls, taskId: str, dto: UpdateWatchlistDTO, userId: str) -> CreateWatchlistResponse:
         validate_task_exists(str(taskId))
 
         updated_watchlist = WatchlistRepository.update(taskId, dto["isActive"], userId)

@@ -83,7 +83,6 @@ class TaskListView(APIView):
             )
 
         team_id = query.validated_data.get("teamId")
-        print(team_id)
         response = TaskService.get_tasks(
             page=query.validated_data["page"],
             limit=query.validated_data["limit"],
@@ -225,7 +224,6 @@ class TaskDetailView(APIView):
     )
     def delete(self, request: Request, task_id: str):
         user = get_current_user_info(request)
-        task_id = task_id
         TaskService.delete_task(task_id, user["user_id"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 

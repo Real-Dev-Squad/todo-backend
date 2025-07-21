@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from bson import ObjectId
 from datetime import datetime, timezone
 
 from todo.constants.task import TaskPriority, TaskStatus
@@ -41,12 +40,6 @@ class UpdateTaskSerializer(serializers.Serializer):
         if not isinstance(value, (list, tuple)):
             raise serializers.ValidationError(ValidationErrors.INVALID_LABELS_STRUCTURE)
 
-        invalid_ids = [label_id for label_id in value if not ObjectId.is_valid(label_id)]
-        if invalid_ids:
-            raise serializers.ValidationError(
-                [ValidationErrors.INVALID_OBJECT_ID.format(label_id) for label_id in invalid_ids]
-            )
-
         return value
 
     def validate_dueAt(self, value):
@@ -80,8 +73,5 @@ class UpdateTaskSerializer(serializers.Serializer):
 
         if not user_type or user_type not in ["team", "user"]:
             raise serializers.ValidationError("user_type must be either 'team' or 'user'")
-
-        if not ObjectId.is_valid(assignee_id):
-            raise serializers.ValidationError(ValidationErrors.INVALID_OBJECT_ID.format(assignee_id))
 
         return value

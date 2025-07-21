@@ -54,15 +54,9 @@ class TaskAssignmentRepository(MongoRepository):
         """
         collection = cls.get_collection()
         try:
-            # Try with ObjectId first
             task_assignments_data = collection.find(
                 {"assignee_id": assignee_id, "user_type": user_type, "is_active": True}
             )
-            if not list(task_assignments_data):
-                # Try with string if ObjectId doesn't work
-                task_assignments_data = collection.find(
-                    {"assignee_id": assignee_id, "user_type": user_type, "is_active": True}
-                )
             return [TaskAssignmentModel(**data) for data in task_assignments_data]
         except Exception:
             return []
@@ -231,7 +225,6 @@ class TaskAssignmentRepository(MongoRepository):
                     return insert_result.inserted_id
 
         def write_postgres():
-            print(task_assignment_model)
             task_instance = PostgresTask.objects.get(id=task_assignment_model.task_id)
             # TODO: Use this later if we want to store it as a foreign key
             # user_instance = PostgresUser.objects.get(id=task_assignment_model.assignee_id)

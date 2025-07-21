@@ -89,8 +89,6 @@ class TaskService:
             tasks = TaskRepository.list(page, limit, sort_by, order, user_id, team_id=team_id)
             total_count = TaskRepository.count(user_id, team_id=team_id)
 
-            print(tasks)
-
             if not tasks:
                 return GetTasksResponse(tasks=[], links=None)
 
@@ -653,6 +651,5 @@ class TaskService:
         tasks = TaskRepository.get_tasks_for_user(user_id, page, limit)
         if not tasks:
             return GetTasksResponse(tasks=[], links=None)
-
         task_dtos = [cls.prepare_task_dto(task, user_id) for task in tasks]
         return GetTasksResponse(tasks=task_dtos, links=None)

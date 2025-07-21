@@ -2,7 +2,6 @@ from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status
-from bson import ObjectId
 from todo.middlewares.jwt_auth import get_current_user_info
 from todo.constants.messages import ApiErrors
 from todo.serializers.update_watchlist_serializer import UpdateWatchlistSerializer
@@ -170,8 +169,6 @@ class WatchlistCheckView(APIView):
         task_id = request.query_params.get("task_id")
         if not task_id:
             return Response({"message": "task_id is required"}, status=status.HTTP_400_BAD_REQUEST)
-        if not ObjectId.is_valid(task_id):
-            return Response({"message": "Invalid task_id"}, status=status.HTTP_400_BAD_REQUEST)
         in_watchlist = None
         watchlist_entry = WatchlistRepository.get_by_user_and_task(user["user_id"], task_id)
         if watchlist_entry:

@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from typing import List
-from bson import ObjectId
 from pymongo import ReturnDocument
 import logging
 from concurrent.futures import ThreadPoolExecutor, ALL_COMPLETED, wait
@@ -55,7 +54,7 @@ class TaskRepository(MongoRepository):
         return [TaskModel(**task) for task in tasks_cursor]
 
     @classmethod
-    def _get_assigned_task_ids_for_user(cls, user_id: str) -> List[ObjectId]:
+    def _get_assigned_task_ids_for_user(cls, user_id: str) -> List[str]:
         """Get task IDs where user is assigned (either directly or as team member)."""
         direct_assignments = TaskAssignmentRepository.get_by_assignee_id(user_id, "user")
         direct_task_ids = [assignment.task_id for assignment in direct_assignments]
@@ -152,7 +151,7 @@ class TaskRepository(MongoRepository):
         return None
 
     @classmethod
-    def delete_by_id(cls, task_id: ObjectId, user_id: str) -> TaskModel | None:
+    def delete_by_id(cls, task_id: str, user_id: str) -> TaskModel | None:
         tasks_collection = cls.get_collection()
 
         task = tasks_collection.find_one({"_id": task_id, "isDeleted": False})
@@ -218,7 +217,6 @@ class TaskRepository(MongoRepository):
         assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
         query = {"_id": {"$in": assigned_task_ids}}
         tasks_cursor = tasks_collection.find(query).skip((page - 1) * limit).limit(limit)
-        print(tasks_cursor)
         return [TaskModel(**task) for task in tasks_cursor]
 
     @classmethod

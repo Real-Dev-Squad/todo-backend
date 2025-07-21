@@ -9,22 +9,9 @@ from django.db import transaction
 from todo.repositories.common.mongo_repository import MongoRepository
 from todo.models.watchlist import WatchlistModel
 from todo.dto.watchlist_dto import WatchlistDTO
-from bson import ObjectId
 from todo.models.postgres.watchlist import Watchlist as PostgresWatchlist
 from todo.models.postgres.task import Task as PostgresTask
 from todo.models.postgres.user import User as PostgresUser
-
-
-def _convert_objectids_to_str(obj):
-    """Recursively convert all ObjectId values in a dict/list to strings."""
-    if isinstance(obj, dict):
-        return {k: _convert_objectids_to_str(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [_convert_objectids_to_str(item) for item in obj]
-    elif isinstance(obj, ObjectId):
-        return str(obj)
-    else:
-        return obj
 
 
 class WatchlistRepository(MongoRepository):
@@ -34,7 +21,6 @@ class WatchlistRepository(MongoRepository):
     def get_by_user_and_task(cls, user_id: str, task_id: str) -> Optional[WatchlistModel]:
         doc = cls.get_collection().find_one({"userId": user_id, "taskId": task_id})
         if doc:
-            # Convert ObjectId fields to strings for the model
             if "updatedBy" in doc and doc["updatedBy"]:
                 doc["updatedBy"] = str(doc["updatedBy"])
             return WatchlistModel(**doc)
@@ -70,7 +56,7 @@ class WatchlistRepository(MongoRepository):
                             "$lookup": {
                                 "from": "tasks",
                                 "let": {"taskIdStr": "$taskId"},
-                                "pipeline": [{"$match": {"$expr": {"$eq": ["$_id", {"$toObjectId": "$$taskIdStr"}]}}}],
+                                "pipeline": [{"$match": {"$expr": {"$eq": ["$_id", "$$taskIdStr"]}}}],
                                 "as": "task",
                             }
                         },
@@ -84,7 +70,7 @@ class WatchlistRepository(MongoRepository):
                                         "$match": {
                                             "$expr": {
                                                 "$and": [
-                                                    {"$eq": ["$task_id", {"$toObjectId": "$$taskIdStr"}]},
+                                                    {"$eq": ["$task_id", "$$taskIdStr"]},
                                                     {"$eq": ["$is_active", True]},
                                                 ]
                                             }
@@ -187,7 +173,7 @@ class WatchlistRepository(MongoRepository):
         result = next(aggregation_result, {"total": 0, "data": []})
         count = result.get("total", 0)
 
-        tasks = [_convert_objectids_to_str(doc) for doc in result.get("data", [])]
+        tasks = list(result.get("data", []))
 
         # If assignee is null, try to fetch it separately
         for task in tasks:
@@ -237,7 +223,7 @@ class WatchlistRepository(MongoRepository):
         return None
 
     @classmethod
-    def update(cls, taskId: ObjectId, isActive: bool, userId: ObjectId) -> dict:
+    def update(cls, taskId: str, isActive: bool, userId: str) -> dict:
         """
         Update the watchlist status of a task.
         """

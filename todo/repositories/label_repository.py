@@ -1,5 +1,4 @@
 from typing import List, Tuple
-from bson import ObjectId
 import re
 
 from todo.models.label import LabelModel
@@ -10,7 +9,7 @@ class LabelRepository(MongoRepository):
     collection_name = LabelModel.collection_name
 
     @classmethod
-    def list_by_ids(cls, ids: List[ObjectId]) -> List[LabelModel]:
+    def list_by_ids(cls, ids: List[str]) -> List[LabelModel]:
         if len(ids) == 0:
             return []
         labels_collection = cls.get_collection()

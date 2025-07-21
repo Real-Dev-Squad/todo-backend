@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from bson import ObjectId
 from datetime import datetime, timezone
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.constants.messages import ValidationErrors
@@ -44,12 +43,6 @@ class CreateTaskSerializer(serializers.Serializer):
             raise serializers.ValidationError(ValidationErrors.BLANK_TITLE)
         return value
 
-    def validate_labels(self, value):
-        for label_id in value:
-            if not ObjectId.is_valid(label_id):
-                raise serializers.ValidationError(ValidationErrors.INVALID_OBJECT_ID.format(label_id))
-        return value
-
     def validate_dueAt(self, value):
         if value is not None:
             now = datetime.now(timezone.utc)
@@ -62,10 +55,6 @@ class CreateTaskSerializer(serializers.Serializer):
         assignee_id = data.pop("assignee_id", None)
         user_type = data.pop("user_type", None)
         if assignee_id and user_type:
-            if not ObjectId.is_valid(assignee_id):
-                raise serializers.ValidationError(
-                    {"assignee_id": ValidationErrors.INVALID_OBJECT_ID.format(assignee_id)}
-                )
             if user_type not in ["user", "team"]:
                 raise serializers.ValidationError({"user_type": "user_type must be either 'user' or 'team'"})
             data["assignee"] = {"assignee_id": assignee_id, "user_type": user_type}

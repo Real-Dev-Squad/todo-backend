@@ -214,3 +214,16 @@ class TaskRepository(MongoRepository):
         query = {"_id": {"$in": assigned_task_ids}}
         tasks_cursor = tasks_collection.find(query).skip((page - 1) * limit).limit(limit)
         return [TaskModel(**task) for task in tasks_cursor]
+
+    @classmethod
+    def get_by_ids(cls, task_ids: List[str]) -> List[TaskModel]:
+        """
+        Get multiple tasks by their IDs in a single database query.
+        Returns only the tasks that exist.
+        """
+        if not task_ids:
+            return []
+        tasks_collection = cls.get_collection()
+        object_ids = [ObjectId(task_id) for task_id in task_ids]
+        cursor = tasks_collection.find({"_id": {"$in": object_ids}})
+        return [TaskModel(**doc) for doc in cursor]

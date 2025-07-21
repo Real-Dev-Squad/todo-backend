@@ -19,6 +19,9 @@ from drf_spectacular.types import OpenApiTypes
 from todo.dto.team_dto import TeamDTO
 from todo.services.user_service import UserService
 from todo.repositories.team_repository import TeamRepository
+from todo.repositories.audit_log_repository import AuditLogRepository
+from todo.repositories.user_repository import UserRepository
+from todo.repositories.task_repository import TaskRepository
 
 
 class TeamListView(APIView):
@@ -367,3 +370,85 @@ class TeamInviteCodeView(APIView):
             {"detail": "You are not authorized to view the invite code for this team."},
             status=status.HTTP_403_FORBIDDEN,
         )
+
+
+class TeamActivityTimelineView(APIView):
+    @extend_schema(
+        operation_id="get_team_activity_timeline",
+        summary="Get team activity timeline",
+        description="Return a timeline of all activities related to tasks assigned to the team, including assignment, unassignment, executor changes, and status changes. All IDs are replaced with names.",
+        tags=["teams"],
+        parameters=[
+            OpenApiParameter(
+                name="team_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the team",
+                required=True,
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response={
+                    "type": "object",
+                    "properties": {
+                        "timeline": {
+                            "type": "array",
+                            "items": {"type": "object"},
+                        }
+                    },
+                },
+                description="Team activity timeline returned successfully",
+            ),
+            404: OpenApiResponse(description="Team not found"),
+        },
+    )
+    def get(self, request: Request, team_id: str):
+        team = TeamRepository.get_by_id(team_id)
+        if not team:
+            return Response({"detail": "Team not found."}, status=status.HTTP_404_NOT_FOUND)
+        logs = AuditLogRepository.get_by_team_id(team_id)
+        # Pre-fetch team name
+        team_name = team.name
+        # Pre-fetch all user and task names needed
+        user_ids = set()
+        task_ids = set()
+        for log in logs:
+            if log.performed_by:
+                user_ids.add(str(log.performed_by))
+            if log.spoc_id:
+                user_ids.add(str(log.spoc_id))
+            if log.previous_executor_id:
+                user_ids.add(str(log.previous_executor_id))
+            if log.new_executor_id:
+                user_ids.add(str(log.new_executor_id))
+            if log.task_id:
+                task_ids.add(str(log.task_id))
+        user_map = {str(u.id): u.name for u in UserRepository.get_by_ids(list(user_ids))}
+        task_map = {str(t.id): t.title for t in TaskRepository.get_by_ids(list(task_ids))}
+        timeline = []
+        for log in logs:
+            entry = {
+                "action": log.action,
+                "timestamp": log.timestamp,
+            }
+            if log.task_id:
+                entry["task_title"] = task_map.get(str(log.task_id), str(log.task_id))
+            if log.team_id:
+                entry["team_name"] = team_name
+            if log.performed_by:
+                entry["performed_by_name"] = user_map.get(str(log.performed_by), str(log.performed_by))
+            if log.spoc_id:
+                entry["spoc_name"] = user_map.get(str(log.spoc_id), str(log.spoc_id))
+            if log.previous_executor_id:
+                entry["previous_executor_name"] = user_map.get(
+                    str(log.previous_executor_id), str(log.previous_executor_id)
+                )
+            if log.new_executor_id:
+                entry["new_executor_name"] = user_map.get(str(log.new_executor_id), str(log.new_executor_id))
+            if log.status_from:
+                entry["status_from"] = log.status_from
+            if log.status_to:
+                entry["status_to"] = log.status_to
+            timeline.append(entry)
+        return Response({"timeline": timeline}, status=status.HTTP_200_OK)

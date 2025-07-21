@@ -11,6 +11,7 @@ from todo.views.team import (
     JoinTeamByInviteCodeView,
     AddTeamMembersView,
     TeamInviteCodeView,
+    TeamActivityTimelineView,
 )
 from todo.views.watchlist import WatchlistListView, WatchlistDetailView, WatchlistCheckView
 from todo.views.task_assignment import TaskAssignmentView, TaskAssignmentDetailView
@@ -22,6 +23,7 @@ urlpatterns = [
     path("teams/<str:team_id>", TeamDetailView.as_view(), name="team_detail"),
     path("teams/<str:team_id>/members", AddTeamMembersView.as_view(), name="add_team_members"),
     path("teams/<str:team_id>/invite-code", TeamInviteCodeView.as_view(), name="team_invite_code"),
+    path("teams/<str:team_id>/activity-timeline", TeamActivityTimelineView.as_view(), name="team_activity_timeline"),
     path("tasks", TaskListView.as_view(), name="tasks"),
     path("tasks/<str:task_id>", TaskDetailView.as_view(), name="task_detail"),
     path("tasks/<str:task_id>/update", TaskUpdateView.as_view(), name="update_task_and_assignee"),

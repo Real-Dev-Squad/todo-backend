@@ -71,7 +71,9 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
             response.links.prev, f"{self.mock_reverse_lazy('tasks')}?page=1&limit=1&sort_by=createdAt&order=desc"
         )
 
-        mock_list.assert_called_once_with(2, 1, "createdAt", "desc", str(self.user_id), team_id=None)
+        mock_list.assert_called_once_with(
+            2, 1, "createdAt", "desc", str(self.user_id), team_id=None, status_filter=None
+        )
         mock_count.assert_called_once()
 
     @patch("todo.services.task_service.UserRepository.get_by_id")
@@ -111,7 +113,7 @@ class TaskServiceTests(AuthenticatedMongoTestCase):
         self.assertEqual(len(response.tasks), 0)
         self.assertIsNone(response.links)
 
-        mock_list.assert_called_once_with(1, 10, "createdAt", "desc", "test_user", team_id=None)
+        mock_list.assert_called_once_with(1, 10, "createdAt", "desc", "test_user", team_id=None, status_filter=None)
         mock_count.assert_called_once()
 
     @patch("todo.services.task_service.TaskRepository.count")
@@ -294,7 +296,9 @@ class TaskServiceSortingTests(TestCase):
 
         TaskService.get_tasks(page=1, limit=20, sort_by="createdAt", order="desc", user_id="test_user")
 
-        mock_list.assert_called_once_with(1, 20, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC, "test_user", team_id=None)
+        mock_list.assert_called_once_with(
+            1, 20, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC, "test_user", team_id=None, status_filter=None
+        )
 
     @patch("todo.services.task_service.TaskRepository.count")
     @patch("todo.services.task_service.TaskRepository.list")
@@ -304,7 +308,9 @@ class TaskServiceSortingTests(TestCase):
 
         TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order=SORT_ORDER_DESC, user_id="test_user")
 
-        mock_list.assert_called_once_with(1, 20, SORT_FIELD_PRIORITY, SORT_ORDER_DESC, "test_user", team_id=None)
+        mock_list.assert_called_once_with(
+            1, 20, SORT_FIELD_PRIORITY, SORT_ORDER_DESC, "test_user", team_id=None, status_filter=None
+        )
 
     @patch("todo.services.task_service.TaskRepository.count")
     @patch("todo.services.task_service.TaskRepository.list")
@@ -314,7 +320,9 @@ class TaskServiceSortingTests(TestCase):
 
         TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_DUE_AT, order="asc", user_id="test_user")
 
-        mock_list.assert_called_once_with(1, 20, SORT_FIELD_DUE_AT, SORT_ORDER_ASC, "test_user", team_id=None)
+        mock_list.assert_called_once_with(
+            1, 20, SORT_FIELD_DUE_AT, SORT_ORDER_ASC, "test_user", team_id=None, status_filter=None
+        )
 
     @patch("todo.services.task_service.TaskRepository.count")
     @patch("todo.services.task_service.TaskRepository.list")
@@ -324,7 +332,9 @@ class TaskServiceSortingTests(TestCase):
 
         TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_PRIORITY, order="desc", user_id="test_user")
 
-        mock_list.assert_called_once_with(1, 20, SORT_FIELD_PRIORITY, SORT_ORDER_DESC, "test_user", team_id=None)
+        mock_list.assert_called_once_with(
+            1, 20, SORT_FIELD_PRIORITY, SORT_ORDER_DESC, "test_user", team_id=None, status_filter=None
+        )
 
     @patch("todo.services.task_service.TaskRepository.count")
     @patch("todo.services.task_service.TaskRepository.list")
@@ -334,7 +344,9 @@ class TaskServiceSortingTests(TestCase):
 
         TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_ASSIGNEE, order="asc", user_id="test_user")
 
-        mock_list.assert_called_once_with(1, 20, SORT_FIELD_ASSIGNEE, SORT_ORDER_ASC, "test_user", team_id=None)
+        mock_list.assert_called_once_with(
+            1, 20, SORT_FIELD_ASSIGNEE, SORT_ORDER_ASC, "test_user", team_id=None, status_filter=None
+        )
 
     @patch("todo.services.task_service.TaskRepository.count")
     @patch("todo.services.task_service.TaskRepository.list")
@@ -344,7 +356,9 @@ class TaskServiceSortingTests(TestCase):
 
         TaskService.get_tasks(page=1, limit=20, sort_by=SORT_FIELD_CREATED_AT, order="desc", user_id="test_user")
 
-        mock_list.assert_called_once_with(1, 20, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC, "test_user", team_id=None)
+        mock_list.assert_called_once_with(
+            1, 20, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC, "test_user", team_id=None, status_filter=None
+        )
 
     @patch("todo.services.task_service.reverse_lazy", return_value="/v1/tasks")
     def test_build_page_url_includes_sort_parameters(self, mock_reverse):

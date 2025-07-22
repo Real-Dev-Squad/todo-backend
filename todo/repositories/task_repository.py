@@ -17,12 +17,22 @@ class TaskRepository(MongoRepository):
 
     @classmethod
     def list(
-        cls, page: int, limit: int, sort_by: str, order: str, user_id: str = None, team_id: str = None
+        cls,
+        page: int,
+        limit: int,
+        sort_by: str,
+        order: str,
+        user_id: str = None,
+        team_id: str = None,
+        status_filter: str = None,
     ) -> List[TaskModel]:
         tasks_collection = cls.get_collection()
         logger = logging.getLogger(__name__)
 
-        base_filter = {"status": {"$ne": TaskStatus.DONE.value}}
+        if status_filter:
+            base_filter = {"status": status_filter}
+        else:
+            base_filter = {"status": {"$ne": TaskStatus.DONE.value}}
 
         if team_id:
             logger.debug(f"TaskRepository.list: team_id={team_id}")
@@ -72,10 +82,13 @@ class TaskRepository(MongoRepository):
         return direct_task_ids + team_task_ids
 
     @classmethod
-    def count(cls, user_id: str = None, team_id: str = None) -> int:
+    def count(cls, user_id: str = None, team_id: str = None, status_filter: str = None) -> int:
         tasks_collection = cls.get_collection()
 
-        base_filter = {"status": {"$ne": TaskStatus.DONE.value}}
+        if status_filter:
+            base_filter = {"status": status_filter}
+        else:
+            base_filter = {"status": {"$ne": TaskStatus.DONE.value}}
 
         if team_id:
             team_assignments = TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
@@ -215,11 +228,16 @@ class TaskRepository(MongoRepository):
         return None
 
     @classmethod
-    def get_tasks_for_user(cls, user_id: str, page: int, limit: int) -> List[TaskModel]:
+    def get_tasks_for_user(cls, user_id: str, page: int, limit: int, status_filter: str = None) -> List[TaskModel]:
         tasks_collection = cls.get_collection()
         assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
 
-        query = {"$and": [{"status": {"$ne": TaskStatus.DONE.value}}, {"_id": {"$in": assigned_task_ids}}]}
+        if status_filter:
+            base_filter = {"status": status_filter}
+        else:
+            base_filter = {"status": {"$ne": TaskStatus.DONE.value}}
+
+        query = {"$and": [base_filter, {"$or": [{"createdBy": user_id}, {"_id": {"$in": assigned_task_ids}}]}]}
         tasks_cursor = tasks_collection.find(query).skip((page - 1) * limit).limit(limit)
         return [TaskModel(**task) for task in tasks_cursor]
 

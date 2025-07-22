@@ -21,7 +21,13 @@ class TaskPaginationIntegrationTest(AuthenticatedMongoTestCase):
 
         self.assertEqual(response.status_code, 200)
         mock_get_tasks.assert_called_with(
-            page=1, limit=default_limit, sort_by="createdAt", order="desc", user_id=str(self.user_id), team_id=None
+            page=1,
+            limit=default_limit,
+            sort_by="createdAt",
+            order="desc",
+            user_id=str(self.user_id),
+            team_id=None,
+            status_filter=None,
         )
 
         mock_get_tasks.reset_mock()
@@ -30,7 +36,13 @@ class TaskPaginationIntegrationTest(AuthenticatedMongoTestCase):
 
         self.assertEqual(response.status_code, 200)
         mock_get_tasks.assert_called_with(
-            page=1, limit=10, sort_by="createdAt", order="desc", user_id=str(self.user_id), team_id=None
+            page=1,
+            limit=10,
+            sort_by="createdAt",
+            order="desc",
+            user_id=str(self.user_id),
+            team_id=None,
+            status_filter=None,
         )
 
         # Verify API rejects values above max limit

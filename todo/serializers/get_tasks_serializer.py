@@ -4,6 +4,13 @@ from django.conf import settings
 from todo.constants.task import SORT_FIELDS, SORT_ORDERS, SORT_FIELD_CREATED_AT, SORT_FIELD_DEFAULT_ORDERS, TaskStatus
 
 
+class CaseInsensitiveChoiceField(serializers.ChoiceField):
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            data = data.upper()
+        return super().to_internal_value(data)
+
+
 class GetTaskQueryParamsSerializer(serializers.Serializer):
     page = serializers.IntegerField(
         required=False,
@@ -37,7 +44,7 @@ class GetTaskQueryParamsSerializer(serializers.Serializer):
 
     teamId = serializers.CharField(required=False, allow_blank=False, allow_null=True)
 
-    status = serializers.ChoiceField(
+    status = CaseInsensitiveChoiceField(
         choices=[status.value for status in TaskStatus],
         required=False,
         allow_null=True,

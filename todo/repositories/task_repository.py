@@ -22,6 +22,8 @@ class TaskRepository(MongoRepository):
 
         """
         if status_filter:
+            if status_filter == TaskStatus.DONE.value:
+                return {}  # No status filtering, include all tasks
             return {"status": status_filter}
         else:
             return {"status": {"$ne": TaskStatus.DONE.value}}

@@ -2,7 +2,13 @@ services:
   django-app:
     build: .
     container_name: todo-django-app
-    command: python -Xfrozen_modules=off manage.py runserver_debug 0.0.0.0:8000 --debug-port 5678
+    command: >
+      sh -c "
+        python manage.py migrate &&
+        python manage.py shell -c 'from todo_project.db.init import initialize_database; initialize_database()' &&
+        python manage.py runserver 0.0.0.0:8000
+      "
+
     environment:
       MONGODB_URI: mongodb://db:27017
       DB_NAME: todo-app
@@ -19,9 +25,13 @@ services:
       - "8000:8000"
       - "5678:5678" # Debug port
     depends_on:
-      - db
-      - mongo-init
-      - postgres
+      db:
+        condition: service_started
+      mongo-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
     stdin_open: true
     tty: true
 
@@ -93,7 +103,11 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U todo_user -d todo_app"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U todo_user -d todo_app && echo 'Postgres healthcheck passed'",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5

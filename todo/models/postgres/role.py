@@ -9,9 +9,11 @@ class Role(models.Model):
     description = models.TextField(null=True, blank=True)
     scope = models.CharField(max_length=50)
     is_active = models.BooleanField(default=True)  # type: ignore[arg-type]
-    created_by = models.UUIDField()
+    created_by = models.ForeignKey("User", on_delete=models.CASCADE, related_name="created_roles")
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_by = models.UUIDField(null=True, blank=True)
+    updated_by = models.ForeignKey(
+        "User", on_delete=models.SET_NULL, null=True, blank=True, related_name="updated_roles"
+    )
     updated_at = models.DateTimeField(null=True, blank=True)
     objects: Manager = models.Manager()
 

@@ -10,19 +10,25 @@ class Task(models.Model):
     description = models.TextField(null=True, blank=True)
     priority = models.IntegerField()
     status = models.CharField(max_length=20)
-    assignee = models.CharField(max_length=255, null=True, blank=True)
+    assignee = models.ForeignKey(
+        "User", on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_tasks"
+    )
     is_acknowledged = models.BooleanField(default=False)  # type: ignore[arg-type]
     labels = models.JSONField(default=list, blank=True)
     is_deleted = models.BooleanField(default=False)  # type: ignore[arg-type]
     deferred_at = models.DateTimeField(null=True, blank=True)
     deferred_till = models.DateTimeField(null=True, blank=True)
-    deferred_by = models.CharField(max_length=255, null=True, blank=True)
+    deferred_by = models.ForeignKey(
+        "User", on_delete=models.SET_NULL, null=True, blank=True, related_name="deferred_tasks"
+    )
     started_at = models.DateTimeField(null=True, blank=True)
     due_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(null=True, blank=True)
-    created_by = models.CharField(max_length=255)
-    updated_by = models.CharField(max_length=255, null=True, blank=True)
+    created_by = models.ForeignKey("User", on_delete=models.SET_NULL, null=True, related_name="created_tasks")
+    updated_by = models.ForeignKey(
+        "User", on_delete=models.SET_NULL, null=True, blank=True, related_name="updated_tasks"
+    )
     objects: Manager = models.Manager()
 
     class Meta:

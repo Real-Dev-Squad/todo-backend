@@ -3,29 +3,42 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any
 from concurrent.futures import ThreadPoolExecutor, ALL_COMPLETED, wait
 import uuid
+
 from todo_project.db.config import DatabaseManager
-from todo.models.label import LabelModel
-from todo.models.postgres.label import Label as PostgresLabel
+from todo.models.label import LabelModel  # Mongo schema
+from todo.models.postgres.label import Label as PostgresLabel  # Django ORM
+from todo.models.postgres.user import User  # <-- Import your User model
 
 logger = logging.getLogger(__name__)
 
 
+def get_or_create_system_user() -> User:
+    """
+    Get or create a system user for `created_by`.
+    """
+    system_email = "system@internal.local"
+
+    system_user = User.objects.filter(email_id=system_email).first()
+    if not system_user:
+        system_user = User.objects.create(
+            google_id="system-internal",
+            email_id=system_email,
+            name="System User",
+        )
+        logger.info(f"Created system user: {system_user.id}")
+    return system_user
+
+
 def migrate_fixed_labels_parallel() -> bool:
     """
-    Migration to add fixed labels to both MongoDB and Postgres in parallel, using the same UUID for each label.
-    This migration is idempotent and can be run multiple times safely.
-    Ensures both databases have the same id and data for each label.
+    Add fixed labels to MongoDB + Postgres in parallel, ensuring same UUID and system user.
     """
-    logger.info("Starting fixed labels parallel migration (MongoDB + Postgres)")
+    logger.info("Starting fixed labels parallel migration")
 
     fixed_labels: List[Dict[str, Any]] = [
         {"name": "Feature", "color": "#22c55e", "description": "New feature implementation"},
         {"name": "Bug", "color": "#ef4444", "description": "Bug fixes and error corrections"},
-        {
-            "name": "Refactoring/Optimization",
-            "color": "#f59e0b",
-            "description": "Code refactoring and performance optimization",
-        },
+        {"name": "Refactoring/Optimization", "color": "#f59e0b", "description": "Refactoring and optimization"},
         {"name": "API", "color": "#3b82f6", "description": "API development and integration"},
         {"name": "UI/UX", "color": "#8b5cf6", "description": "User interface and user experience improvements"},
         {"name": "Testing", "color": "#06b6d4", "description": "Testing and quality assurance"},
@@ -37,38 +50,29 @@ def migrate_fixed_labels_parallel() -> bool:
     labels_collection = db_manager.get_collection("labels")
     now = datetime.now(timezone.utc)
 
+    # ✅ get system user once
+    system_user = get_or_create_system_user()
+
     def upsert_label(label_data):
-        # Check if label exists in MongoDB (case-insensitive)
+        # MongoDB check
         mongo_existing = labels_collection.find_one(
             {"name": {"$regex": f"^{label_data['name']}$", "$options": "i"}, "isDeleted": {"$ne": True}}
         )
         mongo_uuid = str(mongo_existing["_id"]) if mongo_existing else None
 
-        # Check if label exists in Postgres (case-insensitive)
+        # Postgres check
         try:
-            existing_pg_label = PostgresLabel.objects.filter(name__iexact=label_data["name"]).first()
+            pg_existing = PostgresLabel.objects.filter(name__iexact=label_data["name"]).first()
         except Exception as e:
             logger.error(f"[Postgres] Error checking label '{label_data['name']}': {e}")
-            existing_pg_label = None
-        pg_uuid = str(existing_pg_label.id) if existing_pg_label else None
+            pg_existing = None
+        pg_uuid = str(pg_existing.id) if pg_existing else None
 
-        # Decide which UUID to use
-        label_uuid = None
-        if mongo_uuid and pg_uuid:
-            if mongo_uuid != pg_uuid:
-                logger.warning(
-                    f"UUID mismatch for label '{label_data['name']}': MongoDB={mongo_uuid}, Postgres={pg_uuid}. Using MongoDB UUID."
-                )
-            label_uuid = mongo_uuid
-        elif mongo_uuid:
-            label_uuid = mongo_uuid
-        elif pg_uuid:
-            label_uuid = pg_uuid
-        else:
-            label_uuid = str(uuid.uuid4())
+        # Pick UUID
+        label_uuid = mongo_uuid or pg_uuid or str(uuid.uuid4())
 
-        # Prepare label document/data
-        label_document = {
+        # Mongo upsert
+        label_doc = {
             "_id": label_uuid,
             "name": label_data["name"],
             "color": label_data["color"],
@@ -76,41 +80,40 @@ def migrate_fixed_labels_parallel() -> bool:
             "isDeleted": False,
             "createdAt": now,
             "updatedAt": None,
-            "createdBy": "system",
+            "createdBy": str(system_user.id),
             "updatedBy": None,
         }
-        # Upsert in MongoDB
         try:
-            LabelModel(**label_document)
-            labels_collection.update_one({"_id": label_uuid}, {"$set": label_document}, upsert=True)
-            logger.info(f"[MongoDB] Upserted label '{label_data['name']}' with UUID: {label_uuid}")
+            LabelModel(**label_doc)  # validate
+            labels_collection.update_one({"_id": label_uuid}, {"$set": label_doc}, upsert=True)
+            logger.info(f"[MongoDB] Upserted label '{label_data['name']}' UUID: {label_uuid}")
         except Exception as e:
-            logger.error(f"[MongoDB] Failed to upsert label '{label_data['name']}': {e}")
+            logger.error(f"[MongoDB] Failed to upsert '{label_data['name']}': {e}")
 
-        # Upsert in Postgres
+        # Postgres upsert
         try:
-            if existing_pg_label:
-                # Update fields if needed
+            if pg_existing:
                 updated = False
                 if (
-                    existing_pg_label.name != label_data["name"]
-                    or existing_pg_label.color != label_data["color"]
-                    or getattr(existing_pg_label, "description", None) != label_data["description"]
-                    or existing_pg_label.is_deleted
+                    pg_existing.name != label_data["name"]
+                    or pg_existing.color != label_data["color"]
+                    or getattr(pg_existing, "description", "") != label_data["description"]
+                    or pg_existing.is_deleted
                 ):
-                    existing_pg_label.name = label_data["name"]
-                    existing_pg_label.color = label_data["color"]
-                    if hasattr(existing_pg_label, "description"):
-                        existing_pg_label.description = label_data["description"]
-                    existing_pg_label.is_deleted = False
-                    existing_pg_label.save()
+                    pg_existing.name = label_data["name"]
+                    pg_existing.color = label_data["color"]
+                    if hasattr(pg_existing, "description"):
+                        pg_existing.description = label_data["description"]
+                    pg_existing.is_deleted = False
+                    pg_existing.updated_by = system_user
+                    pg_existing.updated_at = now
+                    pg_existing.save()
                     updated = True
                 if updated:
-                    logger.info(f"[Postgres] Updated label '{label_data['name']}' with UUID: {label_uuid}")
+                    logger.info(f"[Postgres] Updated label '{label_data['name']}' UUID: {label_uuid}")
                 else:
-                    logger.info(f"[Postgres] Label '{label_data['name']}' already up-to-date with UUID: {label_uuid}")
+                    logger.info(f"[Postgres] Label '{label_data['name']}' already up-to-date.")
             else:
-                # Only add description if it exists in the model
                 fields = {f.name for f in PostgresLabel._meta.get_fields()}
                 kwargs = dict(
                     id=label_uuid,
@@ -119,109 +122,39 @@ def migrate_fixed_labels_parallel() -> bool:
                     is_deleted=False,
                     created_at=now,
                     updated_at=None,
-                    created_by=uuid.uuid4(),
+                    created_by=system_user,
                     updated_by=None,
                 )
                 if "description" in fields:
                     kwargs["description"] = label_data["description"]
                 PostgresLabel.objects.create(**kwargs)
-                logger.info(f"[Postgres] Created label '{label_data['name']}' with UUID: {label_uuid}")
+                logger.info(f"[Postgres] Created label '{label_data['name']}' UUID: {label_uuid}")
         except Exception as e:
-            logger.error(f"[Postgres] Failed to upsert label '{label_data['name']}': {e}")
+            logger.error(f"[Postgres] Failed to upsert '{label_data['name']}': {e}")
 
     with ThreadPoolExecutor() as executor:
         futures = [executor.submit(upsert_label, label) for label in fixed_labels]
         wait(futures, return_when=ALL_COMPLETED)
 
-    logger.info("Fixed labels parallel migration completed.")
+    logger.info("Finished labels parallel migration.")
     return True
 
 
 def run_all_migrations() -> bool:
-    """
-    Run all database migrations.
-
-    Returns:
-        bool: True if all migrations completed successfully, False otherwise
-    """
-    logger.info("Starting database migrations")
-
+    logger.info("Running all DB migrations")
     migrations = [
         ("Fixed Labels Parallel Migration", migrate_fixed_labels_parallel),
     ]
-
-    success_count = 0
-
-    for migration_name, migration_func in migrations:
+    success = 0
+    for name, func in migrations:
         try:
-            logger.info(f"Running {migration_name}")
-            if migration_func():
-                logger.info(f"{migration_name} completed successfully")
-                success_count += 1
+            logger.info(f"Running: {name}")
+            if func():
+                success += 1
+                logger.info(f"{name} ✅")
             else:
-                logger.error(f"{migration_name} failed")
+                logger.error(f"{name} ❌")
         except Exception as e:
-            logger.error(f"{migration_name} failed with exception: {str(e)}")
-
-    total_migrations = len(migrations)
-    logger.info(f"Database migrations completed - {success_count}/{total_migrations} successful")
-
-    return success_count == total_migrations
-
-
-def create_label_in_both_dbs(name, color, description):
-    db_manager = DatabaseManager()
-    labels_collection = db_manager.get_collection("labels")
-    now = datetime.now(timezone.utc)
-
-    # Check MongoDB for existing label (case-insensitive)
-    mongo_existing = labels_collection.find_one(
-        {"name": {"$regex": f"^{name}$", "$options": "i"}, "isDeleted": {"$ne": True}}
-    )
-
-    # Check Postgres for existing label (case-insensitive)
-    try:
-        pg_existing = PostgresLabel.objects.filter(name__iexact=name).first()
-    except Exception as e:
-        print(f"[Postgres] Error checking label '{name}': {e}")
-        pg_existing = None
-
-    if mongo_existing or pg_existing:
-        print(f"Label '{name}' already exists in one or both DBs. Skipping creation.")
-        return
-
-    label_uuid = str(uuid.uuid4())
-
-    # MongoDB
-    label_document = {
-        "_id": label_uuid,
-        "name": name,
-        "color": color,
-        "description": description,
-        "isDeleted": False,
-        "createdAt": now,
-        "updatedAt": None,
-        "createdBy": "system",
-        "updatedBy": None,
-    }
-    LabelModel(**label_document)  # Validate
-    labels_collection.insert_one(label_document)
-
-    # Postgres
-    # Only add description if it exists in the model
-    fields = {f.name for f in PostgresLabel._meta.get_fields()}
-    kwargs = dict(
-        id=label_uuid,
-        name=name,
-        color=color,
-        is_deleted=False,
-        created_at=now,
-        updated_at=None,
-        created_by="system",
-        updated_by=None,
-    )
-    if "description" in fields:
-        kwargs["description"] = description
-    PostgresLabel.objects.create(**kwargs)
-
-    print(f"Created label '{name}' in both DBs with UUID: {label_uuid}")
+            logger.error(f"{name} Exception: {str(e)}")
+    logger.info(f"Migrations done: {success}/{len(migrations)} successful")
+    return success == len(migrations)

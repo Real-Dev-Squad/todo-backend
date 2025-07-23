@@ -341,6 +341,7 @@ class WatchlistRepository(MongoRepository):
 
         def update_postgres():
             from todo.models.postgres.watchlist import Watchlist as PostgresWatchlist
+
             with transaction.atomic():
                 # Find the Postgres watchlist entry
                 try:
@@ -387,7 +388,9 @@ class WatchlistRepository(MongoRepository):
                         pg_watchlist.updated_at = now
                         pg_watchlist.updated_by = userId
                         pg_watchlist.save()
-                        print(f"[COMPENSATION] Rolled back Postgres update for watchlist userId={userId}, taskId={taskId}")
+                        print(
+                            f"[COMPENSATION] Rolled back Postgres update for watchlist userId={userId}, taskId={taskId}"
+                        )
                     except PostgresWatchlist.DoesNotExist:
                         pass
             raise Exception(f"Watchlist update failed: {exceptions}")

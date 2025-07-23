@@ -10,9 +10,10 @@ class Label(models.Model):
     is_deleted = models.BooleanField(default=False)  # type: ignore[arg-type]
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(null=True, blank=True)
-    created_by = models.UUIDField()
-    updated_by = models.UUIDField(null=True, blank=True)
-    updated_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey("User", on_delete=models.CASCADE, related_name="created_labels")
+    updated_by = models.ForeignKey(
+        "User", on_delete=models.SET_NULL, null=True, blank=True, related_name="updated_labels"
+    )
     objects: Manager = models.Manager()
 
     class Meta:

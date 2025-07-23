@@ -166,6 +166,79 @@ class TeamRepository(MongoRepository):
         team.id = mongo_id
         return team
 
+    @classmethod
+    def update_parallel(cls, team_id: str, update_data: dict, updated_by_user_id: str) -> Optional[TeamModel]:
+        teams_collection = cls.get_collection()
+        now = datetime.now(timezone.utc)
+        exceptions = []
+        mongo_result = None
+        postgres_done = False
+
+        original_mongo = teams_collection.find_one({"_id": team_id, "is_deleted": False})
+        try:
+            original_postgres = PostgresTeam.objects.get(id=team_id, is_deleted=False)
+        except PostgresTeam.DoesNotExist:
+            original_postgres = None
+
+        def update_mongo():
+            update_data_mongo = {**update_data, "updated_by": updated_by_user_id, "updated_at": now}
+            update_data_mongo = {k: v for k, v in update_data_mongo.items() if v is not None}
+            updated_doc = teams_collection.find_one_and_update(
+                {"_id": team_id, "is_deleted": False},
+                {"$set": update_data_mongo},
+                return_document=ReturnDocument.AFTER,
+            )
+            if not updated_doc:
+                raise Exception("MongoDB update failed: No document updated.")
+            return updated_doc
+
+        def update_postgres():
+            with transaction.atomic():
+                try:
+                    pg_team = PostgresTeam.objects.get(id=team_id, is_deleted=False)
+                except PostgresTeam.DoesNotExist:
+                    raise Exception("Postgres update failed: Team does not exist.")
+                for k, v in update_data.items():
+                    if hasattr(pg_team, k) and v is not None:
+                        setattr(pg_team, k, v)
+                pg_team.updated_by = updated_by_user_id
+                pg_team.updated_at = now
+                pg_team.save()
+                return "postgres_success"
+
+        with ThreadPoolExecutor() as executor:
+            future_mongo = executor.submit(lambda: retry(update_mongo, max_attempts=3))
+            future_postgres = executor.submit(lambda: retry(update_postgres, max_attempts=3))
+            wait([future_mongo, future_postgres], return_when=ALL_COMPLETED)
+
+            for future in (future_mongo, future_postgres):
+                try:
+                    res = future.result()
+                    if res == "postgres_success":
+                        postgres_done = True
+                    else:
+                        mongo_result = res
+                except Exception as exc:
+                    exceptions.append(exc)
+                    print(f"[ERROR] Update failed: {exc}")
+
+        # Compensation logic
+        if exceptions:
+            if mongo_result and not postgres_done and original_mongo:
+                teams_collection.replace_one({"_id": team_id}, original_mongo)
+                print(f"[COMPENSATION] Rolled back Mongo update for team {team_id}")
+            if postgres_done and not mongo_result and original_postgres:
+                with transaction.atomic():
+                    pg_team = PostgresTeam.objects.get(id=team_id, is_deleted=False)
+                    for k, v in original_postgres.__dict__.items():
+                        if not k.startswith("_") and hasattr(pg_team, k):
+                            setattr(pg_team, k, v)
+                    pg_team.save()
+                    print(f"[COMPENSATION] Rolled back Postgres update for team {team_id}")
+            raise Exception(f"Team update failed: {exceptions}")
+
+        return TeamModel(**mongo_result) if mongo_result else None
+
 
 class UserTeamDetailsRepository(MongoRepository):
     collection_name = UserTeamDetailsModel.collection_name

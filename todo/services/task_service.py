@@ -71,6 +71,7 @@ class TaskService:
         order: str,
         user_id: str,
         team_id: str = None,
+        status_filter: str = None,
     ) -> GetTasksResponse:
         try:
             cls._validate_pagination_params(page, limit)
@@ -89,8 +90,10 @@ class TaskService:
                         },
                     )
 
-            tasks = TaskRepository.list(page, limit, sort_by, order, user_id, team_id=team_id)
-            total_count = TaskRepository.count(user_id, team_id=team_id)
+            tasks = TaskRepository.list(
+                page, limit, sort_by, order, user_id, team_id=team_id, status_filter=status_filter
+            )
+            total_count = TaskRepository.count(user_id, team_id=team_id, status_filter=status_filter)
 
             if not tasks:
                 return GetTasksResponse(tasks=[], links=None)
@@ -665,9 +668,10 @@ class TaskService:
         user_id: str,
         page: int = PaginationConfig.DEFAULT_PAGE,
         limit: int = PaginationConfig.DEFAULT_LIMIT,
+        status_filter: str = None,
     ) -> GetTasksResponse:
         cls._validate_pagination_params(page, limit)
-        tasks = TaskRepository.get_tasks_for_user(user_id, page, limit)
+        tasks = TaskRepository.get_tasks_for_user(user_id, page, limit, status_filter=status_filter)
         if not tasks:
             return GetTasksResponse(tasks=[], links=None)
 

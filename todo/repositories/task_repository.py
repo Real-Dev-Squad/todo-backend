@@ -237,7 +237,7 @@ class TaskRepository(MongoRepository):
         else:
             base_filter = {"status": {"$ne": TaskStatus.DONE.value}}
 
-        query = {"$and": [base_filter, {"$or": [{"createdBy": user_id}, {"_id": {"$in": assigned_task_ids}}]}]}
+        query = {"$and": [base_filter, {"_id": {"$in": assigned_task_ids}}]}
         tasks_cursor = tasks_collection.find(query).skip((page - 1) * limit).limit(limit)
         return [TaskModel(**task) for task in tasks_cursor]
 

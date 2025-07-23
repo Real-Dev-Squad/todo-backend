@@ -81,7 +81,7 @@ class TaskListView(APIView):
             user = get_current_user_info(request)
             if not user:
                 raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
-            status_filter = query.validated_data.get("status")
+            status_filter = query.validated_data.get("status", "").upper()
             response = TaskService.get_tasks_for_user(
                 user_id=user["user_id"],
                 page=query.validated_data["page"],

@@ -77,9 +77,6 @@ class TeamListView(APIView):
             created_by_user_id = request.user_id
             response: CreateTeamResponse = TeamService.create_team(dto, created_by_user_id)
             data = response.model_dump(mode="json")
-            # Remove invite_code from the created team
-            if "team" in data:
-                data["team"].pop("invite_code", None)
             return Response(data=data, status=status.HTTP_201_CREATED)
 
         except ValueError as e:

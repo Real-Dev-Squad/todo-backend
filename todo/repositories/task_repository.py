@@ -16,6 +16,17 @@ class TaskRepository(MongoRepository):
     collection_name = TaskModel.collection_name
 
     @classmethod
+    def _build_status_filter(cls, status_filter: str = None) -> dict:
+        """
+        Build status filter for task queries.
+
+        """
+        if status_filter:
+            return {"status": status_filter}
+        else:
+            return {"status": {"$ne": TaskStatus.DONE.value}}
+
+    @classmethod
     def list(
         cls,
         page: int,
@@ -29,10 +40,7 @@ class TaskRepository(MongoRepository):
         tasks_collection = cls.get_collection()
         logger = logging.getLogger(__name__)
 
-        if status_filter:
-            base_filter = {"status": status_filter}
-        else:
-            base_filter = {"status": {"$ne": TaskStatus.DONE.value}}
+        base_filter = cls._build_status_filter(status_filter)
 
         if team_id:
             logger.debug(f"TaskRepository.list: team_id={team_id}")
@@ -85,10 +93,7 @@ class TaskRepository(MongoRepository):
     def count(cls, user_id: str = None, team_id: str = None, status_filter: str = None) -> int:
         tasks_collection = cls.get_collection()
 
-        if status_filter:
-            base_filter = {"status": status_filter}
-        else:
-            base_filter = {"status": {"$ne": TaskStatus.DONE.value}}
+        base_filter = cls._build_status_filter(status_filter)
 
         if team_id:
             team_assignments = TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
@@ -232,10 +237,7 @@ class TaskRepository(MongoRepository):
         tasks_collection = cls.get_collection()
         assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
 
-        if status_filter:
-            base_filter = {"status": status_filter}
-        else:
-            base_filter = {"status": {"$ne": TaskStatus.DONE.value}}
+        base_filter = cls._build_status_filter(status_filter)
 
         query = {"$and": [base_filter, {"_id": {"$in": assigned_task_ids}}]}
         tasks_cursor = tasks_collection.find(query).skip((page - 1) * limit).limit(limit)

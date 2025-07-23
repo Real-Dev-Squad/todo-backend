@@ -9,31 +9,51 @@ from todo.models.task import TaskModel
 from todo.repositories.common.mongo_repository import MongoRepository
 from todo.repositories.task_assignment_repository import TaskAssignmentRepository
 from todo.constants.messages import ApiErrors, RepositoryErrors
-from todo.constants.task import SORT_FIELD_PRIORITY, SORT_FIELD_ASSIGNEE, SORT_ORDER_DESC
+from todo.constants.task import SORT_FIELD_PRIORITY, SORT_FIELD_ASSIGNEE, SORT_ORDER_DESC, TaskStatus
 
 
 class TaskRepository(MongoRepository):
     collection_name = TaskModel.collection_name
 
     @classmethod
+    def _build_status_filter(cls, status_filter: str = None) -> dict:
+        """
+        Build status filter for task queries.
+
+        """
+        if status_filter:
+            return {"status": status_filter}
+        else:
+            return {"status": {"$ne": TaskStatus.DONE.value}}
+
+    @classmethod
     def list(
-        cls, page: int, limit: int, sort_by: str, order: str, user_id: str = None, team_id: str = None
+        cls,
+        page: int,
+        limit: int,
+        sort_by: str,
+        order: str,
+        user_id: str = None,
+        team_id: str = None,
+        status_filter: str = None,
     ) -> List[TaskModel]:
         tasks_collection = cls.get_collection()
         logger = logging.getLogger(__name__)
+
+        base_filter = cls._build_status_filter(status_filter)
 
         if team_id:
             logger.debug(f"TaskRepository.list: team_id={team_id}")
             team_assignments = TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
             team_task_ids = [assignment.task_id for assignment in team_assignments]
             logger.debug(f"TaskRepository.list: team_task_ids={team_task_ids}")
-            query_filter = {"_id": {"$in": team_task_ids}}
+            query_filter = {"$and": [base_filter, {"_id": {"$in": team_task_ids}}]}
             logger.debug(f"TaskRepository.list: query_filter={query_filter}")
         elif user_id:
             assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
-            query_filter = {"_id": {"$in": assigned_task_ids}}
+            query_filter = {"$and": [base_filter, {"_id": {"$in": assigned_task_ids}}]}
         else:
-            query_filter = {}
+            query_filter = base_filter
 
         if sort_by == SORT_FIELD_PRIORITY:
             sort_direction = 1 if order == SORT_ORDER_DESC else -1
@@ -70,17 +90,22 @@ class TaskRepository(MongoRepository):
         return direct_task_ids + team_task_ids
 
     @classmethod
-    def count(cls, user_id: str = None, team_id: str = None) -> int:
+    def count(cls, user_id: str = None, team_id: str = None, status_filter: str = None) -> int:
         tasks_collection = cls.get_collection()
+
+        base_filter = cls._build_status_filter(status_filter)
+
         if team_id:
             team_assignments = TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
             team_task_ids = [assignment.task_id for assignment in team_assignments]
-            query_filter = {"_id": {"$in": team_task_ids}}
+            query_filter = {"$and": [base_filter, {"_id": {"$in": team_task_ids}}]}
         elif user_id:
             assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
-            query_filter = {"$or": [{"createdBy": user_id}, {"_id": {"$in": assigned_task_ids}}]}
+            query_filter = {
+                "$and": [base_filter, {"$or": [{"createdBy": user_id}, {"_id": {"$in": assigned_task_ids}}]}]
+            }
         else:
-            query_filter = {}
+            query_filter = base_filter
         return tasks_collection.count_documents(query_filter)
 
     @classmethod
@@ -208,10 +233,13 @@ class TaskRepository(MongoRepository):
         return None
 
     @classmethod
-    def get_tasks_for_user(cls, user_id: str, page: int, limit: int) -> List[TaskModel]:
+    def get_tasks_for_user(cls, user_id: str, page: int, limit: int, status_filter: str = None) -> List[TaskModel]:
         tasks_collection = cls.get_collection()
         assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
-        query = {"_id": {"$in": assigned_task_ids}}
+
+        base_filter = cls._build_status_filter(status_filter)
+
+        query = {"$and": [base_filter, {"_id": {"$in": assigned_task_ids}}]}
         tasks_cursor = tasks_collection.find(query).skip((page - 1) * limit).limit(limit)
         return [TaskModel(**task) for task in tasks_cursor]
 

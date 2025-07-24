@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from todo.views.team import TeamListView, JoinTeamByInviteCodeView, RemoveTeamMemberView
+from todo.views.team import TeamListView, JoinTeamByInviteCodeView
 from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.dto.team_dto import TeamDTO
 from datetime import datetime, timezone

@@ -12,7 +12,7 @@ from todo.views.team import (
     AddTeamMembersView,
     TeamInviteCodeView,
     TeamActivityTimelineView,
-    RemoveTeamMemberView
+    RemoveTeamMemberView,
 )
 from todo.views.watchlist import WatchlistListView, WatchlistDetailView, WatchlistCheckView
 from todo.views.task_assignment import TaskAssignmentView, TaskAssignmentDetailView
@@ -45,5 +45,5 @@ urlpatterns = [
 ]
 
 urlpatterns += [
-    path('teams/<str:team_id>/members/<str:user_id>', RemoveTeamMemberView.as_view(), name='remove_team_member'),
+    path("teams/<str:team_id>/members/<str:user_id>", RemoveTeamMemberView.as_view(), name="remove_team_member"),
 ]

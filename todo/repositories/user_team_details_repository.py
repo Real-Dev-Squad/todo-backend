@@ -1,6 +1,7 @@
 from bson import ObjectId
 from todo.repositories.common.mongo_repository import MongoRepository
 
+
 class UserTeamDetailsRepository(MongoRepository):
     collection_name = "user_team_details"
 
@@ -27,4 +28,4 @@ class UserTeamDetailsRepository(MongoRepository):
             print(f"DEBUG: delete_one result: deleted={result.deleted_count}")
             if result.deleted_count > 0:
                 return True
-        return False 
+        return False

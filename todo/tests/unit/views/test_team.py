@@ -153,6 +153,7 @@ class RemoveTeamMemberViewTests(TestCase):
     @patch("todo.views.team.TeamService.remove_member_from_team")
     def test_remove_member_not_found(self, mock_remove):
         from todo.services.team_service import TeamService
+
         mock_remove.side_effect = TeamService.TeamOrUserNotFound()
         response = self.client.delete(self.url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

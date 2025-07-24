@@ -457,7 +457,9 @@ class RemoveTeamMemberView(APIView):
         description="Removes the specified user from the specified team.",
         parameters=[
             OpenApiParameter(name="team_id", type=str, location=OpenApiParameter.PATH, description="ID of the team"),
-            OpenApiParameter(name="user_id", type=str, location=OpenApiParameter.PATH, description="ID of the user to remove"),
+            OpenApiParameter(
+                name="user_id", type=str, location=OpenApiParameter.PATH, description="ID of the user to remove"
+            ),
         ],
         responses={
             204: OpenApiResponse(description="User removed from team successfully."),
@@ -469,6 +471,7 @@ class RemoveTeamMemberView(APIView):
     def delete(self, request, team_id, user_id):
         print(f"DEBUG: RemoveTeamMemberView.delete called with team_id={team_id}, user_id={user_id}")
         from todo.services.team_service import TeamService
+
         try:
             TeamService.remove_member_from_team(user_id=user_id, team_id=team_id)
             return Response(status=status.HTTP_204_NO_CONTENT)

@@ -257,11 +257,8 @@ class WatchlistRepository(MongoRepository):
         doc["_id"] = new_watchlist_id
 
         def write_mongo():
-            client = cls.get_client()
-            with client.start_session() as session:
-                with session.start_transaction():
-                    insert_result = watchlists_collection.insert_one(doc, session=session)
-                    return insert_result.inserted_id
+            insert_result = watchlists_collection.insert_one(doc)
+            return insert_result.inserted_id
 
         def write_postgres():
             task_instance = PostgresTask.objects.get(id=watchlist_model.taskId)
@@ -274,7 +271,7 @@ class WatchlistRepository(MongoRepository):
                     task=task_instance,
                     is_active=True,
                     created_at=now,
-                    created_by=watchlist_model.createdBy,
+                    created_by_id=watchlist_model.createdBy,
                 )
                 return "postgres_success"
 

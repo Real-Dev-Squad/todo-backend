@@ -112,11 +112,8 @@ class TeamRepository(MongoRepository):
         team_dict["_id"] = new_team_id
 
         def write_mongo():
-            client = cls.get_client()
-            with client.start_session() as session:
-                with session.start_transaction():
-                    insert_result = teams_collection.insert_one(team_dict, session=session)
-                    return insert_result.inserted_id
+            insert_result = teams_collection.insert_one(team_dict)
+            return insert_result.inserted_id
 
         def write_postgres():
             with transaction.atomic():
@@ -126,7 +123,7 @@ class TeamRepository(MongoRepository):
                     description=team.description,
                     poc_id=team.poc_id,
                     invite_code=team.invite_code,
-                    created_by=team.created_by,
+                    created_by_id=team.created_by,
                     created_at=team.created_at,
                     is_deleted=team.is_deleted,
                 )
@@ -365,7 +362,7 @@ class UserTeamDetailsRepository(MongoRepository):
             return False
 
     @classmethod
-    def add_user_to_team(
+    def add_user_from_team(
         cls, team_id: str, user_id: str, role_id: str, created_by_user_id: str
     ) -> UserTeamDetailsModel:
         """
@@ -443,11 +440,8 @@ class UserTeamDetailsRepository(MongoRepository):
         user_team_dict["_id"] = new_user_team_id
 
         def write_mongo():
-            client = cls.get_client()
-            with client.start_session() as session:
-                with session.start_transaction():
-                    insert_result = collection.insert_one(user_team_dict, session=session)
-                    return insert_result.inserted_id
+            insert_result = collection.insert_one(user_team_dict)
+            return insert_result.inserted_id
 
         def write_postgres():
             with transaction.atomic():
@@ -456,10 +450,10 @@ class UserTeamDetailsRepository(MongoRepository):
                     user_id=user_team.user_id,
                     team_id=user_team.team_id,
                     is_active=user_team.is_active,
-                    role_id=user_team.role_id,
+                    role=user_team.role_id,
                     created_at=now,
                     updated_at=None,
-                    created_by=user_team.created_by,
+                    created_by_id=user_team.created_by,
                     updated_by=None,
                 )
                 return "postgres_success"
@@ -504,3 +498,117 @@ class UserTeamDetailsRepository(MongoRepository):
         for user_team in user_teams:
             results.append(cls.create_parallel(user_team))
         return results
+
+    @classmethod
+    def update_team_members_parallel(cls, team_id: str, member_ids: list[str], updated_by_user_id: str) -> bool:
+        """
+        Update team members by replacing the current members with the new list in both MongoDB and Postgres in parallel.
+        Compensation logic is applied if one update fails.
+        Args:
+            team_id (str): The team ID
+            member_ids (list[str]): The new list of user IDs
+            updated_by_user_id (str): The user performing the update
+        Returns:
+            bool: True if both DBs updated, else raises Exception
+        """
+        collection = cls.get_collection()
+        now = datetime.now(timezone.utc)
+        exceptions = []
+        mongo_done = False
+        postgres_done = False
+        # Save originals for compensation
+        original_mongo = list(collection.find({"team_id": team_id, "is_active": True}))
+        from todo.models.postgres.user_team_details import UserTeamDetails as PostgresUserTeamDetails
+
+        original_postgres = list(PostgresUserTeamDetails.objects.filter(team_id=team_id, is_active=True))
+
+        def update_mongo():
+            # Remove all current members
+            collection.update_many(
+                {"team_id": team_id, "is_active": True},
+                {"$set": {"is_active": False, "updated_by": updated_by_user_id, "updated_at": now}},
+            )
+            # Add new members
+            for user_id in member_ids:
+                existing = collection.find_one({"team_id": team_id, "user_id": user_id})
+                if existing:
+                    if not existing.get("is_active", True):
+                        collection.update_one(
+                            {"_id": existing["_id"]},
+                            {"$set": {"is_active": True, "updated_by": updated_by_user_id, "updated_at": now}},
+                        )
+                else:
+                    user_team = {
+                        "user_id": user_id,
+                        "team_id": team_id,
+                        "is_active": True,
+                        "created_by": updated_by_user_id,
+                        "updated_by": updated_by_user_id,
+                        "created_at": now,
+                        "updated_at": now,
+                        "role_id": "1",  # Default role
+                    }
+                    collection.insert_one(user_team)
+            return True
+
+        def update_postgres():
+            with transaction.atomic():
+                # Remove all current members
+                PostgresUserTeamDetails.objects.filter(team_id=team_id, is_active=True).update(
+                    is_active=False, updated_by_id=updated_by_user_id, updated_at=now
+                )
+                # Add new members
+                for user_id in member_ids:
+                    existing = PostgresUserTeamDetails.objects.filter(team_id=team_id, user_id=user_id).first()
+                    if existing:
+                        if not existing.is_active:
+                            existing.is_active = True
+                            existing.updated_by_id = updated_by_user_id
+                            existing.updated_at = now
+                            existing.save()
+                    else:
+                        PostgresUserTeamDetails.objects.create(
+                            user_id=user_id,
+                            team_id=team_id,
+                            is_active=True,
+                            role_id="1",  # Default role
+                            created_by_id=updated_by_user_id,
+                            updated_by_id=updated_by_user_id,
+                            created_at=now,
+                            updated_at=now,
+                        )
+            return True
+
+        with ThreadPoolExecutor() as executor:
+            future_mongo = executor.submit(lambda: retry(update_mongo, max_attempts=3))
+            future_postgres = executor.submit(lambda: retry(update_postgres, max_attempts=3))
+            wait([future_mongo, future_postgres], return_when=ALL_COMPLETED)
+
+            for future in (future_mongo, future_postgres):
+                try:
+                    res = future.result()
+                    if res is True:
+                        if future == future_mongo:
+                            mongo_done = True
+                        else:
+                            postgres_done = True
+                except Exception as exc:
+                    exceptions.append(exc)
+
+        # Compensation logic
+        if exceptions:
+            if mongo_done and not postgres_done:
+                # Rollback Mongo: restore original state
+                collection.delete_many({"team_id": team_id})
+                if original_mongo:
+                    collection.insert_many(original_mongo)
+            if postgres_done and not mongo_done:
+                # Rollback Postgres: restore original state
+                with transaction.atomic():
+                    PostgresUserTeamDetails.objects.filter(team_id=team_id).delete()
+                    for orig in original_postgres:
+                        orig.pk = None  # To force insert
+                        orig.save()
+            raise Exception(f"Update team members failed: {exceptions}")
+
+        return mongo_done and postgres_done

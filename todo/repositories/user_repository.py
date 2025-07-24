@@ -124,30 +124,27 @@ class UserRepository:
             user_id = str(uuid.uuid4())
 
         def write_mongo():
-            session = cls._get_client().start_session()
-            with session.start_transaction():
-                result = collection.find_one_and_update(
-                    {"google_id": google_id},
-                    {
-                        "$set": {
-                            "email_id": user_data["email"],
-                            "name": user_data["name"],
-                            "picture": user_data.get("picture"),
-                            "updated_at": now,
-                        },
-                        "$setOnInsert": {
-                            "_id": user_id,
-                            "google_id": google_id,
-                            "created_at": now,
-                        },
+            result = collection.find_one_and_update(
+                {"google_id": google_id},
+                {
+                    "$set": {
+                        "email_id": user_data["email"],
+                        "name": user_data["name"],
+                        "picture": user_data.get("picture"),
+                        "updated_at": now,
                     },
-                    upsert=True,
-                    return_document=ReturnDocument.AFTER,
-                    session=session,
-                )
-                if not result:
-                    raise APIException(RepositoryErrors.USER_OPERATION_FAILED)
-                return result
+                    "$setOnInsert": {
+                        "_id": user_id,
+                        "google_id": google_id,
+                        "created_at": now,
+                    },
+                },
+                upsert=True,
+                return_document=ReturnDocument.AFTER,
+            )
+            if not result:
+                raise APIException(RepositoryErrors.USER_OPERATION_FAILED)
+            return result
 
         def write_postgres():
             with transaction.atomic():

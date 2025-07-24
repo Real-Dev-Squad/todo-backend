@@ -318,7 +318,7 @@ class TaskService:
         # Handle assignee updates separately
         if "assignee" in validated_data:
             assignee_info = validated_data["assignee"]
-            TaskAssignmentRepository.update_assignee(
+            TaskAssignmentRepository.update_assignment_parallel(
                 task_id,
                 assignee_info["assignee_id"],
                 assignee_info["user_type"],
@@ -329,7 +329,7 @@ class TaskService:
             return cls.prepare_task_dto(current_task, user_id)
 
         update_payload["updatedBy"] = user_id
-        updated_task = TaskRepository.update(task_id, update_payload)
+        updated_task = TaskRepository.update_parallel(task_id, update_payload, user_id)
 
         if not updated_task:
             raise TaskNotFoundException(task_id)
@@ -401,7 +401,7 @@ class TaskService:
         # Update task if there are changes
         if update_payload:
             update_payload["updatedBy"] = user_id
-            updated_task = TaskRepository.update(task_id, update_payload)
+            updated_task = TaskRepository.update_parallel(task_id, update_payload, user_id)
             if not updated_task:
                 raise TaskNotFoundException(task_id)
         else:
@@ -409,7 +409,7 @@ class TaskService:
 
         # Handle assignee updates
         if validated_data.get("assignee"):
-            TaskAssignmentRepository.update_assignment(
+            TaskAssignmentRepository.update_assignment_parallel(
                 task_id,
                 validated_data["assignee"]["assignee_id"],
                 validated_data["assignee"]["user_type"],
@@ -481,7 +481,7 @@ class TaskService:
         # Update task if there are changes
         if update_payload:
             update_payload["updatedBy"] = user_id
-            updated_task = TaskRepository.update(task_id, update_payload)
+            updated_task = TaskRepository.update_parallel(task_id, update_payload, user_id)
             if not updated_task:
                 raise TaskNotFoundException(task_id)
         else:
@@ -544,7 +544,7 @@ class TaskService:
             "updatedBy": user_id,
         }
 
-        updated_task = TaskRepository.update(task_id, update_payload)
+        updated_task = TaskRepository.update_parallel(task_id, update_payload, user_id)
         if not updated_task:
             raise TaskNotFoundException(task_id)
 

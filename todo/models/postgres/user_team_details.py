@@ -8,7 +8,7 @@ class UserTeamDetails(models.Model):
     user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="team_details")
     team = models.ForeignKey("Team", on_delete=models.CASCADE, related_name="user_details")
     is_active = models.BooleanField(default=True)  # type: ignore[arg-type]
-    role = models.ForeignKey("Role", on_delete=models.CASCADE, related_name="user_team_details")
+    role = models.CharField(max_length=50)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey("User", on_delete=models.CASCADE, related_name="created_user_team_details")

@@ -7,7 +7,9 @@ from django.db.models.manager import Manager
 class TaskAssignment(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     task = models.ForeignKey(Task, on_delete=models.CASCADE)
-    assignee_user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="assigned_tasks_as_user")
+    assignee_user = models.ForeignKey(
+        "User", on_delete=models.CASCADE, null=True, blank=True, related_name="assigned_tasks_as_user"
+    )
     assignee_team = models.ForeignKey(
         "Team", on_delete=models.CASCADE, null=True, blank=True, related_name="assigned_tasks_as_team"
     )

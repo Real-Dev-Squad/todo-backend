@@ -224,7 +224,7 @@ class TaskAssignmentDetailView(APIView):
 
         # Update executor_id
         try:
-            updated = TaskAssignmentRepository.update_executor(task_id, executor_id, user["user_id"])
+            updated = TaskAssignmentRepository.update_executor_parallel(task_id, executor_id, user["user_id"])
             if not updated:
                 # Get more details about why it failed
                 import traceback

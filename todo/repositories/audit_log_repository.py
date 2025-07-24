@@ -6,10 +6,15 @@ from todo.models.postgres.audit_log import AuditLog as PostgresAuditLogs
 from concurrent.futures import ThreadPoolExecutor, ALL_COMPLETED, wait
 from todo.utils.retry_utils import retry
 from django.db import transaction
+from todo_project.db.config import DatabaseManager
 
 
 class AuditLogRepository(MongoRepository):
     collection_name = AuditLogModel.collection_name
+
+    @classmethod
+    def _get_client(cls):
+        return DatabaseManager()._database_client
 
     @classmethod
     def create(cls, audit_log: AuditLogModel) -> AuditLogModel:
@@ -29,10 +34,8 @@ class AuditLogRepository(MongoRepository):
         audit_log_dict["_id"] = new_audit_log_id
 
         def write_mongo():
-            session = cls._get_client().start_session()
-            with session.start_transaction():
-                insert_result = collection.insert_one(audit_log_dict, session=session)
-                return insert_result.inserted_id
+            insert_result = collection.insert_one(audit_log_dict)
+            return insert_result.inserted_id
 
         def write_postgres():
             with transaction.atomic():

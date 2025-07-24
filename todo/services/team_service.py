@@ -277,7 +277,9 @@ class TeamService:
             if dto.member_ids is not None:
                 from todo.repositories.team_repository import UserTeamDetailsRepository
 
-                success = UserTeamDetailsRepository.update_team_members(team_id, dto.member_ids, updated_by_user_id)
+                success = UserTeamDetailsRepository.update_team_members_parallel(
+                    team_id, dto.member_ids, updated_by_user_id
+                )
                 if not success:
                     raise ValueError(f"Failed to update team members for team with id {team_id}")
 

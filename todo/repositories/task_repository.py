@@ -112,35 +112,31 @@ class TaskRepository(MongoRepository):
             TaskModel: Created task with displayId
         """
         tasks_collection = cls.get_collection()
-        client = cls.get_client()
 
-        with client.start_session() as session:
-            try:
-                with session.start_transaction():
-                    # Atomically increment and get the next counter value
-                    db = cls.get_database()
-                    counter_result = db.counters.find_one_and_update(
-                        {"_id": "taskDisplayId"}, {"$inc": {"seq": 1}}, return_document=True, session=session
-                    )
+        try:
+            db = cls.get_database()
+            counter_result = db.counters.find_one_and_update(
+                {"_id": "taskDisplayId"}, {"$inc": {"seq": 1}}, return_document=True
+            )
 
-                    if not counter_result:
-                        db.counters.insert_one({"_id": "taskDisplayId", "seq": 1}, session=session)
-                        next_number = 1
-                    else:
-                        next_number = counter_result["seq"]
+            if not counter_result:
+                db.counters.insert_one({"_id": "taskDisplayId", "seq": 1})
+                next_number = 1
+            else:
+                next_number = counter_result["seq"]
 
-                    task.displayId = f"#{next_number}"
-                    task.createdAt = datetime.now(timezone.utc)
-                    task.updatedAt = None
+            task.displayId = f"#{next_number}"
+            task.createdAt = datetime.now(timezone.utc)
+            task.updatedAt = None
 
-                    task_dict = task.model_dump(mode="json", by_alias=True, exclude_none=True)
-                    insert_result = tasks_collection.insert_one(task_dict, session=session)
+            task_dict = task.model_dump(mode="json", by_alias=True, exclude_none=True)
+            insert_result = tasks_collection.insert_one(task_dict)
 
-                    task.id = insert_result.inserted_id
-                    return task
+            task.id = insert_result.inserted_id
+            return task
 
-            except Exception as e:
-                raise ValueError(RepositoryErrors.TASK_CREATION_FAILED.format(str(e)))
+        except Exception as e:
+            raise ValueError(RepositoryErrors.TASK_CREATION_FAILED.format(str(e)))
 
     @classmethod
     def get_by_id(cls, task_id: str) -> TaskModel | None:
@@ -229,23 +225,20 @@ class TaskRepository(MongoRepository):
         task_dict["_id"] = new_task_id
 
         def write_mongo():
-            client = cls.get_client()
-            with client.start_session() as session:
-                with session.start_transaction():
-                    db = cls.get_database()
-                    counter_result = db.counters.find_one_and_update(
-                        {"_id": "taskDisplayId"}, {"$inc": {"seq": 1}}, return_document=True, session=session
-                    )
-                    if not counter_result:
-                        db.counters.insert_one({"_id": "taskDisplayId", "seq": 1}, session=session)
-                        next_number = 1
-                    else:
-                        next_number = counter_result["seq"]
+            db = cls.get_database()
+            counter_result = db.counters.find_one_and_update(
+                {"_id": "taskDisplayId"}, {"$inc": {"seq": 1}}, return_document=True
+            )
+            if not counter_result:
+                db.counters.insert_one({"_id": "taskDisplayId", "seq": 1})
+                next_number = 1
+            else:
+                next_number = counter_result["seq"]
 
-                    task.displayId = f"#{next_number}"
-                    task_dict["displayId"] = task.displayId
-                    insert_result = tasks_collection.insert_one(task_dict, session=session)
-                    return insert_result.inserted_id
+            task.displayId = f"#{next_number}"
+            task_dict["displayId"] = task.displayId
+            insert_result = tasks_collection.insert_one(task_dict)
+            return insert_result.inserted_id
 
         def write_postgres():
             with transaction.atomic():
@@ -267,7 +260,7 @@ class TaskRepository(MongoRepository):
                     started_at=task.startedAt,
                     due_at=task.dueAt,
                     created_at=task.createdAt,
-                    created_by=task.createdBy,
+                    created_by_id=task.createdBy,
                 )
                 return "postgres_success"
 
@@ -303,3 +296,109 @@ class TaskRepository(MongoRepository):
 
         task.id = mongo_id
         return task
+
+    @classmethod
+    def update_parallel(cls, task_id: str, update_data: dict, updated_by_user_id: str) -> TaskModel | None:
+        """
+        Update a task in both MongoDB and Postgres in parallel. Compensation logic is applied if one update fails.
+        Args:
+            task_id (str): The ID of the task to update
+            update_data (dict): The fields to update
+            updated_by_user_id (str): The user performing the update
+        Returns:
+            TaskModel | None: The updated task model if successful, else None
+        """
+        tasks_collection = cls.get_collection()
+        now = datetime.now(timezone.utc)
+        exceptions = []
+        mongo_result = None
+        postgres_done = False
+
+        # Save original Mongo and Postgres for compensation
+        original_mongo = tasks_collection.find_one({"_id": task_id, "isDeleted": False})
+        try:
+            original_postgres = PostgresTask.objects.get(id=task_id, is_deleted=False)
+        except PostgresTask.DoesNotExist:
+            original_postgres = None
+
+        def update_mongo():
+            update_data_mongo = {**update_data, "updatedBy": updated_by_user_id, "updatedAt": now}
+            update_data_mongo = {k: v for k, v in update_data_mongo.items() if v is not None}
+            updated_doc = tasks_collection.find_one_and_update(
+                {"_id": task_id, "isDeleted": False},
+                {"$set": update_data_mongo},
+                return_document=ReturnDocument.AFTER,
+            )
+            if not updated_doc:
+                raise Exception("MongoDB update failed: No document updated.")
+            return updated_doc
+
+        def update_postgres():
+            with transaction.atomic():
+                try:
+                    pg_task = PostgresTask.objects.get(id=task_id, is_deleted=False)
+                except PostgresTask.DoesNotExist:
+                    raise TaskNotFoundException(task_id)
+                for k, v in update_data.items():
+                    # Map Pydantic to Django field names if needed
+                    if k == "displayId":
+                        setattr(pg_task, "display_id", v)
+                    elif k == "isAcknowledged":
+                        setattr(pg_task, "is_acknowledged", v)
+                    elif k == "isDeleted":
+                        setattr(pg_task, "is_deleted", v)
+                    elif k == "deferredDetails" and v is not None:
+                        setattr(pg_task, "deferred_at", v.get("deferredAt"))
+                        setattr(pg_task, "deferred_till", v.get("deferredTill"))
+                        setattr(pg_task, "deferred_by_id", v.get("deferredBy"))
+                    elif k == "startedAt":
+                        setattr(pg_task, "started_at", v)
+                    elif k == "dueAt":
+                        setattr(pg_task, "due_at", v)
+                    elif k == "createdAt":
+                        setattr(pg_task, "created_at", v)
+                    elif k == "updatedAt":
+                        setattr(pg_task, "updated_at", v)
+                    elif k == "createdBy":
+                        setattr(pg_task, "created_by_id", v)
+                    elif k == "updatedBy":
+                        setattr(pg_task, "updated_by_id", v)
+                    elif hasattr(pg_task, k.lower()):
+                        setattr(pg_task, k.lower(), v)
+                pg_task.updated_by_id = updated_by_user_id
+                pg_task.updated_at = now
+                pg_task.save()
+                return "postgres_success"
+
+        with ThreadPoolExecutor() as executor:
+            future_mongo = executor.submit(lambda: retry(update_mongo, max_attempts=3))
+            future_postgres = executor.submit(lambda: retry(update_postgres, max_attempts=3))
+            wait([future_mongo, future_postgres], return_when=ALL_COMPLETED)
+
+            for future in (future_mongo, future_postgres):
+                try:
+                    res = future.result()
+                    if res == "postgres_success":
+                        postgres_done = True
+                    else:
+                        mongo_result = res
+                except Exception as exc:
+                    exceptions.append(exc)
+                    print(f"[ERROR] Update failed: {exc}")
+
+        # Compensation logic
+        if exceptions:
+            if mongo_result and not postgres_done and original_mongo:
+                tasks_collection.replace_one({"_id": task_id}, original_mongo)
+                print(f"[COMPENSATION] Rolled back Mongo update for task {task_id}")
+            if postgres_done and not mongo_result and original_postgres:
+                with transaction.atomic():
+                    pg_task = PostgresTask.objects.get(id=task_id, is_deleted=False)
+                    for k, v in original_postgres.__dict__.items():
+                        if not k.startswith("_") and hasattr(pg_task, k):
+                            setattr(pg_task, k, v)
+                    pg_task.save()
+                    print(f"[COMPENSATION] Rolled back Postgres update for task {task_id}")
+            raise Exception(f"Task update failed: {exceptions}")
+
+        return TaskModel(**mongo_result) if mongo_result else None

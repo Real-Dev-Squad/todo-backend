@@ -449,3 +449,30 @@ class TeamActivityTimelineView(APIView):
                 entry["status_to"] = log.status_to
             timeline.append(entry)
         return Response({"timeline": timeline}, status=status.HTTP_200_OK)
+
+
+class RemoveTeamMemberView(APIView):
+    @extend_schema(
+        summary="Remove a user from a team",
+        description="Removes the specified user from the specified team.",
+        parameters=[
+            OpenApiParameter(name="team_id", type=str, location=OpenApiParameter.PATH, description="ID of the team"),
+            OpenApiParameter(name="user_id", type=str, location=OpenApiParameter.PATH, description="ID of the user to remove"),
+        ],
+        responses={
+            204: OpenApiResponse(description="User removed from team successfully."),
+            404: OpenApiResponse(description="Team or user not found."),
+            400: OpenApiResponse(description="Bad request or other error."),
+        },
+        tags=["teams"],
+    )
+    def delete(self, request, team_id, user_id):
+        print(f"DEBUG: RemoveTeamMemberView.delete called with team_id={team_id}, user_id={user_id}")
+        from todo.services.team_service import TeamService
+        try:
+            TeamService.remove_member_from_team(user_id=user_id, team_id=team_id)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except TeamService.TeamOrUserNotFound:
+            return Response({"detail": "Team or user not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)

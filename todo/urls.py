@@ -12,6 +12,7 @@ from todo.views.team import (
     AddTeamMembersView,
     TeamInviteCodeView,
     TeamActivityTimelineView,
+    RemoveTeamMemberView
 )
 from todo.views.watchlist import WatchlistListView, WatchlistDetailView, WatchlistCheckView
 from todo.views.task_assignment import TaskAssignmentView, TaskAssignmentDetailView
@@ -41,4 +42,8 @@ urlpatterns = [
     path("auth/google/callback", GoogleCallbackView.as_view(), name="google_callback"),
     path("auth/logout", LogoutView.as_view(), name="google_logout"),
     path("users", UsersView.as_view(), name="users"),
+]
+
+urlpatterns += [
+    path('teams/<str:team_id>/members/<str:user_id>', RemoveTeamMemberView.as_view(), name='remove_team_member'),
 ]

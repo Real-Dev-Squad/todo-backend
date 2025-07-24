@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 from rest_framework.test import APIClient
 from rest_framework import status
 
-from todo.views.team import TeamListView, JoinTeamByInviteCodeView
+from todo.views.team import TeamListView, JoinTeamByInviteCodeView, RemoveTeamMemberView
 from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.dto.team_dto import TeamDTO
 from datetime import datetime, timezone
@@ -134,3 +134,33 @@ class JoinTeamByInviteCodeViewTests(TestCase):
         response = self.view.post(mock_request)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("invite_code", response.data)
+
+
+class RemoveTeamMemberViewTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.team_id = "507f1f77bcf86cd799439012"
+        self.user_id = "507f1f77bcf86cd799439011"
+        self.url = f"/teams/{self.team_id}/members/{self.user_id}/"
+
+    @patch("todo.views.team.TeamService.remove_member_from_team")
+    def test_remove_member_success(self, mock_remove):
+        mock_remove.return_value = True
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        mock_remove.assert_called_once_with(user_id=self.user_id, team_id=self.team_id)
+
+    @patch("todo.views.team.TeamService.remove_member_from_team")
+    def test_remove_member_not_found(self, mock_remove):
+        from todo.services.team_service import TeamService
+        mock_remove.side_effect = TeamService.TeamOrUserNotFound()
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("not found", response.data["detail"])
+
+    @patch("todo.views.team.TeamService.remove_member_from_team")
+    def test_remove_member_generic_error(self, mock_remove):
+        mock_remove.side_effect = Exception("Something went wrong")
+        response = self.client.delete(self.url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Something went wrong", response.data["detail"])

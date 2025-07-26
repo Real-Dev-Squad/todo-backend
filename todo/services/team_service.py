@@ -400,6 +400,7 @@ class TeamService:
                         team_id=team.id,
                         action="member_added_to_team",
                         performed_by=PyObjectId(added_by_user_id),
+                        details={"added_member_id": member_id}
                     )
                 )
 

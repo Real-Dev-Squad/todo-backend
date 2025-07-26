@@ -8,7 +8,6 @@ from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRep
 from todo.constants.messages import AppMessages
 from todo.utils.invite_code_utils import generate_invite_code
 from typing import List
-from datetime import datetime, timezone
 from todo.models.audit_log import AuditLogModel
 from todo.repositories.audit_log_repository import AuditLogRepository
 

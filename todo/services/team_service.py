@@ -429,7 +429,7 @@ class TeamService:
         success = UserTeamDetailsRepository.remove_member_from_team(user_id=user_id, team_id=team_id)
         if not success:
             raise cls.TeamOrUserNotFound()
-        
+
         # Audit log for team member removal
         AuditLogRepository.create(
             AuditLogModel(
@@ -438,5 +438,5 @@ class TeamService:
                 performed_by=PyObjectId(removed_by_user_id) if removed_by_user_id else PyObjectId(user_id),
             )
         )
-        
+
         return True

@@ -13,7 +13,7 @@ class AuditLogModel(Document):
     previous_executor_id: PyObjectId | None = None
     new_executor_id: PyObjectId | None = None
     spoc_id: PyObjectId | None = None
-    action: str  # e.g., "assigned_to_team", "unassigned_from_team", "status_changed", "reassign_executor"
+    action: str  # e.g., "assigned_to_team", "unassigned_from_team", "status_changed", "reassign_executor", "team_created", "member_joined_team", "member_added_to_team", "member_removed_from_team", "team_updated"
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     # For status changes
     status_from: str | None = None

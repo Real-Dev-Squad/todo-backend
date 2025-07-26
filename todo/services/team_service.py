@@ -8,6 +8,9 @@ from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRep
 from todo.constants.messages import AppMessages
 from todo.utils.invite_code_utils import generate_invite_code
 from typing import List
+from datetime import datetime, timezone
+from todo.models.audit_log import AuditLogModel
+from todo.repositories.audit_log_repository import AuditLogRepository
 
 DEFAULT_ROLE_ID = "1"
 
@@ -89,6 +92,15 @@ class TeamService:
             # Create all user-team relationships
             if user_teams:
                 UserTeamDetailsRepository.create_many(user_teams)
+
+            # Audit log for team creation
+            AuditLogRepository.create(
+                AuditLogModel(
+                    team_id=created_team.id,
+                    action="team_created",
+                    performed_by=PyObjectId(created_by_user_id),
+                )
+            )
 
             # Convert to DTO
             team_dto = TeamDTO(
@@ -226,6 +238,15 @@ class TeamService:
         )
         UserTeamDetailsRepository.create(user_team)
 
+        # Audit log for team join
+        AuditLogRepository.create(
+            AuditLogModel(
+                team_id=team.id,
+                action="member_joined_team",
+                performed_by=PyObjectId(user_id),
+            )
+        )
+
         # 4. Return team details
         return TeamDTO(
             id=str(team.id),
@@ -282,6 +303,15 @@ class TeamService:
                 success = UserTeamDetailsRepository.update_team_members(team_id, dto.member_ids, updated_by_user_id)
                 if not success:
                     raise ValueError(f"Failed to update team members for team with id {team_id}")
+
+            # Audit log for team update
+            AuditLogRepository.create(
+                AuditLogModel(
+                    team_id=PyObjectId(team_id),
+                    action="team_updated",
+                    performed_by=PyObjectId(updated_by_user_id),
+                )
+            )
 
             # Convert to DTO
             return TeamDTO(
@@ -364,6 +394,16 @@ class TeamService:
             if new_user_teams:
                 UserTeamDetailsRepository.create_many(new_user_teams)
 
+            # Audit log for team member addition
+            for member_id in member_ids:
+                AuditLogRepository.create(
+                    AuditLogModel(
+                        team_id=team.id,
+                        action="member_added_to_team",
+                        performed_by=PyObjectId(added_by_user_id),
+                    )
+                )
+
             # Return updated team details
             return TeamDTO(
                 id=str(team.id),
@@ -384,10 +424,20 @@ class TeamService:
         pass
 
     @classmethod
-    def remove_member_from_team(cls, user_id: str, team_id: str):
+    def remove_member_from_team(cls, user_id: str, team_id: str, removed_by_user_id: str = None):
         from todo.repositories.user_team_details_repository import UserTeamDetailsRepository
 
         success = UserTeamDetailsRepository.remove_member_from_team(user_id=user_id, team_id=team_id)
         if not success:
             raise cls.TeamOrUserNotFound()
+        
+        # Audit log for team member removal
+        AuditLogRepository.create(
+            AuditLogModel(
+                team_id=PyObjectId(team_id),
+                action="member_removed_from_team",
+                performed_by=PyObjectId(removed_by_user_id) if removed_by_user_id else PyObjectId(user_id),
+            )
+        )
+        
         return True

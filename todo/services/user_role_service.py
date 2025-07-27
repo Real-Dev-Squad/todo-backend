@@ -58,19 +58,24 @@ class UserRoleService:
         cls, user_id: str, scope: Optional[str] = None, team_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         try:
-            # Convert scope string to enum if provided
             scope_enum = RoleScope(scope) if scope else None
 
             user_roles = UserRoleRepository.get_user_roles(user_id, scope_enum, team_id)
-            return [
-                {
-                    "role_name": role.role_name.value,  # Convert enum to string for API response
-                    "scope": role.scope.value,
+
+            result = []
+            for role in user_roles:
+                role_name_value = role.role_name.value if hasattr(role.role_name, "value") else role.role_name
+                scope_value = role.scope.value if hasattr(role.scope, "value") else role.scope
+
+                role_dict = {
+                    "role_name": role_name_value,
+                    "scope": scope_value,
                     "team_id": role.team_id,
                     "assigned_at": role.created_at,
                 }
-                for role in user_roles
-            ]
+                result.append(role_dict)
+
+            return result
         except Exception as e:
             logger.error(f"Failed to get user roles: {str(e)}")
             return []

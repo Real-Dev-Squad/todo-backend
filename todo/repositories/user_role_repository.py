@@ -16,12 +16,15 @@ class UserRoleRepository(MongoRepository):
     def create(cls, user_role: UserRoleModel) -> UserRoleModel:
         collection = cls.get_collection()
 
+        role_name_value = user_role.role_name.value if hasattr(user_role.role_name, "value") else user_role.role_name
+        scope_value = user_role.scope.value if hasattr(user_role.scope, "value") else user_role.scope
+
         # Check if already exists and is active
         existing = collection.find_one(
             {
                 "user_id": user_role.user_id,
-                "role_name": user_role.role_name.value,  # Compare with enum value
-                "scope": user_role.scope.value,
+                "role_name": role_name_value,
+                "scope": scope_value,
                 "team_id": user_role.team_id,
                 "is_active": True,
             }
@@ -45,11 +48,12 @@ class UserRoleRepository(MongoRepository):
         query = {"user_id": user_id, "is_active": True}
 
         if scope:
-            query["scope"] = scope.value
+            scope_value = scope.value if hasattr(scope, "value") else scope
+            query["scope"] = scope_value
 
         if team_id:
             query["team_id"] = team_id
-        elif scope and scope.value == "GLOBAL":
+        elif scope and (scope.value if hasattr(scope, "value") else scope) == "GLOBAL":
             query["team_id"] = None
 
         roles = []
@@ -72,11 +76,14 @@ class UserRoleRepository(MongoRepository):
         """Remove a role from a user - simple deactivation."""
         collection = cls.get_collection()
 
-        query = {"user_id": user_id, "role_name": role_name.value, "scope": scope.value, "is_active": True}
+        role_name_value = role_name.value if hasattr(role_name, "value") else role_name
+        scope_value = scope.value if hasattr(scope, "value") else scope
 
-        if scope.value == "TEAM" and team_id:
+        query = {"user_id": user_id, "role_name": role_name_value, "scope": scope_value, "is_active": True}
+
+        if scope_value == "TEAM" and team_id:
             query["team_id"] = team_id
-        elif scope.value == "GLOBAL":
+        elif scope_value == "GLOBAL":
             query["team_id"] = None
 
         result = collection.update_many(query, {"$set": {"is_active": False}})

@@ -141,7 +141,7 @@ class RemoveTeamMemberViewTests(TestCase):
         self.view = RemoveTeamMemberView()
         self.team_id = "507f1f77bcf86cd799439012"
         self.user_id = "507f1f77bcf86cd799439011"
-        self.mock_user_id = "507f1f77bcf86cd799439013" 
+        self.mock_user_id = "507f1f77bcf86cd799439013"
 
     @patch("todo.views.team.TeamService.remove_member_from_team")
     def test_remove_member_success(self, mock_remove):

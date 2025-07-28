@@ -473,7 +473,8 @@ class RemoveTeamMemberView(APIView):
         from todo.services.team_service import TeamService
 
         try:
-            TeamService.remove_member_from_team(user_id=user_id, team_id=team_id)
+            # Pass the user performing the removal (request.user_id) and the user being removed (user_id)
+            TeamService.remove_member_from_team(user_id=user_id, team_id=team_id, removed_by_user_id=request.user_id)
             return Response(status=status.HTTP_204_NO_CONTENT)
         except TeamService.TeamOrUserNotFound:
             return Response({"detail": "Team or user not found."}, status=status.HTTP_404_NOT_FOUND)

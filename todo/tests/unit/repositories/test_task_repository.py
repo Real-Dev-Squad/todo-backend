@@ -97,7 +97,7 @@ class TaskRepositoryTests(TestCase):
         result = TaskRepository.count()
 
         self.assertEqual(result, 42)
- 
+
         self.mock_collection.count_documents.assert_called_once()
         actual_filter = self.mock_collection.count_documents.call_args[0][0]
         self.assertIn("$and", actual_filter)

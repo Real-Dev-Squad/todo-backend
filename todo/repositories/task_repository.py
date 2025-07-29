@@ -98,16 +98,26 @@ class TaskRepository(MongoRepository):
         direct_task_ids = [assignment.task_id for assignment in direct_assignments]
 
         # Get teams where user is a member
-        from todo.repositories.team_repository import UserTeamDetailsRepository
+        from todo.repositories.team_repository import UserTeamDetailsRepository, TeamRepository
 
         user_teams = UserTeamDetailsRepository.get_by_user_id(user_id)
         team_ids = [str(team.team_id) for team in user_teams]
 
-        # Get tasks assigned to those teams
+        # Get tasks assigned to those teams (only if user is POC)
         team_task_ids = []
-        for team_id in team_ids:
-            team_assignments = TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
-            team_task_ids.extend([assignment.task_id for assignment in team_assignments])
+        if team_ids:
+            # Get teams where user is POC
+            poc_teams = TeamRepository.get_collection().find(
+                {"_id": {"$in": [ObjectId(team_id) for team_id in team_ids]}, "is_deleted": False, "poc_id": user_id}
+            )
+            poc_team_ids = [str(team["_id"]) for team in poc_teams]
+
+            # Get team assignments for POC teams
+            if poc_team_ids:
+                team_assignments = TaskAssignmentRepository.get_collection().find(
+                    {"assignee_id": {"$in": poc_team_ids}, "user_type": "team", "is_active": True}
+                )
+                team_task_ids = [ObjectId(assignment["task_id"]) for assignment in team_assignments]
 
         return direct_task_ids + team_task_ids
 

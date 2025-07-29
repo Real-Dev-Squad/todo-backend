@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from urllib.parse import urlencode
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from todo.dto.deferred_details_dto import DeferredDetailsDTO
 from todo.dto.label_dto import LabelDTO
 from todo.dto.task_dto import TaskDTO, CreateTaskDTO
@@ -28,7 +28,6 @@ from todo.repositories.team_repository import TeamRepository
 from todo.constants.task import (
     TaskStatus,
     TaskPriority,
-    MINIMUM_DEFERRAL_NOTICE_DAYS,
 )
 from todo.constants.messages import ApiErrors, ValidationErrors
 from django.conf import settings
@@ -547,9 +546,7 @@ class TaskService:
                 else current_task.dueAt.astimezone(timezone.utc)
             )
 
-            defer_limit = due_at - timedelta(days=MINIMUM_DEFERRAL_NOTICE_DAYS)
-
-            if deferred_till > defer_limit:
+            if deferred_till >= due_at:
                 raise UnprocessableEntityException(
                     ValidationErrors.CANNOT_DEFER_TOO_CLOSE_TO_DUE_DATE,
                     source={ApiErrorSource.PARAMETER: "deferredTill"},

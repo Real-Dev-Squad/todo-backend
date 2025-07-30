@@ -7,9 +7,11 @@ from datetime import datetime, timezone, timedelta
 from todo.dto.deferred_details_dto import DeferredDetailsDTO
 from todo.dto.label_dto import LabelDTO
 from todo.dto.task_dto import TaskDTO, CreateTaskDTO
+from todo.dto.task_assignment_dto import CreateTaskAssignmentDTO
 from todo.dto.user_dto import UserDTO
 from todo.dto.responses.get_tasks_response import GetTasksResponse
 from todo.dto.responses.create_task_response import CreateTaskResponse
+
 from todo.dto.responses.error_response import (
     ApiErrorResponse,
     ApiErrorDetail,
@@ -44,6 +46,7 @@ from todo.repositories.watchlist_repository import WatchlistRepository
 import math
 from todo.models.audit_log import AuditLogModel
 from todo.repositories.audit_log_repository import AuditLogRepository
+from todo.services.task_assignment_service import TaskAssignmentService
 
 
 @dataclass
@@ -613,14 +616,12 @@ class TaskService:
 
             # Create assignee relationship if assignee is provided
             if dto.assignee:
-                assignee_relationship = TaskAssignmentModel(
-                    assignee_id=PyObjectId(dto.assignee["assignee_id"]),
-                    task_id=created_task.id,
-                    user_type=dto.assignee["user_type"],
-                    created_by=PyObjectId(dto.createdBy),
-                    updated_by=None,
+                assignee_dto = CreateTaskAssignmentDTO(
+                    task_id=str(created_task.id),
+                    assignee_id=dto.assignee.get("assignee_id"),
+                    user_type=dto.assignee.get("user_type"),
                 )
-                TaskAssignmentRepository.create(assignee_relationship)
+                TaskAssignmentService.create_task_assignment(assignee_dto, created_task.createdBy)
 
             task_dto = cls.prepare_task_dto(created_task, dto.createdBy)
             return CreateTaskResponse(data=task_dto)

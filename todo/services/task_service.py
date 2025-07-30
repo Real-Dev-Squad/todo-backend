@@ -172,6 +172,11 @@ class TaskService:
             if watchlist_entry:
                 in_watchlist = watchlist_entry.isActive
 
+        task_status = task_model.status
+
+        if task_model.deferredDetails and task_model.deferredDetails.deferredTill > datetime.now(timezone.utc):
+            task_status = TaskStatus.DEFERRED.value
+
         return TaskDTO(
             id=str(task_model.id),
             displayId=task_model.displayId,
@@ -182,7 +187,7 @@ class TaskService:
             labels=label_dtos,
             startedAt=task_model.startedAt,
             dueAt=task_model.dueAt,
-            status=task_model.status,
+            status=task_status,
             priority=task_model.priority,
             deferredDetails=deferred_details,
             in_watchlist=in_watchlist,
@@ -559,6 +564,7 @@ class TaskService:
         )
 
         update_payload = {
+            "status": TaskStatus.TODO.value,
             "deferredDetails": deferred_details.model_dump(),
             "updatedBy": user_id,
         }

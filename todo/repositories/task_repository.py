@@ -46,10 +46,10 @@ class TaskRepository(MongoRepository):
 
         if team_id:
             logger.debug(f"TaskRepository.list: team_id={team_id}")
-            team_assignments = TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
-            team_task_ids = [assignment.task_id for assignment in team_assignments]
-            logger.debug(f"TaskRepository.list: team_task_ids={team_task_ids}")
-            query_filter = {"$and": [base_filter, {"_id": {"$in": team_task_ids}}]}
+
+            all_task_object_ids = cls._get_team_task_ids(team_id)
+
+            query_filter = {"$and": [base_filter, {"_id": {"$in": all_task_object_ids}}]}
             logger.debug(f"TaskRepository.list: query_filter={query_filter}")
         elif user_id:
             assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
@@ -102,15 +102,39 @@ class TaskRepository(MongoRepository):
         return direct_task_ids + team_task_ids
 
     @classmethod
+    def _get_team_task_ids(cls, team_id: str) -> List[ObjectId]:
+        """Get task IDs for a team (both team assignments and member assignments)."""
+        from todo.repositories.team_repository import UserTeamDetailsRepository
+        from bson import ObjectId
+
+        team_members = UserTeamDetailsRepository.get_users_by_team_id(team_id)
+
+        pipeline = [
+            {
+                "$match": {
+                    "$or": [
+                        {"assignee_id": team_id, "user_type": "team", "is_active": True},
+                        {"assignee_id": {"$in": team_members}, "user_type": "user", "is_active": True},
+                    ]
+                }
+            },
+            {"$project": {"task_id": 1}},
+        ]
+
+        assignments = TaskAssignmentRepository.get_collection().aggregate(pipeline)
+        all_task_ids = [assignment["task_id"] for assignment in assignments]
+
+        return [ObjectId(task_id) for task_id in all_task_ids]
+
+    @classmethod
     def count(cls, user_id: str = None, team_id: str = None, status_filter: str = None) -> int:
         tasks_collection = cls.get_collection()
 
         base_filter = cls._build_status_filter(status_filter)
 
         if team_id:
-            team_assignments = TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
-            team_task_ids = [assignment.task_id for assignment in team_assignments]
-            query_filter = {"$and": [base_filter, {"_id": {"$in": team_task_ids}}]}
+            all_task_object_ids = cls._get_team_task_ids(team_id)
+            query_filter = {"$and": [base_filter, {"_id": {"$in": all_task_object_ids}}]}
         elif user_id:
             assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
             query_filter = {

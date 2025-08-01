@@ -424,6 +424,9 @@ class TaskService:
         if validated_data.get("status") == TaskStatus.IN_PROGRESS and not current_task.startedAt:
             update_payload["startedAt"] = datetime.now(timezone.utc)
 
+        if validated_data.get("status") is not None and current_task.deferredDetails:
+            update_payload["deferredDetails"] = None
+
         # Update task if there are changes
         if update_payload:
             update_payload["updatedBy"] = user_id

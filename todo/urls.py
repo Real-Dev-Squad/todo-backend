@@ -1,5 +1,5 @@
 from django.urls import path
-from todo.views.task import TaskListView, TaskDetailView, TaskUpdateView
+from todo.views.task import TaskListView, TaskDetailView, TaskUpdateView, UserTeamTasksView
 from todo.views.health import HealthView
 from todo.views.user import UsersView
 from todo.views.auth import GoogleLoginView, GoogleCallbackView, LogoutView
@@ -29,6 +29,7 @@ urlpatterns = [
     path("tasks/<str:task_id>", TaskDetailView.as_view(), name="task_detail"),
     path("tasks/<str:task_id>/update", TaskUpdateView.as_view(), name="update_task_and_assignee"),
     path("tasks/<str:task_id>/assign", AssignTaskToUserView.as_view(), name="assign_task_to_user"),
+    path("teams/<str:team_id>/tasks", UserTeamTasksView.as_view(), name="user_team_tasks"),
     path("task-assignments", TaskAssignmentView.as_view(), name="task_assignments"),
     path("task-assignments/<str:task_id>", TaskAssignmentDetailView.as_view(), name="task_assignment_detail"),
     path("roles", RoleListView.as_view(), name="roles"),

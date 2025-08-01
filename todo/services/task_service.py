@@ -678,3 +678,31 @@ class TaskService:
 
         task_dtos = [cls.prepare_task_dto(task, user_id) for task in tasks]
         return GetTasksResponse(tasks=task_dtos, links=None)
+
+    @classmethod
+    def get_tasks_for_user_in_team(
+        cls,
+        user_id: str,
+        team_id: str,
+        page: int = PaginationConfig.DEFAULT_PAGE,
+        limit: int = PaginationConfig.DEFAULT_LIMIT,
+        status_filter: str = None,
+    ) -> GetTasksResponse:
+        """
+        Get tasks for a user within a specific team context.
+        This includes tasks that were originally assigned to the team but later reassigned to the user.
+        """
+        cls._validate_pagination_params(page, limit)
+
+        # Validate that user is a member of the team
+        from todo.repositories.team_repository import TeamRepository
+
+        if not TeamRepository.is_user_team_member(team_id, user_id):
+            raise ValueError("User is not a member of the specified team")
+
+        tasks = TaskRepository.get_tasks_for_user_in_team(user_id, team_id, page, limit, status_filter=status_filter)
+        if not tasks:
+            return GetTasksResponse(tasks=[], links=None)
+
+        task_dtos = [cls.prepare_task_dto(task, user_id) for task in tasks]
+        return GetTasksResponse(tasks=task_dtos, links=None)

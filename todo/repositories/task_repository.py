@@ -267,3 +267,49 @@ class TaskRepository(MongoRepository):
         object_ids = [ObjectId(task_id) for task_id in task_ids]
         cursor = tasks_collection.find({"_id": {"$in": object_ids}})
         return [TaskModel(**doc) for doc in cursor]
+
+    @classmethod
+    def get_tasks_for_user_in_team(
+        cls, user_id: str, team_id: str, page: int, limit: int, status_filter: str = None
+    ) -> List[TaskModel]:
+        """
+        Get tasks for a user within a specific team.
+        This includes:
+        1. Tasks directly assigned to the user that were originally from this team
+        2. Tasks assigned to the team (if user is POC)
+        3. Tasks created by the user within this team context
+        """
+        tasks_collection = cls.get_collection()
+
+        base_filter = cls._build_status_filter(status_filter)
+
+        task_ids = cls._get_task_ids_for_user_in_team(user_id, team_id)
+
+        if not task_ids:
+            return []
+
+        query = {"$and": [base_filter, {"_id": {"$in": task_ids}}]}
+        tasks_cursor = tasks_collection.find(query).skip((page - 1) * limit).limit(limit)
+        return [TaskModel(**task) for task in tasks_cursor]
+
+    @classmethod
+    def _get_task_ids_for_user_in_team(cls, user_id: str, team_id: str) -> List[ObjectId]:
+        """
+        Get task IDs for a user within a specific team context.
+        """
+        from todo.repositories.task_assignment_repository import TaskAssignmentRepository
+        from todo.repositories.team_repository import TeamRepository
+
+        task_ids = []
+
+        user_assignments = TaskAssignmentRepository.get_by_assignee_id(user_id, "user")
+        for assignment in user_assignments:
+            if assignment.original_team_id and str(assignment.original_team_id) == team_id:
+                task_ids.append(assignment.task_id)
+
+        if TeamRepository.is_user_spoc(team_id, user_id):
+            team_assignments = TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
+            for assignment in team_assignments:
+                task_ids.append(assignment.task_id)
+
+        return list(set(task_ids))  # Remove duplicates

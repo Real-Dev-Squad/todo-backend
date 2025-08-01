@@ -424,8 +424,15 @@ class TaskService:
         if validated_data.get("status") == TaskStatus.IN_PROGRESS and not current_task.startedAt:
             update_payload["startedAt"] = datetime.now(timezone.utc)
 
-        if validated_data.get("status") is not None and current_task.deferredDetails:
+        if (
+            validated_data.get("status") is not None
+            and validated_data.get("status") != TaskStatus.DEFERRED.value
+            and current_task.deferredDetails
+        ):
             update_payload["deferredDetails"] = None
+
+        if validated_data.get("status") == TaskStatus.DEFERRED.value:
+            update_payload["status"] = current_task.status
 
         # Update task if there are changes
         if update_payload:

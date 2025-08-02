@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from typing import List
 from bson import ObjectId
 from pymongo import ReturnDocument
-import logging
 
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.task import TaskModel
@@ -40,17 +39,52 @@ class TaskRepository(MongoRepository):
         status_filter: str = None,
     ) -> List[TaskModel]:
         tasks_collection = cls.get_collection()
-        logger = logging.getLogger(__name__)
 
         base_filter = cls._build_status_filter(status_filter)
 
         if team_id:
-            logger.debug(f"TaskRepository.list: team_id={team_id}")
+            # Get tasks directly assigned to the team
             team_assignments = TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
-            team_task_ids = [assignment.task_id for assignment in team_assignments]
-            logger.debug(f"TaskRepository.list: team_task_ids={team_task_ids}")
-            query_filter = {"$and": [base_filter, {"_id": {"$in": team_task_ids}}]}
-            logger.debug(f"TaskRepository.list: query_filter={query_filter}")
+            direct_team_task_ids = [assignment.task_id for assignment in team_assignments]
+
+            # Get tasks assigned to team members (with original_team_id filtering for team isolation)
+            from todo.repositories.team_repository import UserTeamDetailsRepository
+
+            team_member_ids = UserTeamDetailsRepository.get_users_by_team_id(team_id)
+            member_task_ids = []
+
+            if team_member_ids:
+                # Only get tasks where original_team_id matches current team (for team isolation)
+                member_assignments = list(
+                    TaskAssignmentRepository.get_collection().find(
+                        {
+                            "$and": [
+                                {
+                                    "$or": [
+                                        {
+                                            "assignee_id": {
+                                                "$in": [ObjectId(member_id) for member_id in team_member_ids]
+                                            }
+                                        },
+                                        {"assignee_id": {"$in": team_member_ids}},
+                                    ]
+                                },
+                                {"user_type": "user"},
+                                {"is_active": True},
+                                {
+                                    "$or": [
+                                        {"original_team_id": ObjectId(team_id)},  # ObjectId format
+                                        {"original_team_id": team_id},  # String format
+                                    ]
+                                },
+                            ]
+                        }
+                    )
+                )
+                member_task_ids = [ObjectId(assignment["task_id"]) for assignment in member_assignments]
+
+            all_team_task_ids = list(set(direct_team_task_ids + member_task_ids))
+            query_filter = {"$and": [base_filter, {"_id": {"$in": all_team_task_ids}}]}
         elif user_id:
             assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
             query_filter = {"$and": [base_filter, {"_id": {"$in": assigned_task_ids}}]}
@@ -108,9 +142,43 @@ class TaskRepository(MongoRepository):
         base_filter = cls._build_status_filter(status_filter)
 
         if team_id:
+            # Get tasks directly assigned to the team
             team_assignments = TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
-            team_task_ids = [assignment.task_id for assignment in team_assignments]
-            query_filter = {"$and": [base_filter, {"_id": {"$in": team_task_ids}}]}
+            direct_team_task_ids = [assignment.task_id for assignment in team_assignments]
+
+            # Get tasks assigned to team members (with original_team_id filtering for team isolation)
+            from todo.repositories.team_repository import UserTeamDetailsRepository
+
+            team_member_ids = UserTeamDetailsRepository.get_users_by_team_id(team_id)
+            member_task_ids = []
+
+            if team_member_ids:
+                # Only get tasks where original_team_id matches current team (for team isolation)
+
+                member_assignments = TaskAssignmentRepository.get_collection().find(
+                    {
+                        "$and": [
+                            {
+                                "$or": [
+                                    {"assignee_id": {"$in": [ObjectId(member_id) for member_id in team_member_ids]}},
+                                    {"assignee_id": {"$in": team_member_ids}},
+                                ]
+                            },
+                            {"user_type": "user"},
+                            {"is_active": True},
+                            {
+                                "$or": [
+                                    {"original_team_id": ObjectId(team_id)},
+                                    {"original_team_id": team_id},
+                                ]
+                            },
+                        ]
+                    }
+                )
+                member_task_ids = [ObjectId(assignment["task_id"]) for assignment in member_assignments]
+
+            all_team_task_ids = list(set(direct_team_task_ids + member_task_ids))
+            query_filter = {"$and": [base_filter, {"_id": {"$in": all_team_task_ids}}]}
         elif user_id:
             assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
             query_filter = {

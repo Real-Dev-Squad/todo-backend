@@ -72,6 +72,12 @@ class TaskAssignmentRepository(MongoRepository):
         """
         collection = cls.get_collection()
         try:
+            current_assignment = cls.get_by_task_id(task_id)
+            original_team_id = None
+
+            if current_assignment and current_assignment.user_type == "team" and user_type == "user":
+                original_team_id = current_assignment.assignee_id
+
             # Deactivate current assignment if exists (try both ObjectId and string)
             collection.update_many(
                 {"task_id": ObjectId(task_id), "is_active": True},
@@ -102,6 +108,7 @@ class TaskAssignmentRepository(MongoRepository):
                 user_type=user_type,
                 created_by=PyObjectId(user_id),
                 updated_by=None,
+                original_team_id=original_team_id,
             )
 
             return cls.create(new_assignment)

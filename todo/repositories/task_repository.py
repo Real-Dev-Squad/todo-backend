@@ -31,7 +31,7 @@ class TaskRepository(MongoRepository):
             return {
                 "$or": [
                     {"deferredDetails": None},
-                    {"deferredDetails.deferredTill": {"$lte": now}},
+                    {"deferredDetails.deferredTill": {"$lt": now}},
                 ]
             }
 
@@ -42,7 +42,7 @@ class TaskRepository(MongoRepository):
                     {
                         "$or": [
                             {"deferredDetails": None},
-                            {"deferredDetails.deferredTill": {"$lte": now}},
+                            {"deferredDetails.deferredTill": {"$lt": now}},
                         ]
                     },
                 ]

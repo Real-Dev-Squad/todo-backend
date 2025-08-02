@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from bson import ObjectId
-from datetime import datetime, timezone
+from datetime import datetime
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.constants.messages import ValidationErrors
+from zoneinfo import ZoneInfo
 
 
 class CreateTaskSerializer(serializers.Serializer):
@@ -52,8 +53,10 @@ class CreateTaskSerializer(serializers.Serializer):
 
     def validate_dueAt(self, value):
         if value is not None:
-            now = datetime.now(timezone.utc)
-            if value <= now:
+            ist_timezone = ZoneInfo("Asia/Kolkata")
+            now_date = datetime.now(ist_timezone).date()
+            value_date = value.astimezone(ist_timezone).date()
+            if value_date < now_date:
                 raise serializers.ValidationError(ValidationErrors.PAST_DUE_DATE)
         return value
 

@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.constants.messages import ValidationErrors
+from zoneinfo import ZoneInfo
 
 
 class UpdateTaskSerializer(serializers.Serializer):
@@ -50,11 +51,13 @@ class UpdateTaskSerializer(serializers.Serializer):
         return value
 
     def validate_dueAt(self, value):
+        ist_timezone = ZoneInfo("Asia/Kolkata")
         if value is None:
             return value
         errors = []
-        now = datetime.now(timezone.utc)
-        if value <= now:
+        now_date = datetime.now(ist_timezone).date()
+        value_date = value.astimezone(ist_timezone).date()
+        if value_date < now_date:
             errors.append(ValidationErrors.PAST_DUE_DATE)
         if errors:
             raise serializers.ValidationError(errors)

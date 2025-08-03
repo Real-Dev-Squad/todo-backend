@@ -7,9 +7,11 @@ from datetime import datetime, timezone, timedelta
 from todo.dto.deferred_details_dto import DeferredDetailsDTO
 from todo.dto.label_dto import LabelDTO
 from todo.dto.task_dto import TaskDTO, CreateTaskDTO
+from todo.dto.task_assignment_dto import CreateTaskAssignmentDTO
 from todo.dto.user_dto import UserDTO
 from todo.dto.responses.get_tasks_response import GetTasksResponse
 from todo.dto.responses.create_task_response import CreateTaskResponse
+
 from todo.dto.responses.error_response import (
     ApiErrorResponse,
     ApiErrorDetail,
@@ -42,6 +44,9 @@ from bson.errors import InvalidId as BsonInvalidId
 from todo.repositories.user_repository import UserRepository
 from todo.repositories.watchlist_repository import WatchlistRepository
 import math
+from todo.models.audit_log import AuditLogModel
+from todo.repositories.audit_log_repository import AuditLogRepository
+from todo.services.task_assignment_service import TaskAssignmentService
 
 
 @dataclass
@@ -69,6 +74,7 @@ class TaskService:
         order: str,
         user_id: str,
         team_id: str = None,
+        status_filter: str = None,
     ) -> GetTasksResponse:
         try:
             cls._validate_pagination_params(page, limit)
@@ -87,8 +93,10 @@ class TaskService:
                         },
                     )
 
-            tasks = TaskRepository.list(page, limit, sort_by, order, user_id, team_id=team_id)
-            total_count = TaskRepository.count(user_id, team_id=team_id)
+            tasks = TaskRepository.list(
+                page, limit, sort_by, order, user_id, team_id=team_id, status_filter=status_filter
+            )
+            total_count = TaskRepository.count(user_id, team_id=team_id, status_filter=status_filter)
 
             if not tasks:
                 return GetTasksResponse(tasks=[], links=None)
@@ -303,6 +311,10 @@ class TaskService:
                 if not team_data:
                     raise ValueError(f"Team not found: {assignee_id}")
 
+        # Track status change for audit log
+        old_status = getattr(current_task, "status", None)
+        new_status = validated_data.get("status")
+
         update_payload = {}
         enum_fields = {"priority": TaskPriority, "status": TaskStatus}
 
@@ -331,6 +343,18 @@ class TaskService:
 
         update_payload["updatedBy"] = user_id
         updated_task = TaskRepository.update(task_id, update_payload)
+
+        # Audit log for status change
+        if old_status and new_status and old_status != new_status:
+            AuditLogRepository.create(
+                AuditLogModel(
+                    task_id=current_task.id,
+                    action="status_changed",
+                    status_from=old_status,
+                    status_to=new_status,
+                    performed_by=PyObjectId(user_id),
+                )
+            )
 
         if not updated_task:
             raise TaskNotFoundException(task_id)
@@ -592,14 +616,12 @@ class TaskService:
 
             # Create assignee relationship if assignee is provided
             if dto.assignee:
-                assignee_relationship = TaskAssignmentModel(
-                    assignee_id=PyObjectId(dto.assignee["assignee_id"]),
-                    task_id=created_task.id,
-                    user_type=dto.assignee["user_type"],
-                    created_by=PyObjectId(dto.createdBy),
-                    updated_by=None,
+                assignee_dto = CreateTaskAssignmentDTO(
+                    task_id=str(created_task.id),
+                    assignee_id=dto.assignee.get("assignee_id"),
+                    user_type=dto.assignee.get("user_type"),
                 )
-                TaskAssignmentRepository.create(assignee_relationship)
+                TaskAssignmentService.create_task_assignment(assignee_dto, created_task.createdBy)
 
             task_dto = cls.prepare_task_dto(created_task, dto.createdBy)
             return CreateTaskResponse(data=task_dto)
@@ -647,9 +669,10 @@ class TaskService:
         user_id: str,
         page: int = PaginationConfig.DEFAULT_PAGE,
         limit: int = PaginationConfig.DEFAULT_LIMIT,
+        status_filter: str = None,
     ) -> GetTasksResponse:
         cls._validate_pagination_params(page, limit)
-        tasks = TaskRepository.get_tasks_for_user(user_id, page, limit)
+        tasks = TaskRepository.get_tasks_for_user(user_id, page, limit, status_filter=status_filter)
         if not tasks:
             return GetTasksResponse(tasks=[], links=None)
 

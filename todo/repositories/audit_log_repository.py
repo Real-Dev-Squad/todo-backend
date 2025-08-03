@@ -14,3 +14,9 @@ class AuditLogRepository(MongoRepository):
         insert_result = collection.insert_one(audit_log_dict)
         audit_log.id = insert_result.inserted_id
         return audit_log
+
+    @classmethod
+    def get_by_team_id(cls, team_id: str) -> list[AuditLogModel]:
+        collection = cls.get_collection()
+        logs = collection.find({"team_id": team_id}).sort("timestamp", -1)
+        return [AuditLogModel(**log) for log in logs]

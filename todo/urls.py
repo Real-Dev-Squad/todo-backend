@@ -6,7 +6,15 @@ from todo.views.auth import GoogleLoginView, GoogleCallbackView, LogoutView
 from todo.views.role import RoleListView, RoleDetailView
 from todo.views.user_role import UserRoleListView, TeamUserRoleListView, TeamUserRoleDetailView
 from todo.views.label import LabelListView
-from todo.views.team import TeamListView, TeamDetailView, JoinTeamByInviteCodeView, AddTeamMembersView
+from todo.views.team import (
+    TeamListView,
+    TeamDetailView,
+    JoinTeamByInviteCodeView,
+    AddTeamMembersView,
+    TeamInviteCodeView,
+    TeamActivityTimelineView,
+    RemoveTeamMemberView,
+)
 from todo.views.watchlist import WatchlistListView, WatchlistDetailView, WatchlistCheckView
 from todo.views.task_assignment import TaskAssignmentView, TaskAssignmentDetailView
 from todo.views.task import AssignTaskToUserView
@@ -20,6 +28,8 @@ urlpatterns = [
     path(
         "teams/<str:team_id>/users/<str:user_id>/roles", TeamUserRoleDetailView.as_view(), name="team_user_role_detail"
     ),
+    path("teams/<str:team_id>/invite-code", TeamInviteCodeView.as_view(), name="team_invite_code"),
+    path("teams/<str:team_id>/activity-timeline", TeamActivityTimelineView.as_view(), name="team_activity_timeline"),
     path("tasks", TaskListView.as_view(), name="tasks"),
     path("tasks/<str:task_id>", TaskDetailView.as_view(), name="task_detail"),
     path("tasks/<str:task_id>/update", TaskUpdateView.as_view(), name="update_task_and_assignee"),
@@ -38,4 +48,8 @@ urlpatterns = [
     path("auth/logout", LogoutView.as_view(), name="google_logout"),
     path("users", UsersView.as_view(), name="users"),
     path("users/<str:user_id>/roles", UserRoleListView.as_view(), name="user_roles"),
+]
+
+urlpatterns += [
+    path("teams/<str:team_id>/members/<str:user_id>", RemoveTeamMemberView.as_view(), name="remove_team_member"),
 ]

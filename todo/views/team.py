@@ -18,6 +18,10 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiRespon
 from drf_spectacular.types import OpenApiTypes
 from todo.dto.team_dto import TeamDTO
 from todo.services.user_service import UserService
+from todo.repositories.team_repository import TeamRepository
+from todo.repositories.audit_log_repository import AuditLogRepository
+from todo.repositories.user_repository import UserRepository
+from todo.repositories.task_repository import TaskRepository
 
 
 class TeamListView(APIView):
@@ -28,8 +32,10 @@ class TeamListView(APIView):
         try:
             user_id = request.user_id
             response: GetUserTeamsResponse = TeamService.get_user_teams(user_id)
-
-            return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
+            data = response.model_dump(mode="json")
+            for team in data.get("teams", []):
+                team.pop("invite_code", None)
+            return Response(data=data, status=status.HTTP_200_OK)
 
         except ValueError as e:
             if isinstance(e.args[0], ApiErrorResponse):
@@ -70,8 +76,8 @@ class TeamListView(APIView):
             dto = CreateTeamDTO(**serializer.validated_data)
             created_by_user_id = request.user_id
             response: CreateTeamResponse = TeamService.create_team(dto, created_by_user_id)
-
-            return Response(data=response.model_dump(mode="json"), status=status.HTTP_201_CREATED)
+            data = response.model_dump(mode="json")
+            return Response(data=data, status=status.HTTP_201_CREATED)
 
         except ValueError as e:
             if isinstance(e.args[0], ApiErrorResponse):
@@ -149,7 +155,9 @@ class TeamDetailView(APIView):
                 users = UserService.get_users_by_team_id(team_id)
                 users_data = [user.dict() for user in users]
                 team_dto.users = users_data
-            return Response(data=team_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
+            data = team_dto.model_dump(mode="json")
+            data.pop("invite_code", None)
+            return Response(data=data, status=status.HTTP_200_OK)
         except ValueError as e:
             fallback_response = ApiErrorResponse(
                 statusCode=404,
@@ -199,8 +207,9 @@ class TeamDetailView(APIView):
             dto = UpdateTeamDTO(**serializer.validated_data)
             updated_by_user_id = request.user_id
             response: TeamDTO = TeamService.update_team(team_id, dto, updated_by_user_id)
-
-            return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
+            data = response.model_dump(mode="json")
+            data.pop("invite_code", None)
+            return Response(data=data, status=status.HTTP_200_OK)
 
         except ValueError as e:
             if isinstance(e.args[0], ApiErrorResponse):
@@ -244,7 +253,9 @@ class JoinTeamByInviteCodeView(APIView):
             user_id = request.user_id
             invite_code = serializer.validated_data["invite_code"]
             team_dto = TeamService.join_team_by_invite_code(invite_code, user_id)
-            return Response(data=team_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
+            data = team_dto.model_dump(mode="json")
+            data.pop("invite_code", None)
+            return Response(data=data, status=status.HTTP_200_OK)
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -286,8 +297,9 @@ class AddTeamMembersView(APIView):
             member_ids = serializer.validated_data["member_ids"]
             added_by_user_id = request.user_id
             response: TeamDTO = TeamService.add_team_members(team_id, member_ids, added_by_user_id)
-
-            return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
+            data = response.model_dump(mode="json")
+            data.pop("invite_code", None)
+            return Response(data=data, status=status.HTTP_200_OK)
 
         except ValueError as e:
             if isinstance(e.args[0], ApiErrorResponse):
@@ -316,3 +328,155 @@ class AddTeamMembersView(APIView):
             errors=[{"detail": str(error)} for error in errors.values()],
         )
         return Response(data=error_response.model_dump(mode="json"), status=400)
+
+
+class TeamInviteCodeView(APIView):
+    @extend_schema(
+        operation_id="get_team_invite_code",
+        summary="Get team invite code (creator or POC only)",
+        description="Return the invite code for a team if the requesting user is the creator or POC of the team.",
+        tags=["teams"],
+        parameters=[
+            OpenApiParameter(
+                name="team_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the team",
+                required=True,
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(description="Invite code returned successfully"),
+            403: OpenApiResponse(description="Forbidden - not creator or POC"),
+            404: OpenApiResponse(description="Team not found"),
+        },
+    )
+    def get(self, request: Request, team_id: str):
+        """
+        Return the invite code for a team if the requesting user is the creator or POC of the team.
+        """
+        user_id = request.user_id
+        team = TeamRepository.get_by_id(team_id)
+        if not team:
+            return Response({"detail": "Team not found."}, status=status.HTTP_404_NOT_FOUND)
+        is_creator = str(team.created_by) == str(user_id)
+        is_poc = str(team.poc_id) == str(user_id)
+        if is_creator or is_poc:
+            return Response({"invite_code": team.invite_code}, status=status.HTTP_200_OK)
+        return Response(
+            {"detail": "You are not authorized to view the invite code for this team."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+
+class TeamActivityTimelineView(APIView):
+    @extend_schema(
+        operation_id="get_team_activity_timeline",
+        summary="Get team activity timeline",
+        description="Return a timeline of all activities related to tasks assigned to the team, including assignment, unassignment, executor changes, and status changes. All IDs are replaced with names.",
+        tags=["teams"],
+        parameters=[
+            OpenApiParameter(
+                name="team_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the team",
+                required=True,
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(
+                response={
+                    "type": "object",
+                    "properties": {
+                        "timeline": {
+                            "type": "array",
+                            "items": {"type": "object"},
+                        }
+                    },
+                },
+                description="Team activity timeline returned successfully",
+            ),
+            404: OpenApiResponse(description="Team not found"),
+        },
+    )
+    def get(self, request: Request, team_id: str):
+        team = TeamRepository.get_by_id(team_id)
+        if not team:
+            return Response({"detail": "Team not found."}, status=status.HTTP_404_NOT_FOUND)
+        logs = AuditLogRepository.get_by_team_id(team_id)
+        # Pre-fetch team name
+        team_name = team.name
+        # Pre-fetch all user and task names needed
+        user_ids = set()
+        task_ids = set()
+        for log in logs:
+            if log.performed_by:
+                user_ids.add(str(log.performed_by))
+            if log.spoc_id:
+                user_ids.add(str(log.spoc_id))
+            if log.previous_executor_id:
+                user_ids.add(str(log.previous_executor_id))
+            if log.new_executor_id:
+                user_ids.add(str(log.new_executor_id))
+            if log.task_id:
+                task_ids.add(str(log.task_id))
+        user_map = {str(u.id): u.name for u in UserRepository.get_by_ids(list(user_ids))}
+        task_map = {str(t.id): t.title for t in TaskRepository.get_by_ids(list(task_ids))}
+        timeline = []
+        for log in logs:
+            entry = {
+                "action": log.action,
+                "timestamp": log.timestamp,
+            }
+            if log.task_id:
+                entry["task_title"] = task_map.get(str(log.task_id), str(log.task_id))
+            if log.team_id:
+                entry["team_name"] = team_name
+            if log.performed_by:
+                entry["performed_by_name"] = user_map.get(str(log.performed_by), str(log.performed_by))
+            if log.spoc_id:
+                entry["spoc_name"] = user_map.get(str(log.spoc_id), str(log.spoc_id))
+            if log.previous_executor_id:
+                entry["previous_executor_name"] = user_map.get(
+                    str(log.previous_executor_id), str(log.previous_executor_id)
+                )
+            if log.new_executor_id:
+                entry["new_executor_name"] = user_map.get(str(log.new_executor_id), str(log.new_executor_id))
+            if log.status_from:
+                entry["status_from"] = log.status_from
+            if log.status_to:
+                entry["status_to"] = log.status_to
+            timeline.append(entry)
+        return Response({"timeline": timeline}, status=status.HTTP_200_OK)
+
+
+class RemoveTeamMemberView(APIView):
+    @extend_schema(
+        summary="Remove a user from a team",
+        description="Removes the specified user from the specified team.",
+        parameters=[
+            OpenApiParameter(name="team_id", type=str, location=OpenApiParameter.PATH, description="ID of the team"),
+            OpenApiParameter(
+                name="user_id", type=str, location=OpenApiParameter.PATH, description="ID of the user to remove"
+            ),
+        ],
+        responses={
+            204: OpenApiResponse(description="User removed from team successfully."),
+            404: OpenApiResponse(description="Team or user not found."),
+            400: OpenApiResponse(description="Bad request or other error."),
+        },
+        tags=["teams"],
+    )
+    def delete(self, request, team_id, user_id):
+        print(f"DEBUG: RemoveTeamMemberView.delete called with team_id={team_id}, user_id={user_id}")
+        from todo.services.team_service import TeamService
+
+        try:
+            # Pass the user performing the removal (request.user_id) and the user being removed (user_id)
+            TeamService.remove_member_from_team(user_id=user_id, team_id=team_id, removed_by_user_id=request.user_id)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except TeamService.TeamOrUserNotFound:
+            return Response({"detail": "Team or user not found."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)

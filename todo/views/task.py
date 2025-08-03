@@ -57,6 +57,13 @@ class TaskListView(APIView):
                 description="If provided, filters tasks assigned to this team.",
                 required=False,
             ),
+            OpenApiParameter(
+                name="status",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="If provided, filters tasks by status (e.g., 'DONE', 'IN_PROGRESS', 'TODO', 'BLOCKED', 'DEFERRED').",
+                required=False,
+            ),
         ],
         responses={
             200: OpenApiResponse(response=GetTasksResponse, description="Successful response"),
@@ -74,10 +81,12 @@ class TaskListView(APIView):
             user = get_current_user_info(request)
             if not user:
                 raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
+            status_filter = query.validated_data.get("status", "").upper()
             response = TaskService.get_tasks_for_user(
                 user_id=user["user_id"],
                 page=query.validated_data["page"],
                 limit=query.validated_data["limit"],
+                status_filter=status_filter,
             )
             return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
 
@@ -94,6 +103,7 @@ class TaskListView(APIView):
             )
 
         team_id = query.validated_data.get("teamId")
+        status_filter = query.validated_data.get("status")
         response = TaskService.get_tasks(
             page=query.validated_data["page"],
             limit=query.validated_data["limit"],
@@ -101,6 +111,7 @@ class TaskListView(APIView):
             order=query.validated_data.get("order"),
             user_id=user["user_id"],
             team_id=team_id,
+            status_filter=status_filter,
         )
         return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
 

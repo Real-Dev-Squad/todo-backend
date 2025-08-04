@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.constants.messages import ValidationErrors
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 class UpdateTaskSerializer(serializers.Serializer):
@@ -24,6 +25,9 @@ class UpdateTaskSerializer(serializers.Serializer):
         child=serializers.CharField(),
         required=False,
         allow_null=True,
+    )
+    timezone = serializers.CharField(
+        required=False, allow_null=True, help_text="IANA timezone string like 'Asia/Kolkata'"
     )
     dueAt = serializers.DateTimeField(required=False, allow_null=True)
     startedAt = serializers.DateTimeField(required=False, allow_null=True)
@@ -47,17 +51,6 @@ class UpdateTaskSerializer(serializers.Serializer):
                 [ValidationErrors.INVALID_OBJECT_ID.format(label_id) for label_id in invalid_ids]
             )
 
-        return value
-
-    def validate_dueAt(self, value):
-        if value is None:
-            return value
-        errors = []
-        now = datetime.now(timezone.utc)
-        if value <= now:
-            errors.append(ValidationErrors.PAST_DUE_DATE)
-        if errors:
-            raise serializers.ValidationError(errors)
         return value
 
     def validate_startedAt(self, value):
@@ -85,3 +78,25 @@ class UpdateTaskSerializer(serializers.Serializer):
             raise serializers.ValidationError(ValidationErrors.INVALID_OBJECT_ID.format(assignee_id))
 
         return value
+
+    def validate(self, data):
+        due_at = data.get("dueAt")
+        timezone_str = data.get("timezone")
+        errors = {}
+        if due_at is not None:
+            if not timezone_str:
+                errors["timezone"] = [ValidationErrors.REQUIRED_TIMEZONE]
+            else:
+                try:
+                    tz = ZoneInfo(timezone_str)
+
+                    now_date = datetime.now(tz).date()
+                    value_date = due_at.astimezone(tz).date()
+
+                    if value_date < now_date:
+                        errors["dueAt"] = [ValidationErrors.PAST_DUE_DATE]
+                except ZoneInfoNotFoundError:
+                    errors["timezone"] = [ValidationErrors.INVALID_TIMEZONE]
+            if errors:
+                raise serializers.ValidationError(errors)
+        return data

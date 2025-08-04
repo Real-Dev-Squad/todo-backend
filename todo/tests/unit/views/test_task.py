@@ -402,6 +402,7 @@ class CreateTaskViewTests(AuthenticatedMongoTestCase):
             "assignee": {"assignee_id": self.user_id, "user_type": "user"},
             "labels": [],
             "dueAt": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat().replace("+00:00", "Z"),
+            "timezone": "Asia/Calcutta",
         }
 
     @patch("todo.services.task_service.TaskService.create_task")
@@ -491,6 +492,7 @@ class CreateTaskViewTests(AuthenticatedMongoTestCase):
     def test_create_task_returns_400_when_dueAt_is_past(self):
         invalid_payload = self.valid_payload.copy()
         invalid_payload["dueAt"] = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat().replace("+00:00", "Z")
+        invalid_payload["timezone"] = "Asia/Kolkata"
 
         response = self.client.post(self.url, data=invalid_payload, format="json")
 

@@ -17,6 +17,7 @@ class CreateTaskSerializerTest(TestCase):
             "user_type": "user",
             "labels": [],
             "dueAt": (datetime.now(timezone.utc) + timedelta(days=2)).isoformat().replace("+00:00", "Z"),
+            "timezone": "Asia/Calcutta",
         }
 
     def test_serializer_validates_correct_data(self):

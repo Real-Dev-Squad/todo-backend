@@ -1024,7 +1024,7 @@ class TaskServiceDeferTests(TestCase):
     @patch("todo.services.task_service.TaskRepository.get_by_id")
     def test_defer_task_too_close_to_due_date_raises_exception(self, mock_repo_get_by_id):
         mock_repo_get_by_id.return_value = self.task_model
-        deferred_till = self.due_at - timedelta(days=1)
+        deferred_till = self.due_at + timedelta(days=1)
 
         with self.assertRaises(UnprocessableEntityException):
             TaskService.defer_task(self.task_id, deferred_till, self.user_id)

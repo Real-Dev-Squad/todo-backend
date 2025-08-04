@@ -3,7 +3,7 @@ from http import HTTPStatus
 from bson import ObjectId
 from django.urls import reverse
 from todo.constants.messages import ApiErrors, ValidationErrors
-from todo.constants.task import MINIMUM_DEFERRAL_NOTICE_DAYS, TaskPriority, TaskStatus
+from todo.constants.task import TaskPriority, TaskStatus
 from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
 from todo.tests.fixtures.task import tasks_db_data
 
@@ -52,7 +52,7 @@ class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
 
     def test_defer_task_success(self):
         now = datetime.now(timezone.utc)
-        due_at = now + timedelta(days=MINIMUM_DEFERRAL_NOTICE_DAYS + 30)
+        due_at = now + timedelta(days=30)
         task_id = self._insert_task(due_at=due_at)
         deferred_till = now + timedelta(days=10)
 
@@ -76,11 +76,10 @@ class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
 
     def test_defer_task_too_close_to_due_date_returns_422(self):
         now = datetime.now(timezone.utc)
-        due_at = now + timedelta(days=MINIMUM_DEFERRAL_NOTICE_DAYS + 5)
+        due_at = now + timedelta(days=5)
         task_id = self._insert_task(due_at=due_at)
 
-        defer_limit = due_at - timedelta(days=MINIMUM_DEFERRAL_NOTICE_DAYS)
-        deferred_till = defer_limit + timedelta(days=1)
+        deferred_till = due_at + timedelta(days=1)
 
         url = reverse("task_detail", args=[task_id]) + "?action=defer"
         response = self.client.patch(url, data={"deferredTill": deferred_till.isoformat()}, format="json")
@@ -129,7 +128,7 @@ class TaskDeferAPIIntegrationTest(AuthenticatedMongoTestCase):
 
     def test_defer_task_unauthorized(self):
         now = datetime.now(timezone.utc)
-        due_at = now + timedelta(days=MINIMUM_DEFERRAL_NOTICE_DAYS + 30)
+        due_at = now + timedelta(days=30)
         task_id = self._insert_task(due_at=due_at)
         deferred_till = now + timedelta(days=10)
         url = reverse("task_detail", args=[task_id]) + "?action=defer"

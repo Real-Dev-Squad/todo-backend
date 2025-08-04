@@ -24,6 +24,7 @@ class UpdateTaskSerializerTests(TestCase):
             "dueAt": self.future_date.isoformat(),
             "startedAt": (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(),
             "isAcknowledged": True,
+            "timezone": "Asia/Calcutta",
         }
         serializer = UpdateTaskSerializer(data=data)
         self.assertTrue(serializer.is_valid(), serializer.errors)
@@ -54,6 +55,7 @@ class UpdateTaskSerializerTests(TestCase):
             "labels": None,
             "dueAt": None,
             "startedAt": None,
+            "timezone": None,
         }
         serializer = UpdateTaskSerializer(data=data, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
@@ -101,14 +103,14 @@ class UpdateTaskSerializerTests(TestCase):
         self.assertEqual(serializer.validated_data["labels"], [])
 
     def test_due_at_validation_past_date(self):
-        data = {"dueAt": self.past_date.isoformat()}
+        data = {"dueAt": self.past_date.isoformat(), "timezone": "Asia/Calcutta"}
         serializer = UpdateTaskSerializer(data=data, partial=True)
         self.assertFalse(serializer.is_valid())
         self.assertIn("dueAt", serializer.errors)
         self.assertEqual(str(serializer.errors["dueAt"][0]), ValidationErrors.PAST_DUE_DATE)
 
     def test_due_at_validation_future_date(self):
-        data = {"dueAt": self.future_date.isoformat()}
+        data = {"dueAt": self.future_date.isoformat(), "timezone": "Asia/Calcutta"}
         serializer = UpdateTaskSerializer(data=data, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         self.assertEqual(serializer.validated_data["dueAt"], datetime.fromisoformat(data["dueAt"]))

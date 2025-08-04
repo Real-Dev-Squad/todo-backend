@@ -176,6 +176,7 @@ class WatchlistService:
             isDeleted=watchlist_model.isDeleted,
             labels=labels,
             dueAt=watchlist_model.dueAt,
+            deferredDetails=watchlist_model.deferredDetails,
             status=task_status,
             priority=watchlist_model.priority,
             createdAt=watchlist_model.createdAt,

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from urllib.parse import urlencode
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from todo.dto.deferred_details_dto import DeferredDetailsDTO
 from todo.dto.label_dto import LabelDTO
 from todo.dto.task_dto import TaskDTO, CreateTaskDTO
@@ -30,7 +30,6 @@ from todo.repositories.team_repository import TeamRepository
 from todo.constants.task import (
     TaskStatus,
     TaskPriority,
-    MINIMUM_DEFERRAL_NOTICE_DAYS,
 )
 from todo.constants.messages import ApiErrors, ValidationErrors
 from django.conf import settings
@@ -176,6 +175,11 @@ class TaskService:
             if watchlist_entry:
                 in_watchlist = watchlist_entry.isActive
 
+        task_status = task_model.status
+
+        if task_model.deferredDetails and task_model.deferredDetails.deferredTill > datetime.now(timezone.utc):
+            task_status = TaskStatus.DEFERRED.value
+
         return TaskDTO(
             id=str(task_model.id),
             displayId=task_model.displayId,
@@ -186,7 +190,7 @@ class TaskService:
             labels=label_dtos,
             startedAt=task_model.startedAt,
             dueAt=task_model.dueAt,
-            status=task_model.status,
+            status=task_status,
             priority=task_model.priority,
             deferredDetails=deferred_details,
             in_watchlist=in_watchlist,
@@ -423,6 +427,16 @@ class TaskService:
         if validated_data.get("status") == TaskStatus.IN_PROGRESS and not current_task.startedAt:
             update_payload["startedAt"] = datetime.now(timezone.utc)
 
+        if (
+            validated_data.get("status") is not None
+            and validated_data.get("status") != TaskStatus.DEFERRED.value
+            and current_task.deferredDetails
+        ):
+            update_payload["deferredDetails"] = None
+
+        if validated_data.get("status") == TaskStatus.DEFERRED.value:
+            update_payload["status"] = current_task.status
+
         # Update task if there are changes
         if update_payload:
             update_payload["updatedBy"] = user_id
@@ -550,9 +564,7 @@ class TaskService:
                 else current_task.dueAt.astimezone(timezone.utc)
             )
 
-            defer_limit = due_at - timedelta(days=MINIMUM_DEFERRAL_NOTICE_DAYS)
-
-            if deferred_till > defer_limit:
+            if deferred_till >= due_at:
                 raise UnprocessableEntityException(
                     ValidationErrors.CANNOT_DEFER_TOO_CLOSE_TO_DUE_DATE,
                     source={ApiErrorSource.PARAMETER: "deferredTill"},
@@ -565,6 +577,7 @@ class TaskService:
         )
 
         update_payload = {
+            "status": TaskStatus.TODO.value,
             "deferredDetails": deferred_details.model_dump(),
             "updatedBy": user_id,
         }

@@ -17,16 +17,36 @@ class TaskRepository(MongoRepository):
 
     @classmethod
     def _build_status_filter(cls, status_filter: str = None) -> dict:
-        """
-        Build status filter for task queries.
+        now = datetime.now(timezone.utc)
 
-        """
-        if status_filter:
-            if status_filter == TaskStatus.DONE.value:
-                return {}  # No status filtering, include all tasks
-            return {"status": status_filter}
+        if status_filter == TaskStatus.DEFERRED.value:
+            return {
+                "$and": [
+                    {"deferredDetails": {"$ne": None}},
+                    {"deferredDetails.deferredTill": {"$gt": now}},
+                ]
+            }
+
+        elif status_filter == TaskStatus.DONE.value:
+            return {
+                "$or": [
+                    {"deferredDetails": None},
+                    {"deferredDetails.deferredTill": {"$lt": now}},
+                ]
+            }
+
         else:
-            return {"status": {"$ne": TaskStatus.DONE.value}}
+            return {
+                "$and": [
+                    {"status": {"$ne": TaskStatus.DONE.value}},
+                    {
+                        "$or": [
+                            {"deferredDetails": None},
+                            {"deferredDetails.deferredTill": {"$lt": now}},
+                        ]
+                    },
+                ]
+            }
 
     @classmethod
     def list(

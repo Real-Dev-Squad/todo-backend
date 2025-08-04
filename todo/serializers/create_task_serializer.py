@@ -3,7 +3,7 @@ from bson import ObjectId
 from datetime import datetime
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.constants.messages import ValidationErrors
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 class CreateTaskSerializer(serializers.Serializer):
@@ -36,6 +36,9 @@ class CreateTaskSerializer(serializers.Serializer):
         default=list,
         help_text="List of label IDs",
     )
+    timezone = serializers.CharField(
+        required=True, allow_null=False, help_text="IANA timezone string like 'Asia/Kolkata'"
+    )
     dueAt = serializers.DateTimeField(
         required=False, allow_null=True, help_text="Due date and time in ISO format (UTC)"
     )
@@ -51,11 +54,18 @@ class CreateTaskSerializer(serializers.Serializer):
                 raise serializers.ValidationError(ValidationErrors.INVALID_OBJECT_ID.format(label_id))
         return value
 
+    def validate_timezone(self, value):
+        try:
+            ZoneInfo(value)
+        except ZoneInfoNotFoundError:
+            raise serializers.ValidationError(ValidationErrors.INVALID_TIMEZONE)
+        return value
+
     def validate_dueAt(self, value):
         if value is not None:
-            ist_timezone = ZoneInfo("Asia/Kolkata")
-            now_date = datetime.now(ist_timezone).date()
-            value_date = value.astimezone(ist_timezone).date()
+            timezone = ZoneInfo(self.initial_data.get("timezone"))
+            now_date = datetime.now(timezone).date()
+            value_date = value.astimezone(timezone).date()
             if value_date < now_date:
                 raise serializers.ValidationError(ValidationErrors.PAST_DUE_DATE)
         return value

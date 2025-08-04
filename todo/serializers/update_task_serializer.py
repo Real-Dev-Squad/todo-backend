@@ -86,16 +86,17 @@ class UpdateTaskSerializer(serializers.Serializer):
         if due_at is not None:
             if not timezone_str:
                 errors["timezone"] = [ValidationErrors.REQUIRED_TIMEZONE]
-            try:
-                tz = ZoneInfo(timezone_str)
-            except ZoneInfoNotFoundError:
-                errors["timezone"] = [ValidationErrors.INVALID_TIMEZONE]
+            else:
+                try:
+                    tz = ZoneInfo(timezone_str)
 
-            now_date = datetime.now(tz).date()
-            value_date = due_at.astimezone(tz).date()
+                    now_date = datetime.now(tz).date()
+                    value_date = due_at.astimezone(tz).date()
 
-            if value_date < now_date:
-                errors["dueAt"] = [ValidationErrors.PAST_DUE_DATE]
+                    if value_date < now_date:
+                        errors["dueAt"] = [ValidationErrors.PAST_DUE_DATE]
+                except ZoneInfoNotFoundError:
+                    errors["timezone"] = [ValidationErrors.INVALID_TIMEZONE]
             if errors:
                 raise serializers.ValidationError(errors)
         return data

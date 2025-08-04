@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from todo.constants.task import TaskPriority, TaskStatus
+from todo.models.task import DeferredDetailsModel
 
 
 class AssigneeDTO(BaseModel):
@@ -17,6 +18,7 @@ class WatchlistDTO(BaseModel):
     title: str
     description: Optional[str] = None
     priority: Optional[TaskPriority] = None
+    deferredDetails: Optional[DeferredDetailsModel] = None
     status: Optional[TaskStatus] = None
     isAcknowledged: Optional[bool] = None
     isDeleted: Optional[bool] = None

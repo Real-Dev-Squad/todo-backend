@@ -133,6 +133,7 @@ class WatchlistRepository(MongoRepository):
                                         {
                                             "watchlistId": {"$toString": "$_id"},
                                             "taskId": {"$toString": "$task._id"},
+                                            "deferredDetails": "$task.deferredDetails",
                                             "assignee": {
                                                 "$cond": {
                                                     "if": {"$gt": [{"$size": "$assignee_user"}, 0]},

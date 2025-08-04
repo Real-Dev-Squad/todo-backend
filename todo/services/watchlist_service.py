@@ -4,6 +4,7 @@ from django.urls import reverse_lazy
 from urllib.parse import urlencode
 import math
 
+from todo.constants.task import TaskStatus
 from todo.dto.label_dto import LabelDTO
 from todo.dto.responses.paginated_response import LinksData
 from todo.dto.watchlist_dto import CreateWatchlistDTO, UpdateWatchlistDTO, WatchlistDTO
@@ -159,6 +160,13 @@ class WatchlistService:
         if hasattr(watchlist_model, "assignee") and watchlist_model.assignee:
             assignee = watchlist_model.assignee
 
+        task_status = watchlist_model.status
+
+        if watchlist_model.deferredDetails and watchlist_model.deferredDetails.deferredTill > datetime.now(
+            timezone.utc
+        ):
+            task_status = TaskStatus.DEFERRED.value
+
         return WatchlistDTO(
             taskId=str(watchlist_model.taskId),
             displayId=watchlist_model.displayId,
@@ -168,7 +176,7 @@ class WatchlistService:
             isDeleted=watchlist_model.isDeleted,
             labels=labels,
             dueAt=watchlist_model.dueAt,
-            status=watchlist_model.status,
+            status=task_status,
             priority=watchlist_model.priority,
             createdAt=watchlist_model.createdAt,
             createdBy=watchlist_model.createdBy,

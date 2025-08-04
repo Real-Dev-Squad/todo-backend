@@ -235,6 +235,8 @@ class TaskService:
             assignee_id=assignee_id,
             assignee_name=assignee.name,
             user_type=assignee_details.user_type,
+            executor_id=str(assignee_details.executor_id) if assignee_details.executor_id else None,
+            original_team_id=str(assignee_details.original_team_id) if assignee_details.original_team_id else None,
             is_active=assignee_details.is_active,
             created_by=str(assignee_details.created_by),
             updated_by=str(assignee_details.updated_by) if assignee_details.updated_by else None,

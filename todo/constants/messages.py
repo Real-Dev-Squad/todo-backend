@@ -61,6 +61,7 @@ class ValidationErrors:
     BLANK_TITLE = "Title must not be blank."
     INVALID_OBJECT_ID = "{0} is not a valid ObjectId."
     PAST_DUE_DATE = "Due date must be in the future."
+    REQUIRED_TIMEZONE = "Timezone is required if dueAt is provided."
     INVALID_TIMEZONE = "Invalid timezone."
     PAST_DEFERRED_TILL_DATE = "deferredTill cannot be in the past."
     CANNOT_DEFER_TOO_CLOSE_TO_DUE_DATE = "Cannot defer task too close to the due date."

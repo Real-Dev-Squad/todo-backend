@@ -27,7 +27,7 @@ class UpdateTaskSerializer(serializers.Serializer):
         allow_null=True,
     )
     timezone = serializers.CharField(
-        required=True, allow_null=False, help_text="IANA timezone string like 'Asia/Kolkata'"
+        required=False, allow_null=True, help_text="IANA timezone string like 'Asia/Kolkata'"
     )
     dueAt = serializers.DateTimeField(required=False, allow_null=True)
     startedAt = serializers.DateTimeField(required=False, allow_null=True)
@@ -51,26 +51,6 @@ class UpdateTaskSerializer(serializers.Serializer):
                 [ValidationErrors.INVALID_OBJECT_ID.format(label_id) for label_id in invalid_ids]
             )
 
-        return value
-
-    def validate_timezone(self, value):
-        try:
-            ZoneInfo(value)
-        except ZoneInfoNotFoundError:
-            raise serializers.ValidationError(ValidationErrors.INVALID_TIMEZONE)
-        return value
-
-    def validate_dueAt(self, value):
-        timezone = ZoneInfo(self.initial_data.get("timezone"))
-        if value is None:
-            return value
-        errors = []
-        now_date = datetime.now(timezone).date()
-        value_date = value.astimezone(timezone).date()
-        if value_date < now_date:
-            errors.append(ValidationErrors.PAST_DUE_DATE)
-        if errors:
-            raise serializers.ValidationError(errors)
         return value
 
     def validate_startedAt(self, value):
@@ -98,3 +78,24 @@ class UpdateTaskSerializer(serializers.Serializer):
             raise serializers.ValidationError(ValidationErrors.INVALID_OBJECT_ID.format(assignee_id))
 
         return value
+
+    def validate(self, data):
+        due_at = data.get("dueAt")
+        timezone_str = data.get("timezone")
+        errors = {}
+        if due_at is not None:
+            if not timezone_str:
+                errors["timezone"] = [ValidationErrors.REQUIRED_TIMEZONE]
+            try:
+                tz = ZoneInfo(timezone_str)
+            except ZoneInfoNotFoundError:
+                errors["timezone"] = [ValidationErrors.INVALID_TIMEZONE]
+
+            now_date = datetime.now(tz).date()
+            value_date = due_at.astimezone(tz).date()
+
+            if value_date < now_date:
+                errors["dueAt"] = [ValidationErrors.PAST_DUE_DATE]
+            if errors:
+                raise serializers.ValidationError(errors)
+        return data

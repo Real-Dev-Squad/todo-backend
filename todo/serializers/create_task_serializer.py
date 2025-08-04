@@ -54,22 +54,6 @@ class CreateTaskSerializer(serializers.Serializer):
                 raise serializers.ValidationError(ValidationErrors.INVALID_OBJECT_ID.format(label_id))
         return value
 
-    def validate_timezone(self, value):
-        try:
-            ZoneInfo(value)
-        except ZoneInfoNotFoundError:
-            raise serializers.ValidationError(ValidationErrors.INVALID_TIMEZONE)
-        return value
-
-    def validate_dueAt(self, value):
-        if value is not None:
-            timezone = ZoneInfo(self.initial_data.get("timezone"))
-            now_date = datetime.now(timezone).date()
-            value_date = value.astimezone(timezone).date()
-            if value_date < now_date:
-                raise serializers.ValidationError(ValidationErrors.PAST_DUE_DATE)
-        return value
-
     def validate(self, data):
         # Compose the 'assignee' dict if assignee_id and user_type are present
         assignee_id = data.pop("assignee_id", None)
@@ -82,4 +66,22 @@ class CreateTaskSerializer(serializers.Serializer):
             if user_type not in ["user", "team"]:
                 raise serializers.ValidationError({"user_type": "user_type must be either 'user' or 'team'"})
             data["assignee"] = {"assignee_id": assignee_id, "user_type": user_type}
+
+        due_at = data.get("dueAt")
+        timezone_str = data.get("timezone")
+
+        if due_at:
+            if not timezone_str:
+                raise serializers.ValidationError({"timezone": ValidationErrors.REQUIRED_TIMEZONE})
+            try:
+                tz = ZoneInfo(timezone_str)
+            except ZoneInfoNotFoundError:
+                raise serializers.ValidationError({"timezone": ValidationErrors.INVALID_TIMEZONE})
+
+            now_date = datetime.now(tz).date()
+            value_date = due_at.astimezone(tz).date()
+
+            if value_date < now_date:
+                raise serializers.ValidationError({"dueAt": ValidationErrors.PAST_DUE_DATE})
+
         return data

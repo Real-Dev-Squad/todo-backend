@@ -17,41 +17,9 @@ class TaskRepository(MongoRepository):
 
     @classmethod
     def _get_team_task_ids(cls, team_id: str) -> List[ObjectId]:
-        """
-        Get all task IDs for a team (direct assignments + member assignments with team isolation).
-        """
-        team_assignments = TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
-        direct_team_task_ids = [assignment.task_id for assignment in team_assignments]
-
-        team_member_ids = UserTeamDetailsRepository.get_users_by_team_id(team_id)
-        member_task_ids = []
-
-        if team_member_ids:
-            member_assignments = list(
-                TaskAssignmentRepository.get_collection().find(
-                    {
-                        "$and": [
-                            {
-                                "$or": [
-                                    {"assignee_id": {"$in": [ObjectId(member_id) for member_id in team_member_ids]}},
-                                    {"assignee_id": {"$in": team_member_ids}},
-                                ]
-                            },
-                            {"user_type": "user"},
-                            {"is_active": True},
-                            {
-                                "$or": [
-                                    {"team_id": ObjectId(team_id)},
-                                    {"team_id": team_id},
-                                ]
-                            },
-                        ]
-                    }
-                )
-            )
-            member_task_ids = [ObjectId(assignment["task_id"]) for assignment in member_assignments]
-
-        return list(set(direct_team_task_ids + member_task_ids))
+        team_tasks = TaskAssignmentRepository.get_collection().find({"team_id": team_id, "is_active": True})
+        team_task_ids = [ObjectId(task["task_id"]) for task in team_tasks]
+        return list(set(team_task_ids))
 
     @classmethod
     def _build_status_filter(cls, status_filter: str = None) -> dict:
@@ -131,7 +99,7 @@ class TaskRepository(MongoRepository):
         direct_task_ids = [assignment.task_id for assignment in direct_assignments]
 
         # Get teams where user is a member
-        from todo.repositories.team_repository import UserTeamDetailsRepository, TeamRepository
+        from todo.repositories.team_repository import TeamRepository
 
         user_teams = UserTeamDetailsRepository.get_by_user_id(user_id)
         team_ids = [str(team.team_id) for team in user_teams]
@@ -163,6 +131,7 @@ class TaskRepository(MongoRepository):
         if team_id:
             all_team_task_ids = cls._get_team_task_ids(team_id)
             query_filter = {"$and": [base_filter, {"_id": {"$in": all_team_task_ids}}]}
+
         elif user_id:
             assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
             query_filter = {

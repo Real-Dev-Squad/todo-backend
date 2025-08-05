@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 import logging
+from bson import ObjectId
 
 from todo.models.user_role import UserRoleModel
 from todo.repositories.common.mongo_repository import MongoRepository
@@ -73,22 +74,22 @@ class UserRoleRepository(MongoRepository):
         return cls.create(user_role)
 
     @classmethod
-    def remove_role(
-        cls, user_id: str, role_name: "RoleName", scope: "RoleScope", team_id: Optional[str] = None
-    ) -> bool:
-        """Remove a role from a user - simple deactivation."""
+    def remove_role_by_id(cls, user_id: str, role_id: str, scope: str, team_id: Optional[str] = None) -> bool:
+        """Remove a role from a user by role_id - simple deactivation."""
         collection = cls.get_collection()
 
-        role_name_value = role_name.value if hasattr(role_name, "value") else role_name
-        scope_value = scope.value if hasattr(scope, "value") else scope
+        try:
+            object_id = ObjectId(role_id)
+        except Exception:
+            return False
 
-        query = {"user_id": user_id, "role_name": role_name_value, "scope": scope_value, "is_active": True}
+        query = {"_id": object_id, "user_id": user_id, "scope": scope, "is_active": True}
 
-        if scope_value == "TEAM" and team_id:
+        if scope == "TEAM" and team_id:
             query["team_id"] = team_id
-        elif scope_value == "GLOBAL":
+        elif scope == "GLOBAL":
             query["team_id"] = None
 
-        result = collection.update_many(query, {"$set": {"is_active": False}})
+        result = collection.update_one(query, {"$set": {"is_active": False}})
 
         return result.modified_count > 0

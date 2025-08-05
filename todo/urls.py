@@ -4,7 +4,7 @@ from todo.views.health import HealthView
 from todo.views.user import UsersView
 from todo.views.auth import GoogleLoginView, GoogleCallbackView, LogoutView
 from todo.views.role import RoleListView, RoleDetailView
-from todo.views.user_role import UserRoleListView, TeamUserRoleListView, TeamUserRoleDetailView
+from todo.views.user_role import UserRoleListView, TeamUserRoleListView, TeamUserRoleDetailView, TeamUserRoleDeleteView
 from todo.views.label import LabelListView
 from todo.views.team import (
     TeamListView,
@@ -27,6 +27,11 @@ urlpatterns = [
     path("teams/<str:team_id>/users/roles", TeamUserRoleListView.as_view(), name="team_user_roles"),
     path(
         "teams/<str:team_id>/users/<str:user_id>/roles", TeamUserRoleDetailView.as_view(), name="team_user_role_detail"
+    ),
+    path(
+        "teams/<str:team_id>/users/<str:user_id>/roles/<str:role_id>",
+        TeamUserRoleDeleteView.as_view(),
+        name="team_user_role_delete",
     ),
     path("teams/<str:team_id>/invite-code", TeamInviteCodeView.as_view(), name="team_invite_code"),
     path("teams/<str:team_id>/activity-timeline", TeamActivityTimelineView.as_view(), name="team_activity_timeline"),

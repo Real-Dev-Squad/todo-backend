@@ -43,12 +43,9 @@ class UserRoleService:
             return False
 
     @classmethod
-    def remove_role(cls, user_id: str, role_name: str, scope: str, team_id: Optional[str] = None) -> bool:
+    def remove_role_by_id(cls, user_id: str, role_id: str, scope: str, team_id: Optional[str] = None) -> bool:
         try:
-            role_enum = RoleName(role_name)
-            scope_enum = RoleScope(scope)
-
-            return UserRoleRepository.remove_role(user_id, role_enum, scope_enum, team_id)
+            return UserRoleRepository.remove_role_by_id(user_id, role_id, scope, team_id)
         except Exception as e:
             logger.error(f"Failed to remove role: {str(e)}")
             return False
@@ -68,6 +65,7 @@ class UserRoleService:
                 scope_value = role.scope.value if hasattr(role.scope, "value") else role.scope
 
                 role_dict = {
+                    "role_id": str(role.id),
                     "role_name": role_name_value,
                     "scope": scope_value,
                     "team_id": role.team_id,
@@ -112,11 +110,14 @@ class UserRoleService:
             users_roles_map = {}
             for role in user_roles:
                 user_id = role.user_id
-                role_name = role.role_name.value if hasattr(role.role_name, "value") else role.role_name
+                role_data = {
+                    "role_id": str(role.id),
+                    "role_name": role.role_name.value if hasattr(role.role_name, "value") else role.role_name,
+                }
 
                 if user_id not in users_roles_map:
                     users_roles_map[user_id] = []
-                users_roles_map[user_id].append(role_name)
+                users_roles_map[user_id].append(role_data)
 
             team_users = []
             for user_id, roles in users_roles_map.items():

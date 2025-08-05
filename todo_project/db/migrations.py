@@ -167,7 +167,9 @@ def migrate_predefined_roles() -> bool:
         skipped_count = 0
 
         for role_data in predefined_roles:
-            existing = roles_collection.find_one({"name": role_data["name"], "scope": role_data["scope"]})
+            existing = roles_collection.find_one(
+                {"name": {"$regex": f"^{role_data['name']}$", "$options": "i"}, "scope": role_data["scope"]}
+            )
 
             if existing:
                 logger.info(f"Role '{role_data['name']}' ({role_data['scope']}) already exists, skipping")

@@ -41,11 +41,14 @@ class UserRoleRepository(MongoRepository):
 
     @classmethod
     def get_user_roles(
-        cls, user_id: str, scope: Optional["RoleScope"] = None, team_id: Optional[str] = None
+        cls, user_id: Optional[str] = None, scope: Optional["RoleScope"] = None, team_id: Optional[str] = None
     ) -> List[UserRoleModel]:
         collection = cls.get_collection()
 
-        query = {"user_id": user_id, "is_active": True}
+        query = {"is_active": True}
+
+        if user_id:
+            query["user_id"] = user_id
 
         if scope:
             scope_value = scope.value if hasattr(scope, "value") else scope

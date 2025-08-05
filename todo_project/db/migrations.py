@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any
 from todo_project.db.config import DatabaseManager
 from todo.models.label import LabelModel
+from todo.models.role import RoleModel
+from todo.constants.role import RoleName, RoleScope
 
 logger = logging.getLogger(__name__)
 
@@ -135,10 +137,25 @@ def migrate_predefined_roles() -> bool:
     logger.info("Starting predefined roles migration")
 
     predefined_roles = [
-        {"name": "moderator", "scope": "GLOBAL", "description": "Global system moderator", "is_active": True},
-        {"name": "owner", "scope": "TEAM", "description": "Team owner with full privileges", "is_active": True},
-        {"name": "admin", "scope": "TEAM", "description": "Team administrator", "is_active": True},
-        {"name": "member", "scope": "TEAM", "description": "Team member", "is_active": True},
+        {
+            "name": RoleName.MODERATOR.value,
+            "scope": RoleScope.GLOBAL.value,
+            "description": "Global system moderator",
+            "is_active": True,
+        },
+        {
+            "name": RoleName.OWNER.value,
+            "scope": RoleScope.TEAM.value,
+            "description": "Team owner with full privileges",
+            "is_active": True,
+        },
+        {
+            "name": RoleName.ADMIN.value,
+            "scope": RoleScope.TEAM.value,
+            "description": "Team administrator",
+            "is_active": True,
+        },
+        {"name": RoleName.MEMBER.value, "scope": RoleScope.TEAM.value, "description": "Team member", "is_active": True},
     ]
 
     try:
@@ -157,19 +174,27 @@ def migrate_predefined_roles() -> bool:
                 skipped_count += 1
                 continue
 
-            role_doc = {
-                "name": role_data["name"],
-                "scope": role_data["scope"],
-                "description": role_data["description"],
-                "is_active": role_data["is_active"],
-                "created_at": current_time,
-                "created_by": "system",
-            }
+            try:
+                role_doc = {
+                    "name": role_data["name"],
+                    "scope": role_data["scope"],
+                    "description": role_data["description"],
+                    "is_active": role_data["is_active"],
+                    "created_at": current_time,
+                    "created_by": "system",
+                }
 
-            result = roles_collection.insert_one(role_doc)
-            if result.inserted_id:
-                logger.info(f"Created role: {role_data['name']} ({role_data['scope']})")
-                created_count += 1
+                validated_role = RoleModel(**role_doc)
+                validated_doc = validated_role.model_dump(mode="json", by_alias=True, exclude_none=True)
+
+                result = roles_collection.insert_one(validated_doc)
+                if result.inserted_id:
+                    logger.info(f"Created role: {role_data['name']} ({role_data['scope']})")
+                    created_count += 1
+
+            except Exception as validation_error:
+                logger.error(f"Validation failed for role '{role_data['name']}': {validation_error}")
+                continue
 
         logger.info(f"Roles migration completed - {created_count} created, {skipped_count} skipped")
         return True

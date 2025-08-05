@@ -13,15 +13,10 @@ class RoleName(Enum):
     MEMBER = "member"
 
 
-ROLE_MODERATOR = "moderator"
-ROLE_OWNER = "owner"
-ROLE_ADMIN = "admin"
-ROLE_MEMBER = "member"
+GLOBAL_ROLES = [RoleName.MODERATOR.value]
+TEAM_ROLES = [RoleName.OWNER.value, RoleName.ADMIN.value, RoleName.MEMBER.value]
 
-GLOBAL_ROLES = [ROLE_MODERATOR]
-TEAM_ROLES = [ROLE_OWNER, ROLE_ADMIN, ROLE_MEMBER]
-
-DEFAULT_TEAM_ROLE = ROLE_MEMBER
+DEFAULT_TEAM_ROLE = RoleName.MEMBER.value
 
 ROLE_SCOPE_CHOICES = [
     (RoleScope.GLOBAL.value, "Global"),

@@ -321,7 +321,7 @@ class TeamService:
             if dto.description is not None:
                 update_data["description"] = dto.description
             if dto.poc_id is not None:
-                update_data["poc_id"] = PyObjectId(dto.poc_id) if dto.poc_id else None
+                update_data["poc_id"] = PyObjectId(dto.poc_id) if dto.poc_id and dto.poc_id.strip() else None
 
             # Update the team
             updated_team = TeamRepository.update(team_id, update_data, updated_by_user_id)

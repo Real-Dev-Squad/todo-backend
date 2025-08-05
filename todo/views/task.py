@@ -197,6 +197,103 @@ class TaskListView(APIView):
         )
 
 
+class UserTeamTasksView(APIView):
+    @extend_schema(
+        operation_id="get_user_team_tasks",
+        summary="Get tasks for user within a specific team",
+        description="Retrieve tasks for a user within a specific team context. This includes tasks that were originally assigned to the team but later reassigned to the user. Only team members can access this endpoint.",
+        tags=["tasks"],
+        parameters=[
+            OpenApiParameter(
+                name="team_id",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.PATH,
+                description="Unique identifier of the team",
+                required=True,
+            ),
+            OpenApiParameter(
+                name="page",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description="Page number for pagination",
+            ),
+            OpenApiParameter(
+                name="limit",
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description="Number of tasks per page",
+            ),
+            OpenApiParameter(
+                name="status",
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description="If provided, filters tasks by status (e.g., 'DONE', 'IN_PROGRESS', 'TODO', 'BLOCKED', 'DEFERRED').",
+                required=False,
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(response=GetTasksResponse, description="Successful response"),
+            400: OpenApiResponse(description="Bad request - user not a team member"),
+            401: OpenApiResponse(description="Unauthorized"),
+            500: OpenApiResponse(description="Internal server error"),
+        },
+    )
+    def get(self, request: Request, team_id: str):
+        """
+        Get tasks for the current user within a specific team context.
+        """
+        user = get_current_user_info(request)
+        if not user:
+            raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
+
+        # Get query parameters
+        page = int(request.query_params.get("page", 1))
+        limit = int(request.query_params.get("limit", 10))
+        status_filter = request.query_params.get("status", "").upper()
+
+        try:
+            response = TaskService.get_tasks_for_user_in_team(
+                user_id=user["user_id"],
+                team_id=team_id,
+                page=page,
+                limit=limit,
+                status_filter=status_filter,
+            )
+            return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
+        except ValueError as e:
+            error_response = ApiErrorResponse(
+                statusCode=400,
+                message="Bad request",
+                errors=[
+                    ApiErrorDetail(
+                        source={ApiErrorSource.PARAMETER: "team_id"},
+                        title="Validation Error",
+                        detail=str(e),
+                    )
+                ],
+            )
+            return Response(
+                data=error_response.model_dump(mode="json"),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            error_response = ApiErrorResponse(
+                statusCode=500,
+                message="Internal server error",
+                errors=[
+                    ApiErrorDetail(
+                        source={ApiErrorSource.PARAMETER: "server"},
+                        title="Unexpected Error",
+                        detail=str(e),
+                    )
+                ],
+            )
+            return Response(
+                data=error_response.model_dump(mode="json"),
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
 class TaskDetailView(APIView):
     @extend_schema(
         operation_id="get_task_by_id",

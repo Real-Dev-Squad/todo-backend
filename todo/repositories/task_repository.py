@@ -41,8 +41,8 @@ class TaskRepository(MongoRepository):
                             {"is_active": True},
                             {
                                 "$or": [
-                                    {"original_team_id": ObjectId(team_id)},
-                                    {"original_team_id": team_id},
+                                    {"team_id": ObjectId(team_id)},
+                                    {"team_id": team_id},
                                 ]
                             },
                         ]

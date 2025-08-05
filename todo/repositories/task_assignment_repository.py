@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Optional, List
 from bson import ObjectId
 
+from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.task_assignment import TaskAssignmentModel
 from todo.repositories.common.mongo_repository import MongoRepository
 from todo.models.common.pyobjectid import PyObjectId
@@ -73,10 +74,16 @@ class TaskAssignmentRepository(MongoRepository):
         collection = cls.get_collection()
         try:
             current_assignment = cls.get_by_task_id(task_id)
-            original_team_id = None
 
-            if current_assignment and current_assignment.user_type == "team" and user_type == "user":
-                original_team_id = current_assignment.assignee_id
+            if not current_assignment:
+                raise TaskNotFoundException(task_id)
+
+            team_id = None
+
+            if user_type == "team":
+                team_id = assignee_id
+            elif user_type == "user" and current_assignment.team_id is not None:
+                team_id = current_assignment.team_id
 
             # Deactivate current assignment if exists (try both ObjectId and string)
             collection.update_many(
@@ -108,7 +115,7 @@ class TaskAssignmentRepository(MongoRepository):
                 user_type=user_type,
                 created_by=PyObjectId(user_id),
                 updated_by=None,
-                original_team_id=original_team_id,
+                team_id=team_id,
             )
 
             return cls.create(new_assignment)

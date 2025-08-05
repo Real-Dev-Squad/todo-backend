@@ -8,7 +8,7 @@ class CreateTaskAssignmentDTO(BaseModel):
     task_id: str
     assignee_id: str
     user_type: Literal["user", "team"]
-    original_team_id: Optional[str] = None
+    team_id: Optional[str] = None
 
     @validator("task_id")
     def validate_task_id(cls, value):
@@ -31,8 +31,8 @@ class CreateTaskAssignmentDTO(BaseModel):
             raise ValueError("user_type must be either 'user' or 'team'")
         return value
 
-    @validator("original_team_id")
-    def validate_original_team_id(cls, value):
+    @validator("team_id")
+    def validate_team_id(cls, value):
         """Validate that the original team ID is a valid ObjectId if provided."""
         if value is not None and not ObjectId.is_valid(value):
             raise ValueError(f"Invalid original team ID: {value}")
@@ -46,7 +46,7 @@ class TaskAssignmentDTO(BaseModel):
     assignee_name: Optional[str] = None
     user_type: Literal["user", "team"]
     executor_id: Optional[str] = None  # User ID executing the task (for team assignments)
-    original_team_id: Optional[str] = None
+    team_id: Optional[str] = None
     is_active: bool
     created_by: str
     updated_by: Optional[str] = None

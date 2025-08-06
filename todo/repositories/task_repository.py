@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from typing import List
 from bson import ObjectId
 from pymongo import ReturnDocument
-import logging
 
 from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.task import TaskModel
@@ -10,10 +9,17 @@ from todo.repositories.common.mongo_repository import MongoRepository
 from todo.repositories.task_assignment_repository import TaskAssignmentRepository
 from todo.constants.messages import ApiErrors, RepositoryErrors
 from todo.constants.task import SORT_FIELD_PRIORITY, SORT_FIELD_ASSIGNEE, SORT_ORDER_DESC, TaskStatus
+from todo.repositories.team_repository import UserTeamDetailsRepository
 
 
 class TaskRepository(MongoRepository):
     collection_name = TaskModel.collection_name
+
+    @classmethod
+    def _get_team_task_ids(cls, team_id: str) -> List[ObjectId]:
+        team_tasks = TaskAssignmentRepository.get_collection().find({"team_id": team_id, "is_active": True})
+        team_task_ids = [ObjectId(task["task_id"]) for task in team_tasks]
+        return list(set(team_task_ids))
 
     @classmethod
     def _build_status_filter(cls, status_filter: str = None) -> dict:
@@ -60,17 +66,12 @@ class TaskRepository(MongoRepository):
         status_filter: str = None,
     ) -> List[TaskModel]:
         tasks_collection = cls.get_collection()
-        logger = logging.getLogger(__name__)
 
         base_filter = cls._build_status_filter(status_filter)
 
         if team_id:
-            logger.debug(f"TaskRepository.list: team_id={team_id}")
-            team_assignments = TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
-            team_task_ids = [assignment.task_id for assignment in team_assignments]
-            logger.debug(f"TaskRepository.list: team_task_ids={team_task_ids}")
-            query_filter = {"$and": [base_filter, {"_id": {"$in": team_task_ids}}]}
-            logger.debug(f"TaskRepository.list: query_filter={query_filter}")
+            all_team_task_ids = cls._get_team_task_ids(team_id)
+            query_filter = {"$and": [base_filter, {"_id": {"$in": all_team_task_ids}}]}
         elif user_id:
             assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
             query_filter = {"$and": [base_filter, {"_id": {"$in": assigned_task_ids}}]}
@@ -98,7 +99,7 @@ class TaskRepository(MongoRepository):
         direct_task_ids = [assignment.task_id for assignment in direct_assignments]
 
         # Get teams where user is a member
-        from todo.repositories.team_repository import UserTeamDetailsRepository, TeamRepository
+        from todo.repositories.team_repository import TeamRepository
 
         user_teams = UserTeamDetailsRepository.get_by_user_id(user_id)
         team_ids = [str(team.team_id) for team in user_teams]
@@ -128,9 +129,9 @@ class TaskRepository(MongoRepository):
         base_filter = cls._build_status_filter(status_filter)
 
         if team_id:
-            team_assignments = TaskAssignmentRepository.get_by_assignee_id(team_id, "team")
-            team_task_ids = [assignment.task_id for assignment in team_assignments]
-            query_filter = {"$and": [base_filter, {"_id": {"$in": team_task_ids}}]}
+            all_team_task_ids = cls._get_team_task_ids(team_id)
+            query_filter = {"$and": [base_filter, {"_id": {"$in": all_team_task_ids}}]}
+
         elif user_id:
             assigned_task_ids = cls._get_assigned_task_ids_for_user(user_id)
             query_filter = {

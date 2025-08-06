@@ -221,11 +221,12 @@ class TaskAssignmentDetailView(APIView):
             return Response(
                 {"error": f"User {executor_id} is not a member of the team."}, status=status.HTTP_400_BAD_REQUEST
             )
-
         # Update executor_id
         try:
-            updated = TaskAssignmentRepository.update_executor(task_id, executor_id, user["user_id"])
-            if not updated:
+            updated_assignment = TaskAssignmentRepository.update_assignment(
+                task_id, executor_id, "user", user["user_id"]
+            )
+            if not updated_assignment:
                 # Get more details about why it failed
                 import traceback
 
@@ -234,7 +235,7 @@ class TaskAssignmentDetailView(APIView):
                 )
                 print(f"DEBUG: assignment details: {assignment}")
                 return Response(
-                    {"error": "Failed to update executor. Check server logs for details."},
+                    {"error": "Failed to update assignment. Check server logs for details."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
         except Exception as e:

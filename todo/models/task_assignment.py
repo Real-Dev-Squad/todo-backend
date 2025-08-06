@@ -24,8 +24,9 @@ class TaskAssignmentModel(Document):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime | None = None
     executor_id: PyObjectId | None = None  # User within the team who is executing the task
+    team_id: PyObjectId | None = None  # Track the original team when reassigned from team to user
 
-    @validator("task_id", "assignee_id", "created_by", "updated_by")
+    @validator("task_id", "assignee_id", "created_by", "updated_by", "team_id")
     def validate_object_ids(cls, v):
         if v is None:
             return v

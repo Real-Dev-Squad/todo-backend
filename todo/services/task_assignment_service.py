@@ -66,6 +66,7 @@ class TaskAssignmentService:
                 user_type=dto.user_type,
                 created_by=PyObjectId(user_id),
                 updated_by=None,
+                team_id=PyObjectId(dto.team_id) if dto.team_id else None,
             )
             assignment = TaskAssignmentRepository.create(task_assignment)
 

@@ -88,25 +88,19 @@ class TeamService:
                 )
                 user_teams.append(user_team)
 
-            # Create all user-team relationships (ORIGINAL SYSTEM)
             if user_teams:
                 UserTeamDetailsRepository.create_many(user_teams)
 
-            # NEW: Assign roles using the new role system (after successful team creation)
             team_id_str = str(created_team.id)
 
-            # Assign roles to members
+            cls._assign_user_role(created_by_user_id, team_id_str, "owner")
+
             for member_id in member_ids:
-                cls._assign_user_role(member_id, team_id_str, "member")
+                if member_id != created_by_user_id:
+                    cls._assign_user_role(member_id, team_id_str, "member")
 
-            # Assign role to POC
-            if dto.poc_id and dto.poc_id not in member_ids:
+            if dto.poc_id and dto.poc_id != created_by_user_id:
                 cls._assign_user_role(dto.poc_id, team_id_str, "owner")
-
-            # Assign role to creator
-            if created_by_user_id not in member_ids and created_by_user_id != dto.poc_id:
-                creator_role = "owner" if not dto.poc_id else "member"
-                cls._assign_user_role(created_by_user_id, team_id_str, creator_role)
 
             # Audit log for team creation
             AuditLogRepository.create(

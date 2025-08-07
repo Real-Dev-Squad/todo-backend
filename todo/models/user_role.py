@@ -29,8 +29,9 @@ class UserRoleModel(Document):
         scope = values.get("scope")
         if scope and scope.value in VALID_ROLE_NAMES_BY_SCOPE:
             valid_roles = VALID_ROLE_NAMES_BY_SCOPE[scope.value]
-            if v.value not in valid_roles:
-                raise ValueError(f"Invalid role '{v.value}' for scope '{scope.value}'. Valid roles: {valid_roles}")
+            role_value = v.value if hasattr(v, "value") else v
+            if role_value not in valid_roles:
+                raise ValueError(f"Invalid role '{role_value}' for scope '{scope.value}'. Valid roles: {valid_roles}")
         return v
 
     @validator("team_id")

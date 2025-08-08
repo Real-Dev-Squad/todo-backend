@@ -88,9 +88,19 @@ class TeamService:
                 )
                 user_teams.append(user_team)
 
-            # Create all user-team relationships
             if user_teams:
                 UserTeamDetailsRepository.create_many(user_teams)
+
+            team_id_str = str(created_team.id)
+
+            cls._assign_user_role(created_by_user_id, team_id_str, "owner")
+
+            for member_id in member_ids:
+                if member_id != created_by_user_id:
+                    cls._assign_user_role(member_id, team_id_str, "member")
+
+            if dto.poc_id and dto.poc_id != created_by_user_id:
+                cls._assign_user_role(dto.poc_id, team_id_str, "owner")
 
             # Audit log for team creation
             AuditLogRepository.create(
@@ -121,6 +131,20 @@ class TeamService:
 
         except Exception as e:
             raise ValueError(f"Failed to create team: {str(e)}")
+
+    @classmethod
+    def _assign_user_role(cls, user_id: str, team_id: str, role_name: str):
+        """Helper method to assign user roles using the new role system."""
+        try:
+            from todo.services.user_role_service import UserRoleService
+
+            UserRoleService.assign_role(user_id, role_name, "TEAM", team_id)
+        except Exception:
+            # Don't fail team creation if role assignment fails
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to assign role {role_name} to user {user_id} in team {team_id}")
 
     @classmethod
     def get_user_teams(cls, user_id: str) -> GetUserTeamsResponse:
@@ -223,7 +247,7 @@ class TeamService:
             if str(user_team.team_id) == str(team.id) and user_team.is_active:
                 raise ValueError("User is already a member of this team.")
 
-        # 3. Add user to the team
+        # 3. Add user to the team (ORIGINAL SYSTEM)
         from todo.models.common.pyobjectid import PyObjectId
         from todo.models.team import UserTeamDetailsModel
 
@@ -236,6 +260,9 @@ class TeamService:
             updated_by=PyObjectId(user_id),
         )
         UserTeamDetailsRepository.create(user_team)
+
+        # NEW: Assign default member role using new role system
+        cls._assign_user_role(user_id, str(team.id), "member")
 
         # Audit log for team join
         AuditLogRepository.create(
@@ -288,7 +315,7 @@ class TeamService:
             if dto.description is not None:
                 update_data["description"] = dto.description
             if dto.poc_id is not None:
-                update_data["poc_id"] = PyObjectId(dto.poc_id)
+                update_data["poc_id"] = PyObjectId(dto.poc_id) if dto.poc_id and dto.poc_id.strip() else None
 
             # Update the team
             updated_team = TeamRepository.update(team_id, update_data, updated_by_user_id)
@@ -374,7 +401,7 @@ class TeamService:
             if already_members:
                 raise ValueError(f"Users {', '.join(already_members)} are already team members")
 
-            # Add new members to the team
+            # Add new members to the team (ORIGINAL SYSTEM)
             from todo.models.team import UserTeamDetailsModel
             from todo.models.common.pyobjectid import PyObjectId
 
@@ -392,6 +419,10 @@ class TeamService:
 
             if new_user_teams:
                 UserTeamDetailsRepository.create_many(new_user_teams)
+
+                # NEW: Assign default member roles using new role system
+                for member_id in member_ids:
+                    cls._assign_user_role(member_id, team_id, "member")
 
             # Audit log for team member addition
             for member_id in member_ids:

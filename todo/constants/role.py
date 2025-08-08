@@ -6,21 +6,24 @@ class RoleScope(Enum):
     TEAM = "TEAM"
 
 
+class RoleName(Enum):
+    MODERATOR = "moderator"
+    OWNER = "owner"
+    ADMIN = "admin"
+    MEMBER = "member"
+
+
+GLOBAL_ROLES = [RoleName.MODERATOR.value]
+TEAM_ROLES = [RoleName.OWNER.value, RoleName.ADMIN.value, RoleName.MEMBER.value]
+
+DEFAULT_TEAM_ROLE = RoleName.MEMBER.value
+
 ROLE_SCOPE_CHOICES = [
     (RoleScope.GLOBAL.value, "Global"),
     (RoleScope.TEAM.value, "Team"),
 ]
 
-GLOBAL_ROLE_NAMES = [
-    "moderator",
-]
-
-TEAM_ROLE_NAMES = [
-    "owner",
-    "admin",
-]
-
 VALID_ROLE_NAMES_BY_SCOPE = {
-    RoleScope.GLOBAL.value: GLOBAL_ROLE_NAMES,
-    RoleScope.TEAM.value: TEAM_ROLE_NAMES,
+    RoleScope.GLOBAL.value: GLOBAL_ROLES,
+    RoleScope.TEAM.value: TEAM_ROLES,
 }

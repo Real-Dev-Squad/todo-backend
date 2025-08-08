@@ -6,14 +6,11 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiRespon
 from drf_spectacular.types import OpenApiTypes
 from typing import Dict, Any, Callable
 
-from todo.serializers.create_role_serializer import CreateRoleSerializer
-from todo.serializers.update_role_serializer import UpdateRoleSerializer
 from todo.serializers.get_roles_serializer import RoleQuerySerializer
 from todo.services.role_service import RoleService
 from todo.exceptions.global_exception_handler import GlobalExceptionHandler
 from todo.exceptions.role_exceptions import (
     RoleNotFoundException,
-    RoleAlreadyExistsException,
     RoleOperationException,
 )
 
@@ -35,9 +32,6 @@ class BaseRoleView(APIView):
             return func()
         except RoleNotFoundException as e:
             error_response = GlobalExceptionHandler.handle_role_not_found(e)
-            return Response({"error": error_response["error"]}, status=error_response["status_code"])
-        except RoleAlreadyExistsException as e:
-            error_response = GlobalExceptionHandler.handle_role_already_exists(e)
             return Response({"error": error_response["error"]}, status=error_response["status_code"])
         except RoleOperationException as e:
             error_response = GlobalExceptionHandler.handle_role_operation_error(e)
@@ -74,8 +68,8 @@ class RoleListView(BaseRoleView):
 
     @extend_schema(
         operation_id="get_roles",
-        summary="Get all roles",
-        description="Retrieve all roles with optional filtering",
+        summary="Get all predefined roles",
+        description="Retrieve all predefined roles from the system. Roles are created via migration and cannot be modified through API.",
         tags=["roles"],
         parameters=[
             OpenApiParameter(
@@ -104,7 +98,7 @@ class RoleListView(BaseRoleView):
         },
     )
     def get(self, request: Request):
-        """Get all roles with optional filtering."""
+        """Get all predefined roles with optional filtering."""
 
         def _execute():
             query_serializer = RoleQuerySerializer(data=request.query_params)
@@ -118,50 +112,12 @@ class RoleListView(BaseRoleView):
 
         return self._handle_exceptions(_execute)
 
-    @extend_schema(
-        operation_id="create_role",
-        summary="Create a new role",
-        description="Create a new role with the provided details",
-        tags=["roles"],
-        request=CreateRoleSerializer,
-        responses={
-            201: OpenApiResponse(description="Role created successfully"),
-            400: OpenApiResponse(description="Bad request"),
-            409: OpenApiResponse(description="Role already exists"),
-            500: OpenApiResponse(description="Internal server error"),
-        },
-    )
-    def post(self, request: Request):
-        """Create a new role."""
-
-        def _execute():
-            serializer = CreateRoleSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-
-            user_id = getattr(request, "user_id", None)
-            if not user_id:
-                return Response({"error": "User authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
-
-            role_dto = RoleService.create_role(
-                name=serializer.validated_data["name"],
-                description=serializer.validated_data.get("description"),
-                scope=serializer.validated_data["scope"],
-                is_active=serializer.validated_data["is_active"],
-                created_by=user_id,
-            )
-
-            return Response(
-                {"role": role_dto.model_dump(), "message": "Role created successfully"}, status=status.HTTP_201_CREATED
-            )
-
-        return self._handle_exceptions(_execute)
-
 
 class RoleDetailView(BaseRoleView):
     @extend_schema(
         operation_id="get_role_by_id",
         summary="Get role by ID",
-        description="Retrieve a single role by its unique identifier",
+        description="Retrieve a single predefined role by its unique identifier",
         tags=["roles"],
         parameters=[
             OpenApiParameter(
@@ -183,81 +139,5 @@ class RoleDetailView(BaseRoleView):
         def _execute():
             role_dto = RoleService.get_role_by_id(role_id)
             return Response({"role": role_dto.model_dump()}, status=status.HTTP_200_OK)
-
-        return self._handle_exceptions(_execute)
-
-    @extend_schema(
-        operation_id="update_role",
-        summary="Update role",
-        description="Update an existing role with the provided details",
-        tags=["roles"],
-        parameters=[
-            OpenApiParameter(
-                name="role_id",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.PATH,
-                description="Unique identifier of the role",
-            ),
-        ],
-        request=UpdateRoleSerializer,
-        responses={
-            200: OpenApiResponse(description="Role updated successfully"),
-            400: OpenApiResponse(description="Bad request"),
-            404: OpenApiResponse(description="Role not found"),
-            409: OpenApiResponse(description="Role name already exists"),
-            500: OpenApiResponse(description="Internal server error"),
-        },
-    )
-    def patch(self, request: Request, role_id: str):
-        """Update an existing role."""
-
-        def _execute():
-            serializer = UpdateRoleSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-
-            user_id = getattr(request, "user_id", None)
-            if not user_id:
-                return Response({"error": "User authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
-
-            role_dto = RoleService.update_role(
-                role_id=role_id,
-                name=serializer.validated_data.get("name"),
-                description=serializer.validated_data.get("description"),
-                scope=serializer.validated_data.get("scope"),
-                is_active=serializer.validated_data.get("is_active"),
-                updated_by=user_id,
-            )
-
-            return Response(
-                {"role": role_dto.model_dump(), "message": "Role updated successfully"}, status=status.HTTP_200_OK
-            )
-
-        return self._handle_exceptions(_execute)
-
-    @extend_schema(
-        operation_id="delete_role",
-        summary="Delete role",
-        description="Delete a role by its unique identifier",
-        tags=["roles"],
-        parameters=[
-            OpenApiParameter(
-                name="role_id",
-                type=OpenApiTypes.STR,
-                location=OpenApiParameter.PATH,
-                description="Unique identifier of the role to delete",
-            ),
-        ],
-        responses={
-            204: OpenApiResponse(description="Role deleted successfully"),
-            404: OpenApiResponse(description="Role not found"),
-            500: OpenApiResponse(description="Internal server error"),
-        },
-    )
-    def delete(self, request: Request, role_id: str):
-        """Delete a role by ID."""
-
-        def _execute():
-            RoleService.delete_role(role_id)
-            return Response(status=status.HTTP_204_NO_CONTENT)
 
         return self._handle_exceptions(_execute)

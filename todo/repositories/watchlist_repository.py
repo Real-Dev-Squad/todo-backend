@@ -73,11 +73,7 @@ class WatchlistRepository(MongoRepository):
                                 "from": "users",
                                 "let": {"createdById": "$task.createdBy"},
                                 "pipeline": [
-                                    {
-                                        "$match": {
-                                            "$expr": {"$eq": ["$_id", {"$toObjectId": "$$createdById"}]}
-                                        }
-                                    }
+                                    {"$match": {"$expr": {"$eq": ["$_id", {"$toObjectId": "$$createdById"}]}}}
                                 ],
                                 "as": "created_by_user",
                             }

@@ -5,6 +5,7 @@ from todo.constants.task import (
     SORT_FIELD_PRIORITY,
     SORT_FIELD_DUE_AT,
     SORT_FIELD_CREATED_AT,
+    SORT_FIELD_UPDATED_AT,
     SORT_FIELD_ASSIGNEE,
     SORT_ORDER_ASC,
     SORT_ORDER_DESC,
@@ -65,6 +66,7 @@ class TaskSortingIntegrationTest(AuthenticatedMongoTestCase):
 
         test_cases = [
             (SORT_FIELD_CREATED_AT, SORT_ORDER_DESC),
+            (SORT_FIELD_UPDATED_AT, SORT_ORDER_DESC),
             (SORT_FIELD_DUE_AT, SORT_ORDER_ASC),
             (SORT_FIELD_PRIORITY, SORT_ORDER_DESC),
             (SORT_FIELD_ASSIGNEE, SORT_ORDER_ASC),
@@ -114,7 +116,7 @@ class TaskSortingIntegrationTest(AuthenticatedMongoTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         mock_list.assert_called_with(
-            1, 20, SORT_FIELD_CREATED_AT, SORT_ORDER_DESC, str(self.user_id), team_id=None, status_filter=None
+            1, 20, SORT_FIELD_UPDATED_AT, SORT_ORDER_DESC, str(self.user_id), team_id=None, status_filter=None
         )
 
     @patch("todo.services.task_service.reverse_lazy", return_value="/v1/tasks")

@@ -18,6 +18,7 @@ from todo.constants.task import (
     SORT_FIELD_PRIORITY,
     SORT_FIELD_DUE_AT,
     SORT_FIELD_CREATED_AT,
+    SORT_FIELD_UPDATED_AT,
     SORT_FIELD_ASSIGNEE,
     SORT_ORDER_ASC,
     SORT_ORDER_DESC,
@@ -47,7 +48,7 @@ class TaskViewTests(AuthenticatedMongoTestCase):
         mock_get_tasks.assert_called_once_with(
             page=1,
             limit=10,
-            sort_by="createdAt",
+            sort_by="updatedAt",
             order="desc",
             user_id=str(self.user_id),
             team_id=None,
@@ -66,7 +67,7 @@ class TaskViewTests(AuthenticatedMongoTestCase):
         mock_get_tasks.assert_called_once_with(
             page=1,
             limit=default_limit,
-            sort_by="createdAt",
+            sort_by="updatedAt",
             order="desc",
             user_id=str(self.user_id),
             team_id=None,
@@ -177,7 +178,7 @@ class TaskViewTest(AuthenticatedMongoTestCase):
         mock_get_tasks.assert_called_once_with(
             page=1,
             limit=default_limit,
-            sort_by="createdAt",
+            sort_by="updatedAt",
             order="desc",
             user_id=str(self.user_id),
             team_id=None,
@@ -195,7 +196,7 @@ class TaskViewTest(AuthenticatedMongoTestCase):
         mock_get_tasks.assert_called_once_with(
             page=2,
             limit=15,
-            sort_by="createdAt",
+            sort_by="updatedAt",
             order="desc",
             user_id=str(self.user_id),
             team_id=None,
@@ -275,6 +276,7 @@ class TaskViewSortingTests(AuthenticatedMongoTestCase):
             (SORT_FIELD_PRIORITY, "desc"),
             (SORT_FIELD_DUE_AT, "asc"),
             (SORT_FIELD_CREATED_AT, "desc"),
+            (SORT_FIELD_UPDATED_AT, "desc"),
             (SORT_FIELD_ASSIGNEE, "asc"),
         ]
 
@@ -363,7 +365,7 @@ class TaskViewSortingTests(AuthenticatedMongoTestCase):
         mock_get_tasks.assert_called_once_with(
             page=1,
             limit=20,
-            sort_by=SORT_FIELD_CREATED_AT,
+            sort_by=SORT_FIELD_UPDATED_AT,
             order="desc",
             user_id=str(self.user_id),
             team_id=None,
@@ -380,7 +382,7 @@ class TaskViewSortingTests(AuthenticatedMongoTestCase):
             mock_get_tasks.assert_called_once_with(
                 page=1,
                 limit=20,
-                sort_by=SORT_FIELD_CREATED_AT,
+                sort_by=SORT_FIELD_UPDATED_AT,
                 order=SORT_ORDER_ASC,
                 user_id=str(self.user_id),
                 team_id=None,

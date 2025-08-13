@@ -8,7 +8,13 @@ from todo.models.task import TaskModel
 from todo.repositories.common.mongo_repository import MongoRepository
 from todo.repositories.task_assignment_repository import TaskAssignmentRepository
 from todo.constants.messages import ApiErrors, RepositoryErrors
-from todo.constants.task import SORT_FIELD_PRIORITY, SORT_FIELD_ASSIGNEE, SORT_ORDER_DESC, TaskStatus
+from todo.constants.task import (
+    SORT_FIELD_PRIORITY,
+    SORT_FIELD_ASSIGNEE,
+    SORT_FIELD_UPDATED_AT,
+    SORT_ORDER_DESC,
+    TaskStatus,
+)
 from todo.repositories.team_repository import UserTeamDetailsRepository
 
 
@@ -77,6 +83,19 @@ class TaskRepository(MongoRepository):
             query_filter = {"$and": [base_filter, {"_id": {"$in": assigned_task_ids}}]}
         else:
             query_filter = base_filter
+
+        if sort_by == SORT_FIELD_UPDATED_AT:
+            sort_direction = -1 if order == SORT_ORDER_DESC else 1
+            pipeline = [
+                {"$match": query_filter},
+                {"$addFields": {"lastActivity": {"$ifNull": [{"$toDate": "$updatedAt"}, {"$toDate": "$createdAt"}]}}},
+                {"$sort": {"lastActivity": sort_direction}},
+                {"$skip": (page - 1) * limit},
+                {"$limit": limit},
+                {"$project": {"lastActivity": 0}},
+            ]
+            tasks_cursor = tasks_collection.aggregate(pipeline)
+            return [TaskModel(**task) for task in tasks_cursor]
 
         if sort_by == SORT_FIELD_PRIORITY:
             sort_direction = 1 if order == SORT_ORDER_DESC else -1

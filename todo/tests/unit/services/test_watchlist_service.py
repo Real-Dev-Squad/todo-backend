@@ -63,7 +63,7 @@ class TestWatchlistService(TestCase):
             labels=[],
             dueAt=None,
             createdAt=datetime.now(timezone.utc),
-            createdBy=user_id,
+            createdBy="Test User",
             watchlistId=str(ObjectId()),
             assignee=assignee_dto,
         )

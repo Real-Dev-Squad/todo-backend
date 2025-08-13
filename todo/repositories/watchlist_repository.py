@@ -144,7 +144,14 @@ class WatchlistRepository(MongoRepository):
                                             "watchlistId": {"$toString": "$_id"},
                                             "taskId": {"$toString": "$task._id"},
                                             "deferredDetails": "$task.deferredDetails",
-                                            "createdBy": {"$arrayElemAt": ["$created_by_user.name", 0]},
+                                            "createdBy": {
+                                                "id": {"$toString": {"$arrayElemAt": ["$created_by_user._id", 0]}},
+                                                "name": {"$arrayElemAt": ["$created_by_user.name", 0]},
+                                                "addedOn": {"$arrayElemAt": ["$created_by_user.addedOn", 0]},
+                                                "tasksAssignedCount": {
+                                                    "$arrayElemAt": ["$created_by_user.tasksAssignedCount", 0]
+                                                },
+                                            },
                                             "assignee": {
                                                 "$cond": {
                                                     "if": {"$gt": [{"$size": "$assignee_user"}, 0]},
@@ -199,9 +206,11 @@ class WatchlistRepository(MongoRepository):
             if not task.get("assignee"):
                 task["assignee"] = cls._get_assignee_for_task(task.get("taskId"))
 
-            # If createdBy is null or still an ID, try to fetch user name separately
-            if not task.get("createdBy") or ObjectId.is_valid(task.get("createdBy", "")):
-                task["createdBy"] = cls._get_user_name_for_id(task.get("createdBy"))
+            # If createdBy is null or still an ID, try to fetch user details separately
+            if not task.get("createdBy") or (
+                isinstance(task.get("createdBy"), str) and ObjectId.is_valid(task.get("createdBy", ""))
+            ):
+                task["createdBy"] = cls._get_user_dto_for_id(task.get("createdBy"))
 
         tasks = [WatchlistDTO(**doc) for doc in tasks]
 
@@ -246,9 +255,9 @@ class WatchlistRepository(MongoRepository):
         return None
 
     @classmethod
-    def _get_user_name_for_id(cls, user_id: str):
+    def _get_user_dto_for_id(cls, user_id: str):
         """
-        Fallback method to get user name for createdBy field.
+        Fallback method to get user details for createdBy field.
         """
         if not user_id:
             return None
@@ -259,7 +268,12 @@ class WatchlistRepository(MongoRepository):
             # Get user details
             user = UserRepository.get_by_id(user_id)
             if user:
-                return user.name
+                return {
+                    "id": str(user.id),
+                    "name": user.name,
+                    "addedOn": getattr(user, "addedOn", None),
+                    "tasksAssignedCount": getattr(user, "tasksAssignedCount", None),
+                }
         except Exception:
             # If any error occurs, return None
             pass

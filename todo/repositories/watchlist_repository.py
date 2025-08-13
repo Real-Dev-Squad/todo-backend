@@ -144,6 +144,7 @@ class WatchlistRepository(MongoRepository):
                                             "watchlistId": {"$toString": "$_id"},
                                             "taskId": {"$toString": "$task._id"},
                                             "deferredDetails": "$task.deferredDetails",
+                                            "createdBy": {"$arrayElemAt": ["$created_by_user.name", 0]},
                                             "assignee": {
                                                 "$cond": {
                                                     "if": {"$gt": [{"$size": "$assignee_user"}, 0]},
@@ -198,6 +199,10 @@ class WatchlistRepository(MongoRepository):
             if not task.get("assignee"):
                 task["assignee"] = cls._get_assignee_for_task(task.get("taskId"))
 
+            # If createdBy is null or still an ID, try to fetch user name separately
+            if not task.get("createdBy") or ObjectId.is_valid(task.get("createdBy", "")):
+                task["createdBy"] = cls._get_user_name_for_id(task.get("createdBy"))
+
         tasks = [WatchlistDTO(**doc) for doc in tasks]
 
         return count, tasks
@@ -237,6 +242,27 @@ class WatchlistRepository(MongoRepository):
         except Exception:
             # If any error occurs, return None
             return None
+
+        return None
+
+    @classmethod
+    def _get_user_name_for_id(cls, user_id: str):
+        """
+        Fallback method to get user name for createdBy field.
+        """
+        if not user_id:
+            return None
+
+        try:
+            from todo.repositories.user_repository import UserRepository
+
+            # Get user details
+            user = UserRepository.get_by_id(user_id)
+            if user:
+                return user.name
+        except Exception:
+            # If any error occurs, return None
+            pass
 
         return None
 

@@ -70,6 +70,16 @@ class WatchlistRepository(MongoRepository):
                         {"$unwind": "$task"},
                         {
                             "$lookup": {
+                                "from": "users",
+                                "let": {"createdById": "$task.createdBy"},
+                                "pipeline": [
+                                    {"$match": {"$expr": {"$eq": ["$_id", {"$toObjectId": "$$createdById"}]}}}
+                                ],
+                                "as": "created_by_user",
+                            }
+                        },
+                        {
+                            "$lookup": {
                                 "from": "task_details",
                                 "let": {"taskIdStr": "$taskId"},
                                 "pipeline": [

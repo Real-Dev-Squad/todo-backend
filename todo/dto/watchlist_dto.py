@@ -4,6 +4,7 @@ from typing import Optional
 
 from todo.constants.task import TaskPriority, TaskStatus
 from todo.models.task import DeferredDetailsModel
+from todo.dto.user_dto import UserDTO
 
 
 class AssigneeDTO(BaseModel):
@@ -25,7 +26,7 @@ class WatchlistDTO(BaseModel):
     labels: list = []
     dueAt: Optional[datetime] = None
     createdAt: datetime
-    createdBy: str
+    createdBy: UserDTO
     watchlistId: str
     assignee: Optional[AssigneeDTO] = None
 

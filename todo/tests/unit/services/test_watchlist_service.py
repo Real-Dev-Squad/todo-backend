@@ -5,6 +5,7 @@ from django.test import TestCase, override_settings
 
 from todo.services.watchlist_service import WatchlistService
 from todo.dto.watchlist_dto import CreateWatchlistDTO, WatchlistDTO, AssigneeDTO
+from todo.dto.user_dto import UserDTO
 from todo.models.task import TaskModel
 from todo.models.watchlist import WatchlistModel
 from todo.constants.messages import ApiErrors
@@ -63,7 +64,7 @@ class TestWatchlistService(TestCase):
             labels=[],
             dueAt=None,
             createdAt=datetime.now(timezone.utc),
-            createdBy="Test User",
+            createdBy=UserDTO(id=user_id, name="Test User"),
             watchlistId=str(ObjectId()),
             assignee=assignee_dto,
         )
@@ -102,7 +103,7 @@ class TestWatchlistService(TestCase):
             labels=[],
             dueAt=None,
             createdAt=datetime.now(timezone.utc),
-            createdBy=user_id,
+            createdBy=UserDTO(id=user_id, name="Test User"),
             watchlistId=str(ObjectId()),
             assignee=None,
         )

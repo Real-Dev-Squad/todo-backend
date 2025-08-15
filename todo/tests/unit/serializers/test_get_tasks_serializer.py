@@ -7,6 +7,7 @@ from todo.constants.task import (
     SORT_FIELD_PRIORITY,
     SORT_FIELD_DUE_AT,
     SORT_FIELD_CREATED_AT,
+    SORT_FIELD_UPDATED_AT,
     SORT_FIELD_ASSIGNEE,
     SORT_ORDER_ASC,
     SORT_ORDER_DESC,
@@ -133,7 +134,7 @@ class GetTaskQueryParamsSerializerSortingTests(TestCase):
     def test_sort_by_defaults_to_created_at(self):
         serializer = GetTaskQueryParamsSerializer(data={})
         self.assertTrue(serializer.is_valid())
-        self.assertEqual(serializer.validated_data["sort_by"], SORT_FIELD_CREATED_AT)
+        self.assertEqual(serializer.validated_data["sort_by"], SORT_FIELD_UPDATED_AT)
 
     def test_order_has_no_default(self):
         serializer = GetTaskQueryParamsSerializer(data={})
@@ -152,7 +153,7 @@ class GetTaskQueryParamsSerializerSortingTests(TestCase):
     def test_order_with_no_sort_by(self):
         serializer = GetTaskQueryParamsSerializer(data={"order": SORT_ORDER_ASC})
         self.assertTrue(serializer.is_valid())
-        self.assertEqual(serializer.validated_data["sort_by"], SORT_FIELD_CREATED_AT)
+        self.assertEqual(serializer.validated_data["sort_by"], SORT_FIELD_UPDATED_AT)
         self.assertEqual(serializer.validated_data["order"], SORT_ORDER_ASC)
 
     def test_sorting_with_pagination(self):

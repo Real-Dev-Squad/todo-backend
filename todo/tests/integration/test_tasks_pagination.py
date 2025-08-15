@@ -23,7 +23,7 @@ class TaskPaginationIntegrationTest(AuthenticatedMongoTestCase):
         mock_get_tasks.assert_called_with(
             page=1,
             limit=default_limit,
-            sort_by="createdAt",
+            sort_by="updatedAt",
             order="desc",
             user_id=str(self.user_id),
             team_id=None,
@@ -38,7 +38,7 @@ class TaskPaginationIntegrationTest(AuthenticatedMongoTestCase):
         mock_get_tasks.assert_called_with(
             page=1,
             limit=10,
-            sort_by="createdAt",
+            sort_by="updatedAt",
             order="desc",
             user_id=str(self.user_id),
             team_id=None,

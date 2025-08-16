@@ -12,7 +12,6 @@ from todo.utils.invite_code_utils import generate_invite_code
 from typing import List
 from todo.models.audit_log import AuditLogModel
 from todo.repositories.audit_log_repository import AuditLogRepository
-from todo.services.team_invite_code_service import TeamInviteCodeService
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 
 DEFAULT_ROLE_ID = "1"
@@ -40,7 +39,7 @@ class TeamService:
             code_data = TeamInviteCodeRepository.is_code_valid(dto.team_invite_code)
             if not code_data:
                 raise ValueError(
-                    ApiErrorResponse(   
+                    ApiErrorResponse(
                         statusCode=400,
                         message="Invalid or already used team creation code. Please enter a valid code.",
                         errors=[ApiErrorDetail(detail="Invalid team creation code")],

@@ -18,7 +18,7 @@ class TeamInviteCodeRepository(MongoRepository):
         try:
             result = collection.update_one(
                 {"_id": code_id, "is_used": False},
-                {"$set": {"is_used": True, "used_by": ObjectId(used_by), "used_at": datetime.now(timezone.utc)}}
+                {"$set": {"is_used": True, "used_by": ObjectId(used_by), "used_at": datetime.now(timezone.utc)}},
             )
             return result.modified_count > 0
         except Exception as e:

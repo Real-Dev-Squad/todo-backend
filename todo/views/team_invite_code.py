@@ -88,6 +88,8 @@ class VerifyTeamInviteCodeView(APIView):
         code_data = TeamInviteCodeRepository.is_code_valid(dto.code)
 
         if not code_data:
-            return Response(data={"message": "Invalid or already used team invite code"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                data={"message": "Invalid or already used team invite code"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         return Response(data={"message": "Team invite code verified successfully"}, status=status.HTTP_200_OK)

@@ -1,15 +1,19 @@
+from bson import ObjectId
 from todo.dto.team_dto import CreateTeamDTO, TeamDTO
 from todo.dto.update_team_dto import UpdateTeamDTO
 from todo.dto.responses.create_team_response import CreateTeamResponse
 from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
+from todo.repositories.team_invite_code_repository import TeamInviteCodeRepository
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
 from todo.constants.messages import AppMessages
 from todo.utils.invite_code_utils import generate_invite_code
 from typing import List
 from todo.models.audit_log import AuditLogModel
 from todo.repositories.audit_log_repository import AuditLogRepository
+from todo.services.team_invite_code_service import TeamInviteCodeService
+from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 
 DEFAULT_ROLE_ID = "1"
 
@@ -21,17 +25,28 @@ class TeamService:
         Create a new team with members and POC.
 
         Args:
-            dto: Team creation data including name, description, POC, and members
+            dto: Team creation data including name, description, POC, members, and team invite code
             created_by_user_id: ID of the user creating the team
 
         Returns:
             CreateTeamResponse with the created team details and success message
 
         Raises:
-            ValueError: If team creation fails
+            ValueError: If team creation fails or invite code is invalid
         """
         try:
             # Member IDs and POC ID validation is handled at DTO level
+
+            code_data = TeamInviteCodeRepository.is_code_valid(dto.team_invite_code)
+            if not code_data:
+                raise ValueError(
+                    ApiErrorResponse(   
+                        statusCode=400,
+                        message="Invalid or already used team creation code. Please enter a valid code.",
+                        errors=[ApiErrorDetail(detail="Invalid team creation code")],
+                    )
+                )
+
             member_ids = dto.member_ids or []
 
             # Generate invite code
@@ -123,6 +138,9 @@ class TeamService:
                 created_at=created_team.created_at,
                 updated_at=created_team.updated_at,
             )
+
+            result = TeamInviteCodeRepository.consume_code(ObjectId(code_data["_id"]), created_by_user_id)
+            print(f"Result: {result}")
 
             return CreateTeamResponse(
                 team=team_dto,

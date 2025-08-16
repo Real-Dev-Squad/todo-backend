@@ -15,6 +15,7 @@ from todo.views.team import (
     TeamActivityTimelineView,
     RemoveTeamMemberView,
 )
+from todo.views.team_invite_code import GenerateTeamInviteCodeView, VerifyTeamInviteCodeView
 from todo.views.watchlist import WatchlistListView, WatchlistDetailView, WatchlistCheckView
 from todo.views.task_assignment import TaskAssignmentView, TaskAssignmentDetailView
 from todo.views.task import AssignTaskToUserView
@@ -53,6 +54,8 @@ urlpatterns = [
     path("auth/logout", LogoutView.as_view(), name="google_logout"),
     path("users", UsersView.as_view(), name="users"),
     path("users/<str:user_id>/roles", UserRoleListView.as_view(), name="user_roles"),
+    path("team-invite-codes/generate", GenerateTeamInviteCodeView.as_view(), name="generate_team_invite_code"),
+    path("team-invite-codes/verify", VerifyTeamInviteCodeView.as_view(), name="verify_team_invite_code"),
 ]
 
 urlpatterns += [

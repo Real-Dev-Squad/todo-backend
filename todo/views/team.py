@@ -54,12 +54,13 @@ class TeamListView(APIView):
     @extend_schema(
         operation_id="create_team",
         summary="Create a new team",
-        description="Create a new team with the provided details. The creator is always added as a member, even if not in member_ids or as POC.",
+        description="Create a new team with the provided details. The creator is always added as a member, even if not in member_ids or as POC. **Note:** A valid team invite code is required in the request payload.",
         tags=["teams"],
         request=CreateTeamSerializer,
         responses={
             201: OpenApiResponse(response=CreateTeamResponse, description="Team created successfully"),
-            400: OpenApiResponse(description="Bad request - validation error"),
+            400: OpenApiResponse(description="Bad request - validation error or invalid team invite code"),
+            401: OpenApiResponse(description="Unauthorized - authentication required"),
             500: OpenApiResponse(description="Internal server error"),
         },
     )

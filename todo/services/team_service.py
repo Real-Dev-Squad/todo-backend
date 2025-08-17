@@ -1,4 +1,3 @@
-from bson import ObjectId
 from todo.dto.team_dto import CreateTeamDTO, TeamDTO
 from todo.dto.update_team_dto import UpdateTeamDTO
 from todo.dto.responses.create_team_response import CreateTeamResponse
@@ -12,6 +11,7 @@ from todo.utils.invite_code_utils import generate_invite_code
 from typing import List
 from todo.models.audit_log import AuditLogModel
 from todo.repositories.audit_log_repository import AuditLogRepository
+from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 
 DEFAULT_ROLE_ID = "1"
 
@@ -35,9 +35,18 @@ class TeamService:
         try:
             # Member IDs and POC ID validation is handled at DTO level
 
-            code_data = TeamCreationInviteCodeRepository.is_code_valid(dto.team_invite_code)
+            # Validate and consume the code in one atomic operation to prevent race conditions
+            code_data = TeamCreationInviteCodeRepository.validate_and_consume_code(
+                dto.team_invite_code, created_by_user_id
+            )
             if not code_data:
-                raise ValueError("Invalid or already used team creation code. Please enter a valid code.")
+                raise ValueError(
+                    ApiErrorResponse(
+                        statusCode=400,
+                        message="Invalid or already used team creation code. Please enter a valid code.",
+                        errors=[ApiErrorDetail(detail="Invalid team creation code")],
+                    )
+                )
 
             member_ids = dto.member_ids or []
 
@@ -131,15 +140,13 @@ class TeamService:
                 updated_at=created_team.updated_at,
             )
 
-            result = TeamCreationInviteCodeRepository.consume_code(ObjectId(code_data["_id"]), created_by_user_id)
-            if result:
-                AuditLogRepository.create(
-                    AuditLogModel(
-                        action="team_creation_invite_code_consumed",
-                        performed_by=PyObjectId(created_by_user_id),
-                        team_id=created_team.id,
-                    )
+            AuditLogRepository.create(
+                AuditLogModel(
+                    action="team_creation_invite_code_consumed",
+                    performed_by=PyObjectId(created_by_user_id),
+                    team_id=created_team.id,
                 )
+            )
             return CreateTeamResponse(
                 team=team_dto,
                 message=AppMessages.TEAM_CREATED,

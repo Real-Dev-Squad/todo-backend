@@ -20,7 +20,7 @@ class TeamCreationInviteCodeService:
         cls, dto: GenerateTeamCreationInviteCodeDTO, created_by: str
     ) -> GenerateTeamCreationInviteCodeResponse:
         """Generate a new team creation invite code."""
-        code = generate_invite_code(dto.description)
+        code = generate_invite_code("team creation invite code")
 
         team_invite_code = TeamCreationInviteCodeModel(code=code, description=dto.description, created_by=created_by)
 

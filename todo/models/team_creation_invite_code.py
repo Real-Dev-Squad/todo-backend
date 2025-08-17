@@ -14,7 +14,7 @@ class TeamCreationInviteCodeModel(Document):
 
     collection_name: ClassVar[str] = "team_creation_invite_codes"
 
-    code: str = Field(..., min_length=6, max_length=20)
+    code: str = Field(description="The actual invite code")
     description: str | None = None
     created_by: PyObjectId
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

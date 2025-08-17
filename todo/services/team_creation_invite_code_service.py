@@ -43,7 +43,7 @@ class TeamCreationInviteCodeService:
     def get_all_codes(cls, page: int = 1, limit: int = 10, base_url: str = "") -> GetTeamCreationInviteCodesResponse:
         """Get paginated team creation invite codes with user details."""
         try:
-            codes_data, total_count = TeamCreationInviteCodeRepository.get_all_codes_with_user_details(page, limit)
+            codes_data, total_count = TeamCreationInviteCodeRepository.get_all_codes(page, limit)
 
             codes = []
             for code_data in codes_data:

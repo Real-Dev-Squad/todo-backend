@@ -48,7 +48,7 @@ class TeamCreationInviteCodeRepository(MongoRepository):
         return team_invite_code
 
     @classmethod
-    def get_all_codes_with_user_details(cls, page: int = 1, limit: int = 10) -> tuple[List[dict], int]:
+    def get_all_codes(cls, page: int = 1, limit: int = 10) -> tuple[List[dict], int]:
         """Get paginated team creation invite codes with user details for created_by and used_by."""
         collection = cls.get_collection()
         try:

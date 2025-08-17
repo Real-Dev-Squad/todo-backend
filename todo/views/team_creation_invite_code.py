@@ -25,6 +25,10 @@ class GenerateTeamCreationInviteCodeView(APIView):
         """Check if the user is authorized to access team creation invite code functionality."""
         return user_id in AUTHORIZED_USER_IDS
 
+    def _handle_validation_errors(self, errors):
+        """Handle validation errors."""
+        return Response(data={"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
     @extend_schema(
         operation_id="generate_team_creation_invite_code",
         summary="Generate a new team creation invite code",

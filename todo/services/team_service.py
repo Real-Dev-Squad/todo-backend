@@ -35,7 +35,6 @@ class TeamService:
         try:
             # Member IDs and POC ID validation is handled at DTO level
 
-            # Validate and consume the code in one atomic operation to prevent race conditions
             code_data = TeamCreationInviteCodeRepository.validate_and_consume_code(
                 dto.team_invite_code, created_by_user_id
             )

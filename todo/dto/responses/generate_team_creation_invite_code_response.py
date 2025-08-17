@@ -10,6 +10,6 @@ class GenerateTeamCreationInviteCodeResponse(BaseModel):
         message: Success or status message from the operation
     """
 
-    code: str = Field(description="The generated team invite code")
+    code: str = Field(description="The generated team creation invite code")
     description: str | None = Field(None, description="Optional description for the code")
     message: str = Field(description="Success message confirming code generation")

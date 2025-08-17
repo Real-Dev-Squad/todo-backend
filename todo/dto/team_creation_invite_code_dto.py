@@ -4,7 +4,9 @@ from datetime import datetime
 
 
 class GenerateTeamCreationInviteCodeDTO(BaseModel):
-    """DTO for generating team creation invite codes."""
+    """DTO for generating team creation invite codes.
+
+    Allows admins to create invite codes with an optional description for tracking purposes."""
 
     description: Optional[str] = None
 
@@ -19,7 +21,7 @@ class TeamCreationInviteCodeDTO(BaseModel):
     """DTO for team creation invite code data."""
 
     id: str = Field(description="Unique identifier for the team invite code")
-    code: str = Field(description="The actual invite code (6-20 characters)")
+    code: str = Field(description="The actual invite code")
     description: Optional[str] = Field(None, description="Optional description provided when generating the code")
     created_by: str = Field(description="User ID of the admin who generated this code")
     created_at: datetime = Field(description="Timestamp when the code was created")

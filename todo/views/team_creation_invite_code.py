@@ -12,7 +12,7 @@ from todo.repositories.team_creation_invite_code_repository import TeamCreationI
 from todo.dto.team_creation_invite_code_dto import GenerateTeamCreationInviteCodeDTO, VerifyTeamCreationInviteCodeDTO
 from todo.dto.responses.generate_team_creation_invite_code_response import GenerateTeamCreationInviteCodeResponse
 from todo.dto.responses.get_team_creation_invite_codes_response import GetTeamCreationInviteCodesResponse
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample, OpenApiParameter
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample, OpenApiParameter, OpenApiTypes
 
 # TODO: ADD PROD USER IDS
 AUTHORIZED_USER_IDS = [
@@ -137,14 +137,14 @@ class ListTeamCreationInviteCodesView(APIView):
                 location=OpenApiParameter.QUERY,
                 description="Page number (default: 1)",
                 required=False,
-                type=int,
+                type=OpenApiTypes.INT,
             ),
             OpenApiParameter(
                 name="limit",
                 location=OpenApiParameter.QUERY,
                 description="Number of items per page (default: 10, max: 50)",
                 required=False,
-                type=int,
+                type=OpenApiTypes.INT,
             ),
         ],
         examples=[

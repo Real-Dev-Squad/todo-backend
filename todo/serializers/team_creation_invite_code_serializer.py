@@ -15,4 +15,4 @@ class GenerateTeamCreationInviteCodeSerializer(serializers.Serializer):
 class VerifyTeamCreationInviteCodeSerializer(serializers.Serializer):
     """Serializer for verifying team creation invite codes."""
 
-    code = serializers.CharField(max_length=20, min_length=6, help_text="The team creation invite code to verify")
+    code = serializers.CharField(max_length=100)

@@ -32,8 +32,8 @@ class TeamCreationInviteCodeRepository(MongoRepository):
         try:
             code_data = collection.find_one({"code": code, "is_used": False})
             return code_data
-        except Exception:
-            return None
+        except Exception as e:
+            raise Exception(f"Error checking if code is valid: {e}")
 
     @classmethod
     def create(cls, team_invite_code: TeamCreationInviteCodeModel) -> TeamCreationInviteCodeModel:

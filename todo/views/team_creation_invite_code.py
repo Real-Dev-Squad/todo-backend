@@ -106,12 +106,15 @@ class VerifyTeamCreationInviteCodeView(APIView):
             return self._handle_validation_errors(serializer.errors)
 
         dto = VerifyTeamCreationInviteCodeDTO(**serializer.validated_data)
-        code_data = TeamCreationInviteCodeRepository.is_code_valid(dto.code)
-
-        if not code_data:
+        result = TeamCreationInviteCodeRepository.is_code_valid(dto.code)
+        if not result:
             return Response(
                 data={"message": "Invalid or already used team creation invite code"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         return Response(data={"message": "Team creation invite code verified successfully"}, status=status.HTTP_200_OK)
+
+    def _handle_validation_errors(self, errors):
+        """Handle validation errors."""
+        return Response(data={"errors": errors}, status=status.HTTP_400_BAD_REQUEST)

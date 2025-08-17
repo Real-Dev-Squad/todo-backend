@@ -15,10 +15,9 @@ from todo.dto.responses.get_team_creation_invite_codes_response import GetTeamCr
 from todo.services.team_creation_invite_code_service import TeamCreationInviteCodeService
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample, OpenApiParameter
 
-
+# TODO: ADD PROD USER IDS
 AUTHORIZED_USER_IDS = [
     "687544d3814217e020e3d03a",  # Admin user_id
-    "68964bc12f800de2f533f8f1",  # my
 ]
 
 

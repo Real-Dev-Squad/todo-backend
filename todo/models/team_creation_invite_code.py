@@ -7,12 +7,12 @@ from todo.models.common.document import Document
 from todo.models.common.pyobjectid import PyObjectId
 
 
-class TeamInviteCodeModel(Document):
+class TeamCreationInviteCodeModel(Document):
     """
     Model for team creation invite codes.
     """
 
-    collection_name: ClassVar[str] = "team_invite_codes"
+    collection_name: ClassVar[str] = "team_creation_invite_codes"
 
     code: str = Field(..., min_length=6, max_length=20)
     description: str | None = None

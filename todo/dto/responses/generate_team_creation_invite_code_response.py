@@ -1,11 +1,11 @@
 from pydantic import BaseModel, Field
 
 
-class GenerateTeamInviteCodeResponse(BaseModel):
-    """Response model for team invite code generation endpoint.
+class GenerateTeamCreationInviteCodeResponse(BaseModel):
+    """Response model for team creation invite code generation endpoint.
 
     Attributes:
-        code: The generated team invite code
+        code: The generated team creation invite code
         description: Optional description for the code
         message: Success or status message from the operation
     """

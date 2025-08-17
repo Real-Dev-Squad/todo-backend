@@ -5,7 +5,7 @@ from todo.dto.responses.create_team_response import CreateTeamResponse
 from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
-from todo.repositories.team_invite_code_repository import TeamInviteCodeRepository
+from todo.repositories.team_creation_invite_code_repository import TeamCreationInviteCodeRepository
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
 from todo.constants.messages import AppMessages
 from todo.utils.invite_code_utils import generate_invite_code
@@ -36,7 +36,7 @@ class TeamService:
         try:
             # Member IDs and POC ID validation is handled at DTO level
 
-            code_data = TeamInviteCodeRepository.is_code_valid(dto.team_invite_code)
+            code_data = TeamCreationInviteCodeRepository.is_code_valid(dto.team_invite_code)
             if not code_data:
                 raise ValueError(
                     ApiErrorResponse(
@@ -138,9 +138,15 @@ class TeamService:
                 updated_at=created_team.updated_at,
             )
 
-            result = TeamInviteCodeRepository.consume_code(ObjectId(code_data["_id"]), created_by_user_id)
-            print(f"Result: {result}")
-
+            result = TeamCreationInviteCodeRepository.consume_code(ObjectId(code_data["_id"]), created_by_user_id)
+            if result:
+                AuditLogRepository.create(
+                    AuditLogModel(
+                        action="team_creation_invite_code_consumed",
+                        performed_by=PyObjectId(created_by_user_id),
+                        team_id=created_team.id,
+                    )
+                )
             return CreateTeamResponse(
                 team=team_dto,
                 message=AppMessages.TEAM_CREATED,

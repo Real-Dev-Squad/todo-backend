@@ -3,20 +3,20 @@ from typing import Optional
 from datetime import datetime
 
 
-class GenerateTeamInviteCodeDTO(BaseModel):
-    """DTO for generating team invite codes."""
+class GenerateTeamCreationInviteCodeDTO(BaseModel):
+    """DTO for generating team creation invite codes."""
 
     description: Optional[str] = None
 
 
-class VerifyTeamInviteCodeDTO(BaseModel):
-    """DTO for verifying team invite codes."""
+class VerifyTeamCreationInviteCodeDTO(BaseModel):
+    """DTO for verifying team creation invite codes."""
 
     code: str
 
 
-class TeamInviteCodeDTO(BaseModel):
-    """DTO for team invite code data."""
+class TeamCreationInviteCodeDTO(BaseModel):
+    """DTO for team creation invite code data."""
 
     id: str = Field(description="Unique identifier for the team invite code")
     code: str = Field(description="The actual invite code (6-20 characters)")

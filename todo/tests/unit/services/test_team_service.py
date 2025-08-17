@@ -95,10 +95,14 @@ class TeamServiceTests(TestCase):
 
         self.assertIn("Failed to get user teams", str(context.exception))
 
+    @patch("todo.services.team_service.TeamCreationInviteCodeRepository.consume_code")
+    @patch("todo.services.team_service.TeamCreationInviteCodeRepository.is_code_valid")
     @patch("todo.services.team_service.TeamRepository.create")
     @patch("todo.services.team_service.UserTeamDetailsRepository.create_many")
     @patch("todo.dto.team_dto.UserRepository.get_by_id")
-    def test_creator_always_added_as_member(self, mock_user_get_by_id, mock_create_many, mock_team_create):
+    def test_creator_always_added_as_member(
+        self, mock_user_get_by_id, mock_create_many, mock_team_create, mock_is_code_valid, mock_consume_code
+    ):
         """Test that the creator is always added as a member when creating a team"""
         # Patch user lookup to always return a mock user
         mock_user = type(
@@ -107,6 +111,10 @@ class TeamServiceTests(TestCase):
             {"id": None, "name": "Test User", "email_id": "test@example.com", "created_at": None, "updated_at": None},
         )()
         mock_user_get_by_id.return_value = mock_user
+
+        # Mock invite code validation
+        mock_is_code_valid.return_value = {"_id": "507f1f77bcf86cd799439013"}
+        mock_consume_code.return_value = True
         # Creator is not in member_ids or as POC
         creator_id = "507f1f77bcf86cd799439099"
         member_ids = ["507f1f77bcf86cd799439011"]
@@ -118,6 +126,7 @@ class TeamServiceTests(TestCase):
             description="desc",
             member_ids=member_ids,
             poc_id=poc_id,
+            team_invite_code="TEST123",
         )
         # Mock team creation
         mock_team = self.team_model

@@ -19,7 +19,9 @@ class TeamCreationInviteCodeListItemDTO(BaseModel):
 class GetTeamCreationInviteCodesResponse(BaseModel):
     """Response model for listing all team creation invite codes with pagination links."""
 
-    codes: List[TeamCreationInviteCodeListItemDTO] = Field(description="List of team creation invite codes for current page")
+    codes: List[TeamCreationInviteCodeListItemDTO] = Field(
+        description="List of team creation invite codes for current page"
+    )
     previous_url: Optional[str] = Field(None, description="URL for previous page (null if no previous page)")
     next_url: Optional[str] = Field(None, description="URL for next page (null if no next page)")
     message: str = Field(description="Success message")

@@ -12,7 +12,6 @@ from todo.repositories.team_creation_invite_code_repository import TeamCreationI
 from todo.dto.team_creation_invite_code_dto import GenerateTeamCreationInviteCodeDTO, VerifyTeamCreationInviteCodeDTO
 from todo.dto.responses.generate_team_creation_invite_code_response import GenerateTeamCreationInviteCodeResponse
 from todo.dto.responses.get_team_creation_invite_codes_response import GetTeamCreationInviteCodesResponse
-from todo.services.team_creation_invite_code_service import TeamCreationInviteCodeService
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample, OpenApiParameter
 
 # TODO: ADD PROD USER IDS
@@ -138,32 +137,20 @@ class ListTeamCreationInviteCodesView(APIView):
                 location=OpenApiParameter.QUERY,
                 description="Page number (default: 1)",
                 required=False,
-                type=int
+                type=int,
             ),
             OpenApiParameter(
                 name="limit",
                 location=OpenApiParameter.QUERY,
                 description="Number of items per page (default: 10, max: 50)",
                 required=False,
-                type=int
-            )
+                type=int,
+            ),
         ],
         examples=[
-            OpenApiExample(
-                "Default pagination",
-                value={},
-                description="Get first 10 items (default)"
-            ),
-            OpenApiExample(
-                "Custom pagination",
-                value={"page": 2, "limit": 5},
-                description="Get 5 items from page 2"
-            ),
-            OpenApiExample(
-                "Large page size",
-                value={"limit": 20},
-                description="Get first 20 items"
-            )
+            OpenApiExample("Default pagination", value={}, description="Get first 10 items (default)"),
+            OpenApiExample("Custom pagination", value={"page": 2, "limit": 5}, description="Get 5 items from page 2"),
+            OpenApiExample("Large page size", value={"limit": 20}, description="Get first 20 items"),
         ],
         responses={
             200: OpenApiResponse(
@@ -187,17 +174,19 @@ class ListTeamCreationInviteCodesView(APIView):
             )
 
         try:
-            page = int(request.query_params.get('page', 1))
-            limit = int(request.query_params.get('limit', 10))
-            
+            page = int(request.query_params.get("page", 1))
+            limit = int(request.query_params.get("limit", 10))
+
             if page < 1:
                 page = 1
             if limit < 1 or limit > 50:
                 limit = 10
 
-            base_url = '/team-invite-codes'
-            
-            response: GetTeamCreationInviteCodesResponse = TeamCreationInviteCodeService.get_all_codes(page, limit, base_url)
+            base_url = "/team-invite-codes"
+
+            response: GetTeamCreationInviteCodesResponse = TeamCreationInviteCodeService.get_all_codes(
+                page, limit, base_url
+            )
             data = response.model_dump(mode="json")
             return Response(data=data, status=status.HTTP_200_OK)
         except ValueError as e:

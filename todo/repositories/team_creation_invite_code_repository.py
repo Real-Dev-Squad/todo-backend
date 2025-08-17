@@ -54,26 +54,26 @@ class TeamCreationInviteCodeRepository(MongoRepository):
         collection = cls.get_collection()
         try:
             skip = (page - 1) * limit
-            
+
             total_count = collection.count_documents({})
-            
+
             codes = list(collection.find().sort("created_at", -1).skip(skip).limit(limit))
 
             enhanced_codes = []
             for code in codes:
                 created_by_user = None
                 used_by_user = None
-                
+
                 if code.get("created_by"):
                     user = UserRepository.get_by_id(str(code["created_by"]))
                     if user:
                         created_by_user = {"id": str(user.id), "name": user.name}
-                
+
                 if code.get("used_by"):
                     user = UserRepository.get_by_id(str(code["used_by"]))
                     if user:
                         used_by_user = {"id": str(user.id), "name": user.name}
-                
+
                 enhanced_code = {
                     "id": str(code["_id"]),
                     "code": code["code"],

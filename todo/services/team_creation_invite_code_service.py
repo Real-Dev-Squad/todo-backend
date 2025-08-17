@@ -44,7 +44,7 @@ class TeamCreationInviteCodeService:
         """Get paginated team creation invite codes with user details."""
         try:
             codes_data, total_count = TeamCreationInviteCodeRepository.get_all_codes_with_user_details(page, limit)
-            
+
             codes = []
             for code_data in codes_data:
                 code_dto = TeamCreationInviteCodeListItemDTO(
@@ -55,22 +55,22 @@ class TeamCreationInviteCodeService:
                     created_at=code_data["created_at"],
                     used_at=code_data.get("used_at"),
                     used_by=code_data.get("used_by"),
-                    is_used=code_data["is_used"]
+                    is_used=code_data["is_used"],
                 )
-                codes.append(code_dto)  
-            
-            total_pages = (total_count + limit - 1)
+                codes.append(code_dto)
+
+            total_pages = (total_count + limit - 1) // limit
             has_next = page < total_pages
             has_previous = page > 1
-            
+
             previous_url = f"{base_url}?page={page-1}&limit={limit}" if has_previous else None
             next_url = f"{base_url}?page={page+1}&limit={limit}" if has_next else None
-            
+
             return GetTeamCreationInviteCodesResponse(
                 codes=codes,
                 previous_url=previous_url,
                 next_url=next_url,
-                message="Team creation invite codes retrieved successfully"
+                message="Team creation invite codes retrieved successfully",
             )
         except Exception as e:
             raise ValueError(f"Failed to get team creation invite codes: {str(e)}")

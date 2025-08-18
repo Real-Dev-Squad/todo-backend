@@ -13,17 +13,17 @@ from todo.dto.team_creation_invite_code_dto import GenerateTeamCreationInviteCod
 from todo.dto.responses.generate_team_creation_invite_code_response import GenerateTeamCreationInviteCodeResponse
 from todo.dto.responses.get_team_creation_invite_codes_response import GetTeamCreationInviteCodesResponse
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiExample, OpenApiParameter, OpenApiTypes
-
-# TODO: ADD PROD USER IDS
-AUTHORIZED_USER_IDS = [
-    "687544d3814217e020e3d03a",  # Admin user_id
-]
+from django.conf import settings
 
 
 class GenerateTeamCreationInviteCodeView(APIView):
-    def _check_authorization(self, user_id: str) -> bool:
+    def _check_authorization(self, user_email: str = None) -> bool:
         """Check if the user is authorized to access team creation invite code functionality."""
-        return user_id in AUTHORIZED_USER_IDS
+
+        if user_email and user_email in getattr(settings, "ADMIN_EMAILS", []):
+            return True
+
+        return False
 
     def _handle_validation_errors(self, errors):
         """Handle validation errors."""
@@ -62,7 +62,9 @@ class GenerateTeamCreationInviteCodeView(APIView):
         """
         Generate a new team creation invite code.
         """
-        if not self._check_authorization(request.user_id):
+        user_email = request.user_email
+
+        if not self._check_authorization(user_email):
             return Response(
                 data={"message": "You are not authorized to perform this action."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -126,9 +128,13 @@ class VerifyTeamCreationInviteCodeView(APIView):
 
 
 class ListTeamCreationInviteCodesView(APIView):
-    def _check_authorization(self, user_id: str) -> bool:
+    def _check_authorization(self, user_email: str = None) -> bool:
         """Check if the user is authorized to access team creation invite code functionality."""
-        return user_id in AUTHORIZED_USER_IDS
+
+        if user_email and user_email in getattr(settings, "ADMIN_EMAILS", []):
+            return True
+
+        return False
 
     @extend_schema(
         operation_id="list_team_creation_invite_codes",
@@ -171,7 +177,9 @@ class ListTeamCreationInviteCodesView(APIView):
         """
         Get paginated team creation invite codes with user details.
         """
-        if not self._check_authorization(request.user_id):
+        user_email = request.user_email
+
+        if not self._check_authorization(user_email):
             return Response(
                 data={"message": "You are not authorized to perform this action."},
                 status=status.HTTP_403_FORBIDDEN,

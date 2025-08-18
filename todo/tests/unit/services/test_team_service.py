@@ -95,12 +95,20 @@ class TeamServiceTests(TestCase):
 
         self.assertIn("Failed to get user teams", str(context.exception))
 
+    @patch("todo.services.user_role_service.UserRoleService.assign_role")
+    @patch("todo.services.team_service.AuditLogRepository.create")
     @patch("todo.services.team_service.TeamCreationInviteCodeRepository.validate_and_consume_code")
     @patch("todo.services.team_service.TeamRepository.create")
     @patch("todo.services.team_service.UserTeamDetailsRepository.create_many")
     @patch("todo.dto.team_dto.UserRepository.get_by_id")
     def test_creator_always_added_as_member(
-        self, mock_user_get_by_id, mock_create_many, mock_team_create, mock_validate_and_consume_code
+        self,
+        mock_user_get_by_id,
+        mock_create_many,
+        mock_team_create,
+        mock_validate_and_consume_code,
+        mock_audit_log_create,
+        mock_assign_role,
     ):
         """Test that the creator is always added as a member when creating a team"""
         # Patch user lookup to always return a mock user
@@ -135,10 +143,14 @@ class TeamServiceTests(TestCase):
         all_user_ids = [str(obj.user_id) for obj in user_team_objs]
         self.assertIn(creator_id, all_user_ids)
 
+    @patch("todo.services.user_role_service.UserRoleService.assign_role")
+    @patch("todo.services.team_service.AuditLogRepository.create")
     @patch("todo.services.team_service.TeamRepository.get_by_invite_code")
     @patch("todo.services.team_service.UserTeamDetailsRepository.get_by_user_id")
     @patch("todo.services.team_service.UserTeamDetailsRepository.create")
-    def test_join_team_by_invite_code_success(self, mock_create, mock_get_by_user_id, mock_get_by_invite_code):
+    def test_join_team_by_invite_code_success(
+        self, mock_create, mock_get_by_user_id, mock_get_by_invite_code, mock_audit_log_create, mock_assign_role
+    ):
         """Test successful join by invite code"""
         mock_get_by_invite_code.return_value = self.team_model
         mock_get_by_user_id.return_value = []  # Not a member yet

@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 from rest_framework import status
 from todo.tests.integration.base_mongo_test import AuthenticatedMongoTestCase
 from todo.constants.task import (
@@ -119,18 +119,26 @@ class TaskSortingIntegrationTest(AuthenticatedMongoTestCase):
             1, 20, SORT_FIELD_UPDATED_AT, SORT_ORDER_DESC, str(self.user_id), team_id=None, status_filter=None
         )
 
+    @patch("todo.repositories.user_repository.UserRepository.get_by_id")
     @patch("todo.services.task_service.reverse_lazy", return_value="/v1/tasks")
     @patch("todo.repositories.task_repository.TaskRepository.count")
     @patch("todo.repositories.task_repository.TaskRepository.list")
-    def test_pagination_links_preserve_sort_params_integration(self, mock_list, mock_count, mock_reverse):
+    def test_pagination_links_preserve_sort_params_integration(
+        self, mock_list, mock_count, mock_reverse, mock_user_repo
+    ):
         from todo.tests.fixtures.task import tasks_models
+
+        from todo.models.user import UserModel
+
+        mock_user = Mock(spec=UserModel)
+        mock_user.email_id = "test@example.com"
+        mock_user_repo.return_value = mock_user
 
         mock_list.return_value = [tasks_models[0]] if tasks_models else []
         mock_count.return_value = 3
 
         with (
             patch("todo.services.task_service.LabelRepository.list_by_ids", return_value=[]),
-            patch("todo.services.task_service.UserRepository.get_by_id", return_value=None),
         ):
             response = self.client.get("/v1/tasks", {"page": "2", "limit": "1", "sort_by": "priority", "order": "desc"})
 

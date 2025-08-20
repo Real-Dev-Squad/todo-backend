@@ -14,6 +14,7 @@ from todo.exceptions.auth_exceptions import (
 )
 from todo.constants.messages import AuthErrorMessages, ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
+from todo.repositories.user_repository import UserRepository
 
 
 class JWTAuthenticationMiddleware:
@@ -110,8 +111,14 @@ class JWTAuthenticationMiddleware:
             return False
 
     def _set_user_data(self, request, payload):
-        """Set user data on request"""
-        request.user_id = payload["user_id"]
+        """Set user data on request with database verification"""
+        user_id = payload["user_id"]
+        user = UserRepository.get_by_id(user_id)
+        if not user:
+            raise TokenInvalidError(AuthErrorMessages.INVALID_TOKEN)
+
+        request.user_id = user_id
+        request.user_email = user.email_id
 
     def _process_response(self, request, response):
         """Process response and set new cookies if token was refreshed"""
@@ -156,6 +163,7 @@ def get_current_user_info(request) -> dict:
 
     user_info = {
         "user_id": request.user_id,
+        "email": request.user_email,
     }
 
     return user_info

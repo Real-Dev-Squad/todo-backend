@@ -78,6 +78,8 @@ CACHES = {
     }
 }
 
+ADMIN_EMAILS = os.getenv("ADMIN_EMAILS", "").split(",")
+
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [

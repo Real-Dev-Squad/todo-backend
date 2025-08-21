@@ -76,5 +76,5 @@ jobs:
               -e TODO_UI_REDIRECT_PATH="${{ vars.TODO_UI_REDIRECT_PATH }}" \
               -e CORS_ALLOWED_ORIGINS="${{ vars.CORS_ALLOWED_ORIGINS }}" \
               -e SWAGGER_UI_PATH="${{ vars.SWAGGER_UI_PATH }}" \
-              -e ADMIN_EMAILS="${{ vars.ADMIN_EMAIL }}" \
+              -e ADMIN_EMAILS="${{ vars.ADMIN_EMAILS }}" \
               ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}

@@ -13,6 +13,7 @@ from todo.models.task_assignment import TaskAssignmentModel
 from todo.dto.task_assignment_dto import TaskAssignmentDTO
 from todo.models.audit_log import AuditLogModel
 from todo.repositories.audit_log_repository import AuditLogRepository
+from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
 
 
 class TaskAssignmentService:
@@ -58,6 +59,33 @@ class TaskAssignmentService:
             if not updated_assignment:
                 raise ValueError("Failed to update task assignment")
             assignment = updated_assignment
+
+            # Dual write to Postgres for update
+            dual_write_service = EnhancedDualWriteService()
+            assignment_data = {
+                "task_mongo_id": str(assignment.task_id),
+                "user_mongo_id": str(assignment.assignee_id),
+                "team_mongo_id": str(assignment.team_id) if assignment.team_id else None,
+                "status": assignment.status,
+                "assigned_at": assignment.assigned_at,
+                "started_at": assignment.started_at,
+                "completed_at": assignment.completed_at,
+                "created_at": assignment.created_at,
+                "updated_at": assignment.updated_at,
+                "assigned_by": str(assignment.created_by),
+                "updated_by": str(assignment.updated_by) if assignment.updated_by else None,
+            }
+
+            dual_write_success = dual_write_service.update_document(
+                collection_name="task_assignments", mongo_id=str(assignment.id), data=assignment_data
+            )
+
+            if not dual_write_success:
+                # Log the failure but don't fail the request
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to sync task assignment update {assignment.id} to Postgres")
         else:
             # Create new assignment
             task_assignment = TaskAssignmentModel(
@@ -69,6 +97,33 @@ class TaskAssignmentService:
                 team_id=PyObjectId(dto.team_id) if dto.team_id else None,
             )
             assignment = TaskAssignmentRepository.create(task_assignment)
+
+            # Dual write to Postgres
+            dual_write_service = EnhancedDualWriteService()
+            assignment_data = {
+                "task_mongo_id": str(assignment.task_id),
+                "user_mongo_id": str(assignment.assignee_id),
+                "team_mongo_id": str(assignment.team_id) if assignment.team_id else None,
+                "status": assignment.status,
+                "assigned_at": assignment.assigned_at,
+                "started_at": assignment.started_at,
+                "completed_at": assignment.completed_at,
+                "created_at": assignment.created_at,
+                "updated_at": assignment.updated_at,
+                "assigned_by": str(assignment.created_by),
+                "updated_by": str(assignment.updated_by) if assignment.updated_by else None,
+            }
+
+            dual_write_success = dual_write_service.create_document(
+                collection_name="task_assignments", data=assignment_data, mongo_id=str(assignment.id)
+            )
+
+            if not dual_write_success:
+                # Log the failure but don't fail the request
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to sync task assignment {assignment.id} to Postgres")
 
         # If new assignment is to a team, log assignment
         if assignment.user_type == "team":

@@ -9,19 +9,21 @@ from .task_assignment import PostgresTaskAssignment
 from .watchlist import PostgresWatchlist, PostgresWatchlistTask
 from .user_role import PostgresUserRole
 from .audit_log import PostgresAuditLog
+from .team_creation_invite_code import PostgresTeamCreationInviteCode
 
 __all__ = [
-    'PostgresUser',
-    'PostgresTask',
-    'PostgresTaskLabel',
-    'PostgresDeferredDetails',
-    'PostgresTeam',
-    'PostgresUserTeamDetails',
-    'PostgresLabel',
-    'PostgresRole',
-    'PostgresTaskAssignment',
-    'PostgresWatchlist',
-    'PostgresWatchlistTask',
-    'PostgresUserRole',
-    'PostgresAuditLog',
+    "PostgresUser",
+    "PostgresTask",
+    "PostgresTaskLabel",
+    "PostgresDeferredDetails",
+    "PostgresTeam",
+    "PostgresUserTeamDetails",
+    "PostgresLabel",
+    "PostgresRole",
+    "PostgresTaskAssignment",
+    "PostgresWatchlist",
+    "PostgresWatchlistTask",
+    "PostgresUserRole",
+    "PostgresAuditLog",
+    "PostgresTeamCreationInviteCode",
 ]

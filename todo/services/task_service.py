@@ -46,6 +46,7 @@ import math
 from todo.models.audit_log import AuditLogModel
 from todo.repositories.audit_log_repository import AuditLogRepository
 from todo.services.task_assignment_service import TaskAssignmentService
+from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
 
 
 @dataclass
@@ -350,6 +351,36 @@ class TaskService:
         update_payload["updatedBy"] = user_id
         updated_task = TaskRepository.update(task_id, update_payload)
 
+        # Dual write to Postgres
+        if updated_task:
+            dual_write_service = EnhancedDualWriteService()
+            task_data = {
+                "displayId": updated_task.displayId,
+                "title": updated_task.title,
+                "description": updated_task.description,
+                "priority": updated_task.priority,
+                "status": updated_task.status,
+                "isAcknowledged": updated_task.isAcknowledged,
+                "isDeleted": updated_task.isDeleted,
+                "startedAt": updated_task.startedAt,
+                "dueAt": updated_task.dueAt,
+                "createdAt": updated_task.createdAt,
+                "updatedAt": updated_task.updatedAt,
+                "createdBy": str(updated_task.createdBy),
+                "updatedBy": str(updated_task.updatedBy) if updated_task.updatedBy else None,
+            }
+
+            dual_write_success = dual_write_service.update_document(
+                collection_name="tasks", mongo_id=str(updated_task.id), data=task_data
+            )
+
+            if not dual_write_success:
+                # Log the failure but don't fail the request
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to sync task update {updated_task.id} to Postgres")
+
         # Audit log for status change
         if old_status and new_status and old_status != new_status:
             AuditLogRepository.create(
@@ -629,6 +660,35 @@ class TaskService:
         try:
             created_task = TaskRepository.create(task)
 
+            # Dual write to Postgres
+            dual_write_service = EnhancedDualWriteService()
+            task_data = {
+                "displayId": created_task.displayId,
+                "title": created_task.title,
+                "description": created_task.description,
+                "priority": created_task.priority,
+                "status": created_task.status,
+                "isAcknowledged": created_task.isAcknowledged,
+                "isDeleted": created_task.isDeleted,
+                "startedAt": created_task.startedAt,
+                "dueAt": created_task.dueAt,
+                "createdAt": created_task.createdAt,
+                "updatedAt": created_task.updatedAt,
+                "createdBy": str(created_task.createdBy),
+                "updatedBy": str(created_task.updatedBy) if created_task.updatedBy else None,
+            }
+
+            dual_write_success = dual_write_service.create_document(
+                collection_name="tasks", data=task_data, mongo_id=str(created_task.id)
+            )
+
+            if not dual_write_success:
+                # Log the failure but don't fail the request
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to sync task {created_task.id} to Postgres")
+
             # Create assignee relationship if assignee is provided
             team_id = None
             if dto.assignee and dto.assignee.get("user_type") == "team":
@@ -681,6 +741,18 @@ class TaskService:
         deleted_task_model = TaskRepository.delete_by_id(task_id, user_id)
         if deleted_task_model is None:
             raise TaskNotFoundException(task_id)
+
+        # Dual write to Postgres
+        dual_write_service = EnhancedDualWriteService()
+        dual_write_success = dual_write_service.delete_document(collection_name="tasks", mongo_id=task_id)
+
+        if not dual_write_success:
+            # Log the failure but don't fail the request
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to sync task deletion {task_id} to Postgres")
+
         return None
 
     @classmethod

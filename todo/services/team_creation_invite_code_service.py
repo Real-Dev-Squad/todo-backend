@@ -10,6 +10,7 @@ from todo.dto.responses.get_team_creation_invite_codes_response import (
     TeamCreationInviteCodeListItemDTO,
 )
 from todo.utils.invite_code_utils import generate_invite_code
+from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
 
 
 class TeamCreationInviteCodeService:
@@ -25,6 +26,29 @@ class TeamCreationInviteCodeService:
         team_invite_code = TeamCreationInviteCodeModel(code=code, description=dto.description, created_by=created_by)
 
         saved_code = TeamCreationInviteCodeRepository.create(team_invite_code)
+
+        # Dual write to Postgres
+        dual_write_service = EnhancedDualWriteService()
+        invite_code_data = {
+            "code": saved_code.code,
+            "description": saved_code.description,
+            "created_by": str(saved_code.created_by),
+            "created_at": saved_code.created_at,
+            "used_at": saved_code.used_at,
+            "used_by": str(saved_code.used_by) if saved_code.used_by else None,
+            "is_used": saved_code.is_used,
+        }
+
+        dual_write_success = dual_write_service.create_document(
+            collection_name="team_creation_invite_codes", data=invite_code_data, mongo_id=str(saved_code.id)
+        )
+
+        if not dual_write_success:
+            # Log the failure but don't fail the request
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to sync team creation invite code {saved_code.id} to Postgres")
 
         AuditLogRepository.create(
             AuditLogModel(

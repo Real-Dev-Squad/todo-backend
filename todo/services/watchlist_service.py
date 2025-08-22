@@ -18,6 +18,7 @@ from todo.constants.messages import ApiErrors
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
 from todo.utils.task_validation_utils import validate_task_exists
 from bson import ObjectId
+from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
 
 
 class PaginationConfig:
@@ -90,6 +91,27 @@ class WatchlistService:
                 createdAt=datetime.now(timezone.utc),
             )
             created_watchlist = WatchlistRepository.create(watchlist_model)
+
+            # Dual write to Postgres
+            dual_write_service = EnhancedDualWriteService()
+            watchlist_data = {
+                "task_id": str(created_watchlist.taskId),
+                "user_id": str(created_watchlist.userId),
+                "created_by": str(created_watchlist.createdBy),
+                "created_at": created_watchlist.createdAt,
+                "updated_at": created_watchlist.updatedAt,
+            }
+
+            dual_write_success = dual_write_service.create_document(
+                collection_name="watchlists", data=watchlist_data, mongo_id=str(created_watchlist.id)
+            )
+
+            if not dual_write_success:
+                # Log the failure but don't fail the request
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to sync watchlist {created_watchlist.id} to Postgres")
             watchlist_dto = CreateWatchlistDTO(
                 taskId=created_watchlist.taskId,
                 userId=created_watchlist.userId,

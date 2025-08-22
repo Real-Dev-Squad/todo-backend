@@ -13,6 +13,7 @@ class CreateTeamSerializer(serializers.Serializer):
     description = serializers.CharField(max_length=500, required=False, allow_blank=True)
     member_ids = serializers.ListField(child=serializers.CharField(), required=False, default=list)
     poc_id = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    team_invite_code = serializers.CharField(max_length=20, min_length=6)
 
     def validate_poc_id(self, value):
         if not value or not value.strip():

@@ -9,6 +9,7 @@ class CreateTeamDTO(BaseModel):
     description: Optional[str] = None
     member_ids: Optional[List[str]] = None
     poc_id: Optional[str] = None
+    team_invite_code: str
 
     @validator("member_ids")
     def validate_member_ids(cls, value):

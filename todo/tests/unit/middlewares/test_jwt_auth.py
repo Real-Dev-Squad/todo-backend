@@ -9,6 +9,7 @@ from todo.middlewares.jwt_auth import (
     get_current_user_info,
 )
 from todo.constants.messages import AuthErrorMessages
+from todo.models.user import UserModel
 
 
 class JWTAuthenticationMiddlewareTests(TestCase):
@@ -38,24 +39,34 @@ class JWTAuthenticationMiddlewareTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     @patch("todo.middlewares.jwt_auth.validate_access_token")
-    def test_access_token_validation_success(self, mock_validate):
+    @patch("todo.middlewares.jwt_auth.UserRepository.get_by_id")
+    def test_access_token_validation_success(self, mock_get_user, mock_validate):
         """Test successful access token validation"""
         mock_validate.return_value = {"user_id": "123", "token_type": "access"}
+        mock_user = Mock(spec=UserModel)
+        mock_user.email_id = "test@example.com"
+        mock_get_user.return_value = mock_user
+
         self.request.COOKIES = {settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"): "valid_token"}
         self.middleware(self.request)
         self.assertEqual(self.request.user_id, "123")
+        self.assertEqual(self.request.user_email, "test@example.com")
         self.get_response.assert_called_once_with(self.request)
 
     @patch("todo.middlewares.jwt_auth.validate_access_token")
     @patch("todo.middlewares.jwt_auth.validate_refresh_token")
     @patch("todo.middlewares.jwt_auth.generate_access_token")
-    def test_refresh_token_success(self, mock_generate, mock_validate_refresh, mock_validate_access):
+    @patch("todo.middlewares.jwt_auth.UserRepository.get_by_id")
+    def test_refresh_token_success(self, mock_get_user, mock_generate, mock_validate_refresh, mock_validate_access):
         """Test successful token refresh when access token is expired"""
         from todo.exceptions.auth_exceptions import TokenExpiredError
 
         mock_validate_access.side_effect = TokenExpiredError("Token expired")
         mock_validate_refresh.return_value = {"user_id": "123", "token_type": "refresh"}
         mock_generate.return_value = "new_access_token"
+        mock_user = Mock(spec=UserModel)
+        mock_user.email_id = "test@example.com"
+        mock_get_user.return_value = mock_user
 
         self.request.COOKIES = {
             settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"): "expired_token",
@@ -63,8 +74,23 @@ class JWTAuthenticationMiddlewareTests(TestCase):
         }
         self.middleware(self.request)
         self.assertEqual(self.request.user_id, "123")
+        self.assertEqual(self.request.user_email, "test@example.com")
         self.assertEqual(self.request._new_access_token, "new_access_token")
         self.get_response.assert_called_once_with(self.request)
+
+    @patch("todo.middlewares.jwt_auth.validate_access_token")
+    @patch("todo.middlewares.jwt_auth.UserRepository.get_by_id")
+    def test_user_not_found_in_database(self, mock_get_user, mock_validate):
+        """Test authentication failure when user not found in database"""
+        mock_validate.return_value = {"user_id": "123", "token_type": "access"}
+        mock_get_user.return_value = None
+
+        self.request.COOKIES = {settings.COOKIE_SETTINGS.get("ACCESS_COOKIE_NAME"): "valid_token"}
+        response = self.middleware(self.request)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        response_data = json.loads(response.content)
+        self.assertEqual(response_data["message"], AuthErrorMessages.AUTHENTICATION_REQUIRED)
 
     def test_no_tokens_provided(self):
         """Test handling of request with no tokens"""
@@ -81,8 +107,10 @@ class AuthUtilityFunctionsTests(TestCase):
     def test_get_current_user_info_with_user_id(self):
         """Test getting user info when user ID is present"""
         self.request.user_id = "user_123"
+        self.request.user_email = "test@example.com"
         user_info = get_current_user_info(self.request)
         self.assertEqual(user_info["user_id"], "user_123")
+        self.assertEqual(user_info["email"], "test@example.com")
 
     def test_get_current_user_info_no_user_id(self):
         """Test getting user info when no user ID is present"""

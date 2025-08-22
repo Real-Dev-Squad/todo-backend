@@ -19,6 +19,13 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",") if os.getenv("ALLOWED_
 MONGODB_URI = os.getenv("MONGODB_URI")
 DB_NAME = os.getenv("DB_NAME")
 
+# Postgres Configuration
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
+POSTGRES_NAME = os.getenv("POSTGRES_NAME", "todo_postgres")
+POSTGRES_USER = os.getenv("POSTGRES_USER", "todo_user")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "todo_password")
+
 INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
@@ -27,6 +34,9 @@ INSTALLED_APPS = [
     "todo",
     "django.contrib.auth",
     "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.admin",
 ]
 
 MIDDLEWARE = [
@@ -124,7 +134,7 @@ else:
         "PRIVATE_KEY": os.getenv("PRIVATE_KEY"),
         "PUBLIC_KEY": os.getenv("PUBLIC_KEY"),
         "ACCESS_TOKEN_LIFETIME": int(os.getenv("ACCESS_LIFETIME", "3600")),
-        "REFRESH_TOKEN_LIFETIME": int(os.getenv("REFRESH_LIFETIME", "604800")),
+        "REFRESH_TOKEN_LIFETIME": int(os.getenv("REFRESH_TOKEN_LIFETIME", "604800")),
     }
 
 COOKIE_SETTINGS = {
@@ -147,12 +157,25 @@ SERVICES = {
     },
 }
 
+# Database Configuration
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": POSTGRES_NAME,
+        "USER": POSTGRES_USER,
+        "PASSWORD": POSTGRES_PASSWORD,
+        "HOST": POSTGRES_HOST,
+        "PORT": POSTGRES_PORT,
+        "OPTIONS": {
+            "sslmode": "prefer",
+        },
     }
 }
+
+# Dual-Write Configuration
+DUAL_WRITE_ENABLED = os.getenv("DUAL_WRITE_ENABLED", "True").lower() == "true"
+DUAL_WRITE_RETRY_ATTEMPTS = int(os.getenv("DUAL_WRITE_RETRY_ATTEMPTS", "3"))
+DUAL_WRITE_RETRY_DELAY = int(os.getenv("DUAL_WRITE_RETRY_DELAY", "5"))  # seconds
 
 PUBLIC_PATHS = [
     "/favicon.ico",

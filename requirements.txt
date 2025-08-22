@@ -10,7 +10,7 @@ filelock==3.16.1
 gunicorn==23.0.0
 identify==2.6.1
 nodeenv==1.9.1
-platformdirs==4.3.6
+platformdirs==4.3.9
 pydantic==2.10.1
 pydantic_core==2.27.1
 pymongo==4.10.1
@@ -28,3 +28,4 @@ email-validator==2.2.0
 testcontainers[mongodb]==4.10.0
 drf-spectacular==0.28.0
 debugpy==1.8.14
+psycopg2-binary==2.9.9

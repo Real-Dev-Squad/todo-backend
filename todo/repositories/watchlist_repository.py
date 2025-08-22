@@ -69,6 +69,26 @@ class WatchlistRepository(MongoRepository):
                         },
                         {"$unwind": "$task"},
                         {
+                            "$addFields": {
+                                "lastAdded": {"$ifNull": [{"$toDate": "$updatedAt"}, {"$toDate": "$createdAt"}]},
+                                "lastActivity": {
+                                    "$ifNull": [{"$toDate": "$task.updatedAt"}, {"$toDate": "$task.createdAt"}]
+                                },
+                            }
+                        },
+                        {
+                            "$addFields": {
+                                "lastEvent": {
+                                    "$cond": {
+                                        "if": {"$gt": ["$lastAdded", "$lastActivity"]},
+                                        "then": "$lastAdded",
+                                        "else": "$lastActivity",
+                                    }
+                                }
+                            }
+                        },
+                        {"$sort": {"lastEvent": -1}},
+                        {
                             "$lookup": {
                                 "from": "users",
                                 "let": {"createdById": "$task.createdBy"},

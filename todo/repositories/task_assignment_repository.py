@@ -6,8 +6,7 @@ from todo.exceptions.task_exceptions import TaskNotFoundException
 from todo.models.task_assignment import TaskAssignmentModel
 from todo.repositories.common.mongo_repository import MongoRepository
 from todo.models.common.pyobjectid import PyObjectId
-
-
+from todo.constants.task import TaskStatus
 class TaskAssignmentRepository(MongoRepository):
     collection_name = TaskAssignmentModel.collection_name
 
@@ -224,3 +223,61 @@ class TaskAssignmentRepository(MongoRepository):
             return result.modified_count > 0
         except Exception:
             return False
+
+    @classmethod
+    def reassign_tasks_from_user_to_team(cls, user_id: str, team_id: str, removed_by_user_id: str):
+        """
+        Reassign all tasks of user to team
+        """
+        collection = cls.get_collection()
+        now = datetime.now(timezone.utc)
+        pipeline = [
+            {
+                "$match": {
+                    "team_id": team_id,
+                    "assignee_id": user_id,
+                    "user_type": "user",
+                    "is_active": True
+                    }
+            },
+            {"$addFields": {"task_id_obj": { "$toObjectId": "$task_id" }}},
+            {"$lookup": {
+                "from": "tasks",
+                "localField": "task_id_obj",
+                "foreignField": "_id",
+                "as": "task_info"
+            }},
+            { "$unwind": "$task_info" },
+            { "$match": { "task_info.status": { "$ne": TaskStatus.DONE.value } } }
+        ]
+        user_task_assignments = list(collection.aggregate(pipeline))
+        if not user_task_assignments:
+            return 0
+        
+        # Deactivate current assignment (try using both ObjectId and string)
+        collection.update_many(
+            {"assignee_id": ObjectId(user_id), "team_id": ObjectId(team_id), "is_active": True },
+            {"$set": {"is_active": False, "updated_by": ObjectId(removed_by_user_id), "updated_at": now}})
+        
+        collection.update_many(
+            {"assignee_id": user_id, "team_id": team_id, "is_active": True},
+            {"$set": {"is_active": False, "updated_by": ObjectId(removed_by_user_id), "updated_at": now}}
+        )
+
+        new_assignments = []
+        for task in user_task_assignments:
+            new_assignments.append(TaskAssignmentModel(
+                _id=PyObjectId(),
+                task_id=task["task_id_obj"],
+                assignee_id=PyObjectId(team_id),
+                user_type="team",
+                created_by=PyObjectId(removed_by_user_id),
+                updated_by=None,
+                team_id=PyObjectId(team_id)
+            ).model_dump(mode="json", by_alias=True, exclude_none=True))
+        if new_assignments:
+            collection.insert_many(new_assignments)
+        return len(new_assignments)
+
+        
+            

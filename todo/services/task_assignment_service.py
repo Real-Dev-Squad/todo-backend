@@ -14,7 +14,6 @@ from todo.dto.task_assignment_dto import TaskAssignmentDTO
 from todo.models.audit_log import AuditLogModel
 from todo.repositories.audit_log_repository import AuditLogRepository
 
-
 class TaskAssignmentService:
     @classmethod
     def create_task_assignment(cls, dto: CreateTaskAssignmentDTO, user_id: str) -> CreateTaskAssignmentResponse:
@@ -149,3 +148,18 @@ class TaskAssignmentService:
         Delete task assignment by task ID.
         """
         return TaskAssignmentRepository.delete_assignment(task_id, user_id)
+
+    @classmethod
+    def reassign_tasks_from_user_to_team(cls, user_id: str, team_id: str, user_type: str, removed_by_user_id: str):
+        """
+        Reassign all tasks of user to team
+        """
+        assignment = TaskAssignmentRepository.reassign_tasks_from_user_to_team(user_id, team_id, removed_by_user_id)
+        if assignment != 0:
+            AuditLogRepository.create(AuditLogModel(
+                team_id=PyObjectId(team_id),
+                performed_by = PyObjectId(removed_by_user_id),
+                task_count = str(assignment),
+                action="tasks_reassigned_to_team"
+            ))
+        

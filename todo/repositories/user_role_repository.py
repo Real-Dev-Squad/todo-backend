@@ -6,6 +6,7 @@ from bson import ObjectId
 from todo.models.user_role import UserRoleModel
 from todo.repositories.common.mongo_repository import MongoRepository
 from todo.constants.role import RoleScope, RoleName
+from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,27 @@ class UserRoleRepository(MongoRepository):
         user_role_dict = user_role.model_dump(mode="json", by_alias=True, exclude_none=True)
         result = collection.insert_one(user_role_dict)
         user_role.id = result.inserted_id
+
+        dual_write_service = EnhancedDualWriteService()
+        user_role_data = {
+            "user_id": user_role.user_id,
+            "role_name": user_role.role_name.value if hasattr(user_role.role_name, "value") else user_role.role_name,
+            "scope": user_role.scope.value if hasattr(user_role.scope, "value") else user_role.scope,
+            "team_id": user_role.team_id,
+            "is_active": user_role.is_active,
+            "created_at": user_role.created_at,
+            "created_by": user_role.created_by,
+        }
+
+        dual_write_success = dual_write_service.create_document(
+            collection_name="user_roles", data=user_role_data, mongo_id=str(user_role.id)
+        )
+
+        if not dual_write_success:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to sync user role {user_role.id} to Postgres")
+
         return user_role
 
     @classmethod

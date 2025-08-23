@@ -407,15 +407,14 @@ class DualWriteService:
         }
 
     def _transform_user_role_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Transform user role data for Postgres."""
         return {
-            "user_mongo_id": str(data.get("user_id", "")),
-            "role_mongo_id": str(data.get("role_id", "")),
-            "team_mongo_id": str(data.get("team_id", "")) if data.get("team_id") else None,
-            "created_by": str(data.get("created_by", "")),
-            "updated_by": str(data.get("updated_by", "")) if data.get("updated_by") else None,
+            "user_id": str(data.get("user_id", "")),
+            "role_name": data.get("role_name"),
+            "scope": data.get("scope"),
+            "team_id": str(data.get("team_id", "")) if data.get("team_id") else None,
+            "is_active": data.get("is_active", True),
             "created_at": data.get("created_at"),
-            "updated_at": data.get("updated_at"),
+            "created_by": str(data.get("created_by", "")),
         }
 
     def _transform_audit_log_data(self, data: Dict[str, Any]) -> Dict[str, Any]:

@@ -324,9 +324,9 @@ class DualWriteService:
     def _transform_watchlist_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Transform watchlist data for Postgres."""
         return {
-            "name": data.get("name"),
-            "description": data.get("description"),
-            "user_mongo_id": str(data.get("user_id", "")),
+            "task_id": str(data.get("task_id", "")),
+            "user_id": str(data.get("user_id", "")),
+            "is_active": data.get("is_active", True),
             "created_by": str(data.get("created_by", "")),
             "updated_by": str(data.get("updated_by", "")) if data.get("updated_by") else None,
             "created_at": data.get("created_at"),

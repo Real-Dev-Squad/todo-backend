@@ -6,7 +6,7 @@ from .team import PostgresTeam, PostgresUserTeamDetails
 from .label import PostgresLabel
 from .role import PostgresRole
 from .task_assignment import PostgresTaskAssignment
-from .watchlist import PostgresWatchlist, PostgresWatchlistTask
+from .watchlist import PostgresWatchlist
 from .user_role import PostgresUserRole
 from .audit_log import PostgresAuditLog
 from .team_creation_invite_code import PostgresTeamCreationInviteCode
@@ -22,7 +22,6 @@ __all__ = [
     "PostgresRole",
     "PostgresTaskAssignment",
     "PostgresWatchlist",
-    "PostgresWatchlistTask",
     "PostgresUserRole",
     "PostgresAuditLog",
     "PostgresTeamCreationInviteCode",

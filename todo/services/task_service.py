@@ -47,6 +47,7 @@ from todo.models.audit_log import AuditLogModel
 from todo.repositories.audit_log_repository import AuditLogRepository
 from todo.services.task_assignment_service import TaskAssignmentService
 from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
+from todo.models.postgres import PostgresDeferredDetails, PostgresTask
 
 
 @dataclass
@@ -465,6 +466,7 @@ class TaskService:
             and current_task.deferredDetails
         ):
             update_payload["deferredDetails"] = None
+            cls._remove_deferred_details_from_postgres(task_id)
 
         if validated_data.get("status") == TaskStatus.DEFERRED.value:
             update_payload["status"] = current_task.status
@@ -676,6 +678,28 @@ class TaskService:
         if not updated_task:
             raise TaskNotFoundException(task_id)
 
+        try:
+            postgres_task = PostgresTask.objects.get(mongo_id=task_id)
+            
+            deferred_details_data = {
+                "task": postgres_task,
+                "deferred_at": deferred_details.deferredAt,
+                "deferred_till": deferred_details.deferredTill,
+                "deferred_by": str(deferred_details.deferredBy),
+            }
+            
+            PostgresDeferredDetails.objects.update_or_create(
+                task=postgres_task,
+                defaults=deferred_details_data
+            )
+            
+        except PostgresTask.DoesNotExist:
+            pass
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to sync deferred details to PostgreSQL for task {task_id}: {str(e)}")
+
         return cls.prepare_task_dto(updated_task, user_id)
 
     @classmethod
@@ -824,3 +848,17 @@ class TaskService:
 
         task_dtos = [cls.prepare_task_dto(task, user_id) for task in tasks]
         return GetTasksResponse(tasks=task_dtos, links=None)
+
+    @classmethod
+    def _remove_deferred_details_from_postgres(cls, task_id: str) -> None:
+        try:
+            postgres_task = PostgresTask.objects.get(mongo_id=task_id)
+            
+            PostgresDeferredDetails.objects.filter(task=postgres_task).delete()
+            
+        except PostgresTask.DoesNotExist:
+            pass
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to remove deferred details from PostgreSQL for task {task_id}: {str(e)}")

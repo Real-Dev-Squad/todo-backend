@@ -15,7 +15,7 @@ class PostgresWatchlist(models.Model):
     task_id = models.CharField(max_length=24)  # MongoDB ObjectId as string
     user_id = models.CharField(max_length=24)  # MongoDB ObjectId as string
     is_active = models.BooleanField(default=True)
-    
+
     # Audit fields
     created_by = models.CharField(max_length=24)  # MongoDB ObjectId as string
     created_at = models.DateTimeField(default=timezone.now)

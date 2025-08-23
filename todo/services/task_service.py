@@ -680,23 +680,21 @@ class TaskService:
 
         try:
             postgres_task = PostgresTask.objects.get(mongo_id=task_id)
-            
+
             deferred_details_data = {
                 "task": postgres_task,
                 "deferred_at": deferred_details.deferredAt,
                 "deferred_till": deferred_details.deferredTill,
                 "deferred_by": str(deferred_details.deferredBy),
             }
-            
-            PostgresDeferredDetails.objects.update_or_create(
-                task=postgres_task,
-                defaults=deferred_details_data
-            )
-            
+
+            PostgresDeferredDetails.objects.update_or_create(task=postgres_task, defaults=deferred_details_data)
+
         except PostgresTask.DoesNotExist:
             pass
         except Exception as e:
             import logging
+
             logger = logging.getLogger(__name__)
             logger.warning(f"Failed to sync deferred details to PostgreSQL for task {task_id}: {str(e)}")
 
@@ -853,12 +851,13 @@ class TaskService:
     def _remove_deferred_details_from_postgres(cls, task_id: str) -> None:
         try:
             postgres_task = PostgresTask.objects.get(mongo_id=task_id)
-            
+
             PostgresDeferredDetails.objects.filter(task=postgres_task).delete()
-            
+
         except PostgresTask.DoesNotExist:
             pass
         except Exception as e:
             import logging
+
             logger = logging.getLogger(__name__)
             logger.warning(f"Failed to remove deferred details from PostgreSQL for task {task_id}: {str(e)}")

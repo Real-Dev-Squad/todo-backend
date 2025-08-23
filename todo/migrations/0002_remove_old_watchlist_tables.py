@@ -4,17 +4,16 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('todo', '0001_initial_postgres_models'),
+        ("todo", "0001_initial_postgres_models"),
     ]
 
     operations = [
         # Remove the old watchlist tables
         migrations.DeleteModel(
-            name='PostgresWatchlistTask',
+            name="PostgresWatchlistTask",
         ),
         migrations.DeleteModel(
-            name='PostgresWatchlist',
+            name="PostgresWatchlist",
         ),
     ]

@@ -419,17 +419,21 @@ class DualWriteService:
         }
 
     def _transform_audit_log_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Transform audit log data for Postgres."""
         return {
+            "task_id": str(data.get("task_id", "")) if data.get("task_id") else None,
+            "team_id": str(data.get("team_id", "")) if data.get("team_id") else None,
+            "previous_executor_id": str(data.get("previous_executor_id", ""))
+            if data.get("previous_executor_id")
+            else None,
+            "new_executor_id": str(data.get("new_executor_id", "")) if data.get("new_executor_id") else None,
+            "spoc_id": str(data.get("spoc_id", "")) if data.get("spoc_id") else None,
             "action": data.get("action"),
-            "collection_name": data.get("collection_name"),
-            "document_id": str(data.get("document_id", "")),
-            "user_mongo_id": str(data.get("user_id", "")) if data.get("user_id") else None,
-            "old_values": data.get("old_values"),
-            "new_values": data.get("new_values"),
-            "ip_address": data.get("ip_address"),
-            "user_agent": data.get("user_agent"),
             "timestamp": data.get("timestamp"),
+            "status_from": data.get("status_from"),
+            "status_to": data.get("status_to"),
+            "assignee_from": str(data.get("assignee_from", "")) if data.get("assignee_from") else None,
+            "assignee_to": str(data.get("assignee_to", "")) if data.get("assignee_to") else None,
+            "performed_by": str(data.get("performed_by", "")) if data.get("performed_by") else None,
         }
 
     def _transform_team_creation_invite_code_data(self, data: Dict[str, Any]) -> Dict[str, Any]:

@@ -367,7 +367,7 @@ class TaskService:
                 "updatedAt": updated_task.updatedAt,
                 "createdBy": str(updated_task.createdBy),
                 "updatedBy": str(updated_task.updatedBy) if updated_task.updatedBy else None,
-                "labels": updated_task.labels if hasattr(updated_task, 'labels') else [],
+                "labels": updated_task.labels if hasattr(updated_task, "labels") else [],
             }
 
             dual_write_success = dual_write_service.update_document(
@@ -494,7 +494,7 @@ class TaskService:
                 "updatedAt": updated_task.updatedAt,
                 "createdBy": str(updated_task.createdBy),
                 "updatedBy": str(updated_task.updatedBy) if updated_task.updatedBy else None,
-                "labels": updated_task.labels if hasattr(updated_task, 'labels') else [],
+                "labels": updated_task.labels if hasattr(updated_task, "labels") else [],
             }
 
             dual_write_success = dual_write_service.update_document(
@@ -503,6 +503,7 @@ class TaskService:
 
             if not dual_write_success:
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Failed to sync task update {updated_task.id} to Postgres")
 
@@ -602,7 +603,7 @@ class TaskService:
                 "updatedAt": updated_task.updatedAt,
                 "createdBy": str(updated_task.createdBy),
                 "updatedBy": str(updated_task.updatedBy) if updated_task.updatedBy else None,
-                "labels": updated_task.labels if hasattr(updated_task, 'labels') else [],
+                "labels": updated_task.labels if hasattr(updated_task, "labels") else [],
             }
 
             dual_write_success = dual_write_service.update_document(
@@ -611,6 +612,7 @@ class TaskService:
 
             if not dual_write_success:
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Failed to sync task update {updated_task.id} to Postgres")
 
@@ -730,7 +732,7 @@ class TaskService:
                 "updatedAt": created_task.updatedAt,
                 "createdBy": str(created_task.createdBy),
                 "updatedBy": str(created_task.updatedBy) if created_task.updatedBy else None,
-                "labels": created_task.labels if hasattr(created_task, 'labels') else [],
+                "labels": created_task.labels if hasattr(created_task, "labels") else [],
             }
 
             dual_write_success = dual_write_service.create_document(

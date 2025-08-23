@@ -1,22 +1,18 @@
 import logging
-from typing import Any, Dict, Optional, Union, List
-from datetime import datetime
+from typing import Any, Dict, List
 from django.db import transaction
 from django.utils import timezone
-from django.core.exceptions import ValidationError
 
 from todo.models.postgres import (
     PostgresUser,
     PostgresTask,
     PostgresTaskLabel,
-    PostgresDeferredDetails,
     PostgresTeam,
     PostgresUserTeamDetails,
     PostgresLabel,
     PostgresRole,
     PostgresTaskAssignment,
     PostgresWatchlist,
-    PostgresWatchlistTask,
     PostgresUserRole,
     PostgresAuditLog,
     PostgresTeamCreationInviteCode,
@@ -76,13 +72,13 @@ class DualWriteService:
             with transaction.atomic():
                 # Extract labels before creating the task
                 labels = postgres_data.pop("labels", []) if collection_name == "tasks" else []
-                
+
                 postgres_instance = postgres_model.objects.create(**postgres_data)
-                
+
                 # Handle labels for tasks
                 if collection_name == "tasks" and labels:
                     self._sync_task_labels(postgres_instance, labels)
-                
+
                 logger.info(f"Successfully synced {collection_name}:{mongo_id} to Postgres")
                 return True
 
@@ -117,7 +113,7 @@ class DualWriteService:
             with transaction.atomic():
                 # Extract labels before updating the task
                 labels = postgres_data.pop("labels", []) if collection_name == "tasks" else []
-                
+
                 postgres_instance = postgres_model.objects.get(mongo_id=mongo_id)
                 for field, value in postgres_data.items():
                     if hasattr(postgres_instance, field):
@@ -125,7 +121,7 @@ class DualWriteService:
                 postgres_instance.sync_status = "SYNCED"
                 postgres_instance.sync_error = None
                 postgres_instance.save()
-                
+
                 # Handle labels for tasks
                 if collection_name == "tasks":
                     self._sync_task_labels(postgres_instance, labels)
@@ -239,14 +235,14 @@ class DualWriteService:
         """Transform task data for Postgres."""
         # Handle priority enum conversion
         priority = data.get("priority", 3)
-        if hasattr(priority, 'value'):  # If it's an enum, get its value
+        if hasattr(priority, "value"):  # If it's an enum, get its value
             priority = priority.value
-        
+
         # Handle status enum conversion
         status = data.get("status", "TODO")
-        if hasattr(status, 'value'):  # If it's an enum, get its value
+        if hasattr(status, "value"):  # If it's an enum, get its value
             status = status.value
-        
+
         return {
             "display_id": data.get("displayId"),
             "title": data.get("title"),
@@ -340,7 +336,7 @@ class DualWriteService:
     def _sync_task_labels(self, postgres_task, labels: List[str]):
         """
         Sync task labels to PostgresTaskLabel junction table.
-        
+
         Args:
             postgres_task: PostgresTask instance
             labels: List of label MongoDB ObjectIds as strings
@@ -348,19 +344,54 @@ class DualWriteService:
         try:
             # Clear existing labels for this task
             PostgresTaskLabel.objects.filter(task=postgres_task).delete()
-            
+
             # Add new labels
             for label_mongo_id in labels:
                 if label_mongo_id:  # Skip empty labels
-                    PostgresTaskLabel.objects.create(
-                        task=postgres_task,
-                        label_mongo_id=str(label_mongo_id)
-                    )
-            
+                    PostgresTaskLabel.objects.create(task=postgres_task, label_mongo_id=str(label_mongo_id))
+
             logger.info(f"Successfully synced {len(labels)} labels for task {postgres_task.mongo_id}")
-            
+
         except Exception as e:
             logger.error(f"Failed to sync labels for task {postgres_task.mongo_id}: {str(e)}")
+            # Don't fail the entire operation, just log the error
+
+    def _sync_task_assignment_update(self, task_mongo_id: str, new_assignment_data: Dict[str, Any]):
+        """
+        Handle task assignment updates by deactivating old records and creating new ones.
+        This mirrors MongoDB's approach of soft deletes.
+
+        Args:
+            task_mongo_id: MongoDB ObjectId of the task as string
+            new_assignment_data: Data for the new assignment
+        """
+        try:
+            # Deactivate all existing assignments for this task
+            PostgresTaskAssignment.objects.filter(task_mongo_id=task_mongo_id).update(
+                status="REJECTED",  # Mark as rejected instead of deleting
+                updated_at=timezone.now(),
+            )
+
+            # Create new assignment
+            PostgresTaskAssignment.objects.create(
+                mongo_id=new_assignment_data.get("mongo_id"),
+                task_mongo_id=new_assignment_data.get("task_mongo_id"),
+                user_mongo_id=new_assignment_data.get("user_mongo_id"),
+                team_mongo_id=new_assignment_data.get("team_mongo_id"),
+                status=new_assignment_data.get("status", "ASSIGNED"),
+                assigned_at=new_assignment_data.get("assigned_at"),
+                started_at=new_assignment_data.get("started_at"),
+                completed_at=new_assignment_data.get("completed_at"),
+                created_at=new_assignment_data.get("created_at"),
+                updated_at=new_assignment_data.get("updated_at"),
+                assigned_by=new_assignment_data.get("assigned_by"),
+                updated_by=new_assignment_data.get("updated_by"),
+            )
+
+            logger.info(f"Successfully synced task assignment update for task {task_mongo_id}")
+
+        except Exception as e:
+            logger.error(f"Failed to sync task assignment update for task {task_mongo_id}: {str(e)}")
             # Don't fail the entire operation, just log the error
 
     def _transform_user_team_details_data(self, data: Dict[str, Any]) -> Dict[str, Any]:

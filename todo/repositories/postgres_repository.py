@@ -1,21 +1,17 @@
 from typing import Any, Dict, List, Optional, Type
 from django.db import models
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Q
 
 from todo.repositories.abstract_repository import AbstractRepository
 from todo.models.postgres import (
     PostgresUser,
     PostgresTask,
-    PostgresTaskLabel,
-    PostgresDeferredDetails,
     PostgresTeam,
     PostgresUserTeamDetails,
     PostgresLabel,
     PostgresRole,
     PostgresTaskAssignment,
     PostgresWatchlist,
-    PostgresWatchlistTask,
     PostgresUserRole,
     PostgresAuditLog,
 )

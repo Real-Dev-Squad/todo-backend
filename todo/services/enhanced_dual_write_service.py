@@ -1,9 +1,6 @@
 import logging
-from typing import Any, Dict, Optional, Union
-from datetime import datetime
+from typing import Any, Dict, Optional
 from django.conf import settings
-from django.db import transaction
-from django.utils import timezone
 
 from todo.services.dual_write_service import DualWriteService
 

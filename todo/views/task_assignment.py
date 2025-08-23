@@ -241,7 +241,9 @@ class TaskAssignmentDetailView(APIView):
 
             # Dual write for executor update
             from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
+
             assignment_data = {
+                "mongo_id": str(updated_assignment.id),
                 "task_mongo_id": str(updated_assignment.task_id),
                 "user_mongo_id": str(updated_assignment.assignee_id),
                 "team_mongo_id": str(updated_assignment.team_id) if updated_assignment.team_id else None,
@@ -256,16 +258,7 @@ class TaskAssignmentDetailView(APIView):
             }
 
             dual_write_service = EnhancedDualWriteService()
-            dual_write_success = dual_write_service.update_document(
-                collection_name="task_assignments", 
-                mongo_id=str(updated_assignment.id), 
-                data=assignment_data
-            )
-
-            if not dual_write_success:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Failed to sync executor update {updated_assignment.id} to Postgres")
+            dual_write_service._sync_task_assignment_update(str(updated_assignment.task_id), assignment_data)
 
         except Exception as e:
             print(f"DEBUG: Exception in update_executor: {str(e)}")

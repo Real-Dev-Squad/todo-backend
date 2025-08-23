@@ -16,14 +16,14 @@ class UserTeamDetailsRepository(MongoRepository):
             team_id_obj = ObjectId(team_id)
         except Exception:
             team_id_obj = team_id
-        
+
         queries = [
             {"user_id": user_id_obj, "team_id": team_id_obj},
             {"user_id": user_id, "team_id": team_id_obj},
             {"user_id": user_id_obj, "team_id": team_id},
             {"user_id": user_id, "team_id": team_id},
         ]
-        
+
         for query in queries:
             result = collection.find_one(query)
             if result:

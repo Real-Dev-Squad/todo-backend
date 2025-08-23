@@ -62,6 +62,7 @@ class TaskAssignmentService:
 
             dual_write_service = EnhancedDualWriteService()
             assignment_data = {
+                "mongo_id": str(assignment.id),
                 "task_mongo_id": str(assignment.task_id),
                 "user_mongo_id": str(assignment.assignee_id),
                 "team_mongo_id": str(assignment.team_id) if assignment.team_id else None,
@@ -75,15 +76,8 @@ class TaskAssignmentService:
                 "updated_by": str(assignment.updated_by) if assignment.updated_by else None,
             }
 
-            dual_write_success = dual_write_service.update_document(
-                collection_name="task_assignments", mongo_id=str(assignment.id), data=assignment_data
-            )
-
-            if not dual_write_success:
-                import logging
-
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Failed to sync task assignment update {assignment.id} to Postgres")
+            # Use special method for task assignment updates
+            dual_write_service._sync_task_assignment_update(str(assignment.task_id), assignment_data)
         else:
             # Create new assignment
             task_assignment = TaskAssignmentModel(
@@ -98,6 +92,7 @@ class TaskAssignmentService:
 
             dual_write_service = EnhancedDualWriteService()
             assignment_data = {
+                "mongo_id": str(assignment.id),
                 "task_mongo_id": str(assignment.task_id),
                 "user_mongo_id": str(assignment.assignee_id),
                 "team_mongo_id": str(assignment.team_id) if assignment.team_id else None,
@@ -197,9 +192,9 @@ class TaskAssignmentService:
     @classmethod
     def delete_task_assignment(cls, task_id: str, user_id: str) -> bool:
         assignment = TaskAssignmentRepository.get_by_task_id(task_id)
-        
+
         success = TaskAssignmentRepository.delete_assignment(task_id, user_id)
-        
+
         if success and assignment:
             dual_write_service = EnhancedDualWriteService()
             dual_write_success = dual_write_service.delete_document(
@@ -211,5 +206,5 @@ class TaskAssignmentService:
 
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Failed to sync task assignment deletion {assignment.id} to Postgres")
-        
+
         return success

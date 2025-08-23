@@ -62,13 +62,14 @@ class TeamService:
                 }
 
                 dual_write_success = dual_write_service.update_document(
-                    collection_name="team_creation_invite_codes", 
-                    mongo_id=str(code_data.get("_id")), 
-                    data=invite_code_data
+                    collection_name="team_creation_invite_codes",
+                    mongo_id=str(code_data.get("_id")),
+                    data=invite_code_data,
                 )
 
                 if not dual_write_success:
                     import logging
+
                     logger = logging.getLogger(__name__)
                     logger.warning(f"Failed to sync invite code consumption {code_data.get('_id')} to Postgres")
 
@@ -593,7 +594,7 @@ class TeamService:
         from todo.repositories.user_team_details_repository import UserTeamDetailsRepository
 
         user_team_details = UserTeamDetailsRepository.get_by_user_and_team(user_id, team_id)
-        
+
         success = UserTeamDetailsRepository.remove_member_from_team(user_id=user_id, team_id=team_id)
         if not success:
             raise cls.TeamOrUserNotFound()

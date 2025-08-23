@@ -351,7 +351,6 @@ class TaskService:
         update_payload["updatedBy"] = user_id
         updated_task = TaskRepository.update(task_id, update_payload)
 
-        # Dual write to Postgres
         if updated_task:
             dual_write_service = EnhancedDualWriteService()
             task_data = {
@@ -368,6 +367,7 @@ class TaskService:
                 "updatedAt": updated_task.updatedAt,
                 "createdBy": str(updated_task.createdBy),
                 "updatedBy": str(updated_task.updatedBy) if updated_task.updatedBy else None,
+                "labels": updated_task.labels if hasattr(updated_task, 'labels') else [],
             }
 
             dual_write_success = dual_write_service.update_document(
@@ -375,7 +375,6 @@ class TaskService:
             )
 
             if not dual_write_success:
-                # Log the failure but don't fail the request
                 import logging
 
                 logger = logging.getLogger(__name__)
@@ -479,6 +478,34 @@ class TaskService:
         else:
             updated_task = current_task
 
+        if updated_task:
+            dual_write_service = EnhancedDualWriteService()
+            task_data = {
+                "displayId": updated_task.displayId,
+                "title": updated_task.title,
+                "description": updated_task.description,
+                "priority": updated_task.priority,
+                "status": updated_task.status,
+                "isAcknowledged": updated_task.isAcknowledged,
+                "isDeleted": updated_task.isDeleted,
+                "startedAt": updated_task.startedAt,
+                "dueAt": updated_task.dueAt,
+                "createdAt": updated_task.createdAt,
+                "updatedAt": updated_task.updatedAt,
+                "createdBy": str(updated_task.createdBy),
+                "updatedBy": str(updated_task.updatedBy) if updated_task.updatedBy else None,
+                "labels": updated_task.labels if hasattr(updated_task, 'labels') else [],
+            }
+
+            dual_write_success = dual_write_service.update_document(
+                collection_name="tasks", mongo_id=str(updated_task.id), data=task_data
+            )
+
+            if not dual_write_success:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to sync task update {updated_task.id} to Postgres")
+
         # Handle assignee updates
         if validated_data.get("assignee"):
             TaskAssignmentRepository.update_assignment(
@@ -558,6 +585,34 @@ class TaskService:
                 raise TaskNotFoundException(task_id)
         else:
             updated_task = current_task
+
+        if updated_task:
+            dual_write_service = EnhancedDualWriteService()
+            task_data = {
+                "displayId": updated_task.displayId,
+                "title": updated_task.title,
+                "description": updated_task.description,
+                "priority": updated_task.priority,
+                "status": updated_task.status,
+                "isAcknowledged": updated_task.isAcknowledged,
+                "isDeleted": updated_task.isDeleted,
+                "startedAt": updated_task.startedAt,
+                "dueAt": updated_task.dueAt,
+                "createdAt": updated_task.createdAt,
+                "updatedAt": updated_task.updatedAt,
+                "createdBy": str(updated_task.createdBy),
+                "updatedBy": str(updated_task.updatedBy) if updated_task.updatedBy else None,
+                "labels": updated_task.labels if hasattr(updated_task, 'labels') else [],
+            }
+
+            dual_write_success = dual_write_service.update_document(
+                collection_name="tasks", mongo_id=str(updated_task.id), data=task_data
+            )
+
+            if not dual_write_success:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to sync task update {updated_task.id} to Postgres")
 
         # Handle assignee updates
         if dto.assignee:
@@ -660,7 +715,6 @@ class TaskService:
         try:
             created_task = TaskRepository.create(task)
 
-            # Dual write to Postgres
             dual_write_service = EnhancedDualWriteService()
             task_data = {
                 "displayId": created_task.displayId,
@@ -676,6 +730,7 @@ class TaskService:
                 "updatedAt": created_task.updatedAt,
                 "createdBy": str(created_task.createdBy),
                 "updatedBy": str(created_task.updatedBy) if created_task.updatedBy else None,
+                "labels": created_task.labels if hasattr(created_task, 'labels') else [],
             }
 
             dual_write_success = dual_write_service.create_document(
@@ -683,7 +738,6 @@ class TaskService:
             )
 
             if not dual_write_success:
-                # Log the failure but don't fail the request
                 import logging
 
                 logger = logging.getLogger(__name__)
@@ -742,12 +796,10 @@ class TaskService:
         if deleted_task_model is None:
             raise TaskNotFoundException(task_id)
 
-        # Dual write to Postgres
         dual_write_service = EnhancedDualWriteService()
         dual_write_success = dual_write_service.delete_document(collection_name="tasks", mongo_id=task_id)
 
         if not dual_write_success:
-            # Log the failure but don't fail the request
             import logging
 
             logger = logging.getLogger(__name__)

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, List
 from datetime import datetime
 from django.db import transaction
 from django.utils import timezone
@@ -74,7 +74,15 @@ class DualWriteService:
 
             # Write to Postgres
             with transaction.atomic():
+                # Extract labels before creating the task
+                labels = postgres_data.pop("labels", []) if collection_name == "tasks" else []
+                
                 postgres_instance = postgres_model.objects.create(**postgres_data)
+                
+                # Handle labels for tasks
+                if collection_name == "tasks" and labels:
+                    self._sync_task_labels(postgres_instance, labels)
+                
                 logger.info(f"Successfully synced {collection_name}:{mongo_id} to Postgres")
                 return True
 
@@ -107,6 +115,9 @@ class DualWriteService:
 
             # Update in Postgres
             with transaction.atomic():
+                # Extract labels before updating the task
+                labels = postgres_data.pop("labels", []) if collection_name == "tasks" else []
+                
                 postgres_instance = postgres_model.objects.get(mongo_id=mongo_id)
                 for field, value in postgres_data.items():
                     if hasattr(postgres_instance, field):
@@ -114,6 +125,10 @@ class DualWriteService:
                 postgres_instance.sync_status = "SYNCED"
                 postgres_instance.sync_error = None
                 postgres_instance.save()
+                
+                # Handle labels for tasks
+                if collection_name == "tasks":
+                    self._sync_task_labels(postgres_instance, labels)
 
                 logger.info(f"Successfully updated {collection_name}:{mongo_id} in Postgres")
                 return True
@@ -222,12 +237,22 @@ class DualWriteService:
 
     def _transform_task_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Transform task data for Postgres."""
+        # Handle priority enum conversion
+        priority = data.get("priority", 3)
+        if hasattr(priority, 'value'):  # If it's an enum, get its value
+            priority = priority.value
+        
+        # Handle status enum conversion
+        status = data.get("status", "TODO")
+        if hasattr(status, 'value'):  # If it's an enum, get its value
+            status = status.value
+        
         return {
             "display_id": data.get("displayId"),
             "title": data.get("title"),
             "description": data.get("description"),
-            "priority": data.get("priority", "LOW"),
-            "status": data.get("status", "TODO"),
+            "priority": priority,  # Store as integer like MongoDB
+            "status": status,  # Store as string value like MongoDB
             "is_acknowledged": data.get("isAcknowledged", False),
             "is_deleted": data.get("isDeleted", False),
             "started_at": data.get("startedAt"),
@@ -236,6 +261,7 @@ class DualWriteService:
             "updated_at": data.get("updatedAt"),
             "created_by": str(data.get("createdBy", "")),
             "updated_by": str(data.get("updatedBy", "")) if data.get("updatedBy") else None,
+            "labels": data.get("labels", []),  # Include labels for processing
         }
 
     def _transform_team_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -286,9 +312,9 @@ class DualWriteService:
     def _transform_task_assignment_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Transform task assignment data for Postgres."""
         return {
-            "task_mongo_id": str(data.get("task_id", "")),
-            "user_mongo_id": str(data.get("user_id", "")),
-            "team_mongo_id": str(data.get("team_id", "")) if data.get("team_id") else None,
+            "task_mongo_id": str(data.get("task_mongo_id", "")),
+            "user_mongo_id": str(data.get("user_mongo_id", "")),
+            "team_mongo_id": str(data.get("team_mongo_id", "")) if data.get("team_mongo_id") else None,
             "status": data.get("status", "ASSIGNED"),
             "assigned_at": data.get("assigned_at"),
             "started_at": data.get("started_at"),
@@ -310,6 +336,32 @@ class DualWriteService:
             "created_at": data.get("created_at"),
             "updated_at": data.get("updated_at"),
         }
+
+    def _sync_task_labels(self, postgres_task, labels: List[str]):
+        """
+        Sync task labels to PostgresTaskLabel junction table.
+        
+        Args:
+            postgres_task: PostgresTask instance
+            labels: List of label MongoDB ObjectIds as strings
+        """
+        try:
+            # Clear existing labels for this task
+            PostgresTaskLabel.objects.filter(task=postgres_task).delete()
+            
+            # Add new labels
+            for label_mongo_id in labels:
+                if label_mongo_id:  # Skip empty labels
+                    PostgresTaskLabel.objects.create(
+                        task=postgres_task,
+                        label_mongo_id=str(label_mongo_id)
+                    )
+            
+            logger.info(f"Successfully synced {len(labels)} labels for task {postgres_task.mongo_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to sync labels for task {postgres_task.mongo_id}: {str(e)}")
+            # Don't fail the entire operation, just log the error
 
     def _transform_user_team_details_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Transform user team details data for Postgres."""

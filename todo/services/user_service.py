@@ -19,7 +19,6 @@ class UserService:
             cls._validate_google_user_data(google_user_data)
             user = UserRepository.create_or_update(google_user_data)
 
-            # Dual write to Postgres
             dual_write_service = EnhancedDualWriteService()
             user_data = {
                 "google_id": user.google_id,
@@ -35,7 +34,6 @@ class UserService:
             )
 
             if not dual_write_success:
-                # Log the failure but don't fail the request
                 import logging
 
                 logger = logging.getLogger(__name__)

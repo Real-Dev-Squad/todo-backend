@@ -66,6 +66,27 @@ class UserRoleRepository(MongoRepository):
         return roles
 
     @classmethod
+    def get_by_user_role_scope_team(cls, user_id: str, role_id: str, scope: str, team_id: Optional[str] = None):
+        collection = cls.get_collection()
+
+        try:
+            object_id = ObjectId(role_id)
+        except Exception:
+            return None
+
+        query = {"_id": object_id, "user_id": user_id, "scope": scope, "is_active": True}
+
+        if scope == "TEAM" and team_id:
+            query["team_id"] = team_id
+        elif scope == "GLOBAL":
+            query["team_id"] = None
+
+        result = collection.find_one(query)
+        if result:
+            return UserRoleModel(**result)
+        return None
+
+    @classmethod
     def assign_role(
         cls, user_id: str, role_name: "RoleName", scope: "RoleScope", team_id: Optional[str] = None
     ) -> UserRoleModel:

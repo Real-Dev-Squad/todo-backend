@@ -39,7 +39,6 @@ class UserRoleService:
 
             user_role = UserRoleRepository.assign_role(user_id, role_enum, scope_enum, team_id)
 
-            # Dual write to Postgres
             if user_role:
                 dual_write_service = EnhancedDualWriteService()
                 user_role_data = {
@@ -57,7 +56,6 @@ class UserRoleService:
                 )
 
                 if not dual_write_success:
-                    # Log the failure but don't fail the request
                     logger.warning(f"Failed to sync user role {user_role.id} to Postgres")
 
             return True
@@ -68,7 +66,20 @@ class UserRoleService:
     @classmethod
     def remove_role_by_id(cls, user_id: str, role_id: str, scope: str, team_id: Optional[str] = None) -> bool:
         try:
-            return UserRoleRepository.remove_role_by_id(user_id, role_id, scope, team_id)
+            user_role = UserRoleRepository.get_by_user_role_scope_team(user_id, role_id, scope, team_id)
+            
+            success = UserRoleRepository.remove_role_by_id(user_id, role_id, scope, team_id)
+            
+            if success and user_role:
+                dual_write_service = EnhancedDualWriteService()
+                dual_write_success = dual_write_service.delete_document(
+                    collection_name="user_roles", mongo_id=str(user_role.id)
+                )
+
+                if not dual_write_success:
+                    logger.warning(f"Failed to sync user role deletion {user_role.id} to Postgres")
+            
+            return success
         except Exception as e:
             logger.error(f"Failed to remove role: {str(e)}")
             return False

@@ -16,24 +16,9 @@ class PostgresTask(models.Model):
     title = models.CharField(max_length=500)
     description = models.TextField(null=True, blank=True)
 
-    # Enums as choices
-    PRIORITY_CHOICES = [
-        ("LOW", "Low"),
-        ("MEDIUM", "Medium"),
-        ("HIGH", "High"),
-        ("URGENT", "Urgent"),
-    ]
-
-    STATUS_CHOICES = [
-        ("TODO", "To Do"),
-        ("IN_PROGRESS", "In Progress"),
-        ("REVIEW", "Review"),
-        ("DONE", "Done"),
-        ("DEFERRED", "Deferred"),
-    ]
-
-    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default="LOW")
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="TODO")
+    # Store the same format as MongoDB (integer for priority, string for status)
+    priority = models.IntegerField(default=3)  # 1=HIGH, 2=MEDIUM, 3=LOW
+    status = models.CharField(max_length=20, default="TODO")
 
     # Boolean fields
     is_acknowledged = models.BooleanField(default=False)

@@ -92,7 +92,6 @@ class WatchlistService:
             )
             created_watchlist = WatchlistRepository.create(watchlist_model)
 
-            # Dual write to Postgres
             dual_write_service = EnhancedDualWriteService()
             watchlist_data = {
                 "task_id": str(created_watchlist.taskId),
@@ -107,7 +106,6 @@ class WatchlistService:
             )
 
             if not dual_write_success:
-                # Log the failure but don't fail the request
                 import logging
 
                 logger = logging.getLogger(__name__)
@@ -158,6 +156,27 @@ class WatchlistService:
         updated_watchlist = WatchlistRepository.update(taskId, dto["isActive"], userId)
         if not updated_watchlist:
             raise TaskNotFoundException(taskId)
+
+        dual_write_service = EnhancedDualWriteService()
+        watchlist_data = {
+            "task_id": str(updated_watchlist["taskId"]),
+            "user_id": str(updated_watchlist["userId"]),
+            "created_by": str(updated_watchlist["createdBy"]),
+            "created_at": updated_watchlist["createdAt"],
+            "updated_at": updated_watchlist["updatedAt"],
+        }
+
+        dual_write_success = dual_write_service.update_document(
+            collection_name="watchlists", mongo_id=str(taskId), data=watchlist_data
+        )
+
+        if not dual_write_success:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to sync watchlist update {taskId} to Postgres")
+
+        return CreateWatchlistResponse(data=updated_watchlist)
 
     @classmethod
     def _prepare_label_dtos(cls, label_ids: list[str]) -> list[LabelDTO]:

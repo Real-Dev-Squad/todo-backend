@@ -6,6 +6,31 @@ class UserTeamDetailsRepository(MongoRepository):
     collection_name = "user_team_details"
 
     @classmethod
+    def get_by_user_and_team(cls, user_id: str, team_id: str):
+        collection = cls.get_collection()
+        try:
+            user_id_obj = ObjectId(user_id)
+        except Exception:
+            user_id_obj = user_id
+        try:
+            team_id_obj = ObjectId(team_id)
+        except Exception:
+            team_id_obj = team_id
+        
+        queries = [
+            {"user_id": user_id_obj, "team_id": team_id_obj},
+            {"user_id": user_id, "team_id": team_id_obj},
+            {"user_id": user_id_obj, "team_id": team_id},
+            {"user_id": user_id, "team_id": team_id},
+        ]
+        
+        for query in queries:
+            result = collection.find_one(query)
+            if result:
+                return result
+        return None
+
+    @classmethod
     def remove_member_from_team(cls, user_id: str, team_id: str) -> bool:
         collection = cls.get_collection()
         try:

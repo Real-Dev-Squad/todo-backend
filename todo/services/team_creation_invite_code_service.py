@@ -27,7 +27,6 @@ class TeamCreationInviteCodeService:
 
         saved_code = TeamCreationInviteCodeRepository.create(team_invite_code)
 
-        # Dual write to Postgres
         dual_write_service = EnhancedDualWriteService()
         invite_code_data = {
             "code": saved_code.code,
@@ -44,7 +43,6 @@ class TeamCreationInviteCodeService:
         )
 
         if not dual_write_success:
-            # Log the failure but don't fail the request
             import logging
 
             logger = logging.getLogger(__name__)

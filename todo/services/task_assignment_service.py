@@ -60,16 +60,15 @@ class TaskAssignmentService:
                 raise ValueError("Failed to update task assignment")
             assignment = updated_assignment
 
-            # Dual write to Postgres for update
             dual_write_service = EnhancedDualWriteService()
             assignment_data = {
                 "task_mongo_id": str(assignment.task_id),
                 "user_mongo_id": str(assignment.assignee_id),
                 "team_mongo_id": str(assignment.team_id) if assignment.team_id else None,
-                "status": assignment.status,
-                "assigned_at": assignment.assigned_at,
-                "started_at": assignment.started_at,
-                "completed_at": assignment.completed_at,
+                "status": "ASSIGNED",  # Default status since MongoDB model doesn't have this field
+                "assigned_at": assignment.created_at,  # Use created_at as assigned_at
+                "started_at": None,  # MongoDB model doesn't have this field
+                "completed_at": None,  # MongoDB model doesn't have this field
                 "created_at": assignment.created_at,
                 "updated_at": assignment.updated_at,
                 "assigned_by": str(assignment.created_by),
@@ -81,7 +80,6 @@ class TaskAssignmentService:
             )
 
             if not dual_write_success:
-                # Log the failure but don't fail the request
                 import logging
 
                 logger = logging.getLogger(__name__)
@@ -98,16 +96,15 @@ class TaskAssignmentService:
             )
             assignment = TaskAssignmentRepository.create(task_assignment)
 
-            # Dual write to Postgres
             dual_write_service = EnhancedDualWriteService()
             assignment_data = {
                 "task_mongo_id": str(assignment.task_id),
                 "user_mongo_id": str(assignment.assignee_id),
                 "team_mongo_id": str(assignment.team_id) if assignment.team_id else None,
-                "status": assignment.status,
-                "assigned_at": assignment.assigned_at,
-                "started_at": assignment.started_at,
-                "completed_at": assignment.completed_at,
+                "status": "ASSIGNED",  # Default status since MongoDB model doesn't have this field
+                "assigned_at": assignment.created_at,  # Use created_at as assigned_at
+                "started_at": None,  # MongoDB model doesn't have this field
+                "completed_at": None,  # MongoDB model doesn't have this field
                 "created_at": assignment.created_at,
                 "updated_at": assignment.updated_at,
                 "assigned_by": str(assignment.created_by),
@@ -119,7 +116,6 @@ class TaskAssignmentService:
             )
 
             if not dual_write_success:
-                # Log the failure but don't fail the request
                 import logging
 
                 logger = logging.getLogger(__name__)
@@ -200,7 +196,20 @@ class TaskAssignmentService:
 
     @classmethod
     def delete_task_assignment(cls, task_id: str, user_id: str) -> bool:
-        """
-        Delete task assignment by task ID.
-        """
-        return TaskAssignmentRepository.delete_assignment(task_id, user_id)
+        assignment = TaskAssignmentRepository.get_by_task_id(task_id)
+        
+        success = TaskAssignmentRepository.delete_assignment(task_id, user_id)
+        
+        if success and assignment:
+            dual_write_service = EnhancedDualWriteService()
+            dual_write_success = dual_write_service.delete_document(
+                collection_name="task_assignments", mongo_id=str(assignment.id)
+            )
+
+            if not dual_write_success:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to sync task assignment deletion {assignment.id} to Postgres")
+        
+        return success

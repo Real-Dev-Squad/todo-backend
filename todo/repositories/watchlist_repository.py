@@ -53,7 +53,7 @@ class WatchlistRepository(MongoRepository):
         }
 
         dual_write_success = dual_write_service.create_document(
-            collection_name="watchlist", data=watchlist_data, mongo_id=str(watchlist_model.id)
+            collection_name="watchlists", data=watchlist_data, mongo_id=str(watchlist_model.id)
         )
 
         if not dual_write_success:
@@ -337,7 +337,7 @@ class WatchlistRepository(MongoRepository):
             }
 
             dual_write_success = dual_write_service.update_document(
-                collection_name="watchlist", data=watchlist_data, mongo_id=str(current_watchlist.id)
+                collection_name="watchlists", data=watchlist_data, mongo_id=str(current_watchlist.id)
             )
 
             if not dual_write_success:

@@ -33,6 +33,31 @@ class TeamCreationInviteCodeRepository(MongoRepository):
                 {"$set": {"is_used": True, "used_by": used_by, "used_at": current_time.isoformat()}},
                 return_document=True,
             )
+            
+            if result:
+                # Sync the update to PostgreSQL
+                dual_write_service = EnhancedDualWriteService()
+                invite_code_data = {
+                    "code": result["code"],
+                    "description": result.get("description"),
+                    "is_used": True,
+                    "created_by": str(result["created_by"]),
+                    "used_by": str(used_by),
+                    "created_at": result.get("created_at"),
+                    "used_at": current_time,
+                }
+
+                dual_write_success = dual_write_service.update_document(
+                    collection_name="team_creation_invite_codes", 
+                    data=invite_code_data, 
+                    mongo_id=str(result["_id"])
+                )
+
+                if not dual_write_success:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to sync team creation invite code update {result['_id']} to Postgres")
+            
             return result
         except Exception as e:
             raise Exception(f"Error validating and consuming code: {e}")

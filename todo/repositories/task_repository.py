@@ -16,6 +16,8 @@ from todo.constants.task import (
     TaskStatus,
 )
 from todo.repositories.team_repository import UserTeamDetailsRepository
+from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
+from todo.models.postgres import PostgresTask, PostgresDeferredDetails
 
 
 class TaskRepository(MongoRepository):
@@ -210,6 +212,31 @@ class TaskRepository(MongoRepository):
                     insert_result = tasks_collection.insert_one(task_dict, session=session)
 
                     task.id = insert_result.inserted_id
+
+                    dual_write_service = EnhancedDualWriteService()
+                    task_data = {
+                        "title": task.title,
+                        "description": task.description,
+                        "priority": task.priority,
+                        "status": task.status,
+                        "display_id": task.displayId,
+                        "created_by": str(task.createdBy),
+                        "updated_by": str(task.updatedBy) if task.updatedBy else None,
+                        "is_deleted": task.isDeleted,
+                        "created_at": task.createdAt,
+                        "updated_at": task.updatedAt,
+                    }
+
+                    dual_write_success = dual_write_service.create_document(
+                        collection_name="tasks", data=task_data, mongo_id=str(task.id)
+                    )
+
+                    if not dual_write_success:
+                        import logging
+
+                        logger = logging.getLogger(__name__)
+                        logger.warning(f"Failed to sync task {task.id} to Postgres")
+
                     return task
 
             except Exception as e:
@@ -259,9 +286,6 @@ class TaskRepository(MongoRepository):
 
     @classmethod
     def update(cls, task_id: str, update_data: dict) -> TaskModel | None:
-        """
-        Updates a specific task by its ID with the given data.
-        """
         if not isinstance(update_data, dict):
             raise ValueError("update_data must be a dictionary.")
 
@@ -281,7 +305,37 @@ class TaskRepository(MongoRepository):
         )
 
         if updated_task_doc:
-            return TaskModel(**updated_task_doc)
+            task_model = TaskModel(**updated_task_doc)
+
+            dual_write_service = EnhancedDualWriteService()
+            task_data = {
+                "title": task_model.title,
+                "description": task_model.description,
+                "priority": task_model.priority,
+                "status": task_model.status,
+                "display_id": task_model.displayId,
+                "created_by": str(task_model.createdBy),
+                "updated_by": str(task_model.updatedBy) if task_model.updatedBy else None,
+                "is_deleted": task_model.isDeleted,
+                "created_at": task_model.createdAt,
+                "updated_at": task_model.updatedAt,
+            }
+
+            dual_write_success = dual_write_service.update_document(
+                collection_name="tasks", data=task_data, mongo_id=str(task_model.id)
+            )
+
+            if not dual_write_success:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to sync task update {task_model.id} to Postgres")
+
+            # Handle deferred details if present in update_data
+            if "deferredDetails" in update_data:
+                cls._handle_deferred_details_sync(task_id, update_data["deferredDetails"])
+
+            return task_model
         return None
 
     @classmethod
@@ -307,3 +361,30 @@ class TaskRepository(MongoRepository):
         object_ids = [ObjectId(task_id) for task_id in task_ids]
         cursor = tasks_collection.find({"_id": {"$in": object_ids}})
         return [TaskModel(**doc) for doc in cursor]
+
+    @classmethod
+    def _handle_deferred_details_sync(cls, task_id: str, deferred_details: dict) -> None:
+        """Handle deferred details synchronization to PostgreSQL"""
+        try:
+            postgres_task = PostgresTask.objects.get(mongo_id=task_id)
+
+            if deferred_details:
+                deferred_details_data = {
+                    "task": postgres_task,
+                    "deferred_at": deferred_details.get("deferredAt"),
+                    "deferred_till": deferred_details.get("deferredTill"),
+                    "deferred_by": str(deferred_details.get("deferredBy")),
+                }
+
+                PostgresDeferredDetails.objects.update_or_create(task=postgres_task, defaults=deferred_details_data)
+            else:
+                # Remove deferred details if None
+                PostgresDeferredDetails.objects.filter(task=postgres_task).delete()
+
+        except PostgresTask.DoesNotExist:
+            pass
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to sync deferred details to PostgreSQL for task {task_id}: {str(e)}")

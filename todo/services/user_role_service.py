@@ -3,7 +3,6 @@ import logging
 
 from todo.repositories.user_role_repository import UserRoleRepository
 from todo.constants.role import DEFAULT_TEAM_ROLE, VALID_ROLE_NAMES_BY_SCOPE, RoleScope, RoleName
-from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
 
 logger = logging.getLogger(__name__)
 
@@ -40,25 +39,7 @@ class UserRoleService:
             user_role = UserRoleRepository.assign_role(user_id, role_enum, scope_enum, team_id)
 
             if user_role:
-                dual_write_service = EnhancedDualWriteService()
-                user_role_data = {
-                    "user_mongo_id": str(user_role.user_id),
-                    "role_mongo_id": str(user_role.role_id),
-                    "team_mongo_id": str(user_role.team_id) if user_role.team_id else None,
-                    "created_by": str(user_role.created_by),
-                    "updated_by": str(user_role.updated_by) if user_role.updated_by else None,
-                    "created_at": user_role.created_at,
-                    "updated_at": user_role.updated_at,
-                }
-
-                dual_write_success = dual_write_service.create_document(
-                    collection_name="user_roles", data=user_role_data, mongo_id=str(user_role.id)
-                )
-
-                if not dual_write_success:
-                    logger.warning(f"Failed to sync user role {user_role.id} to Postgres")
-
-            return True
+                return True
         except Exception as e:
             logger.error(f"Failed to assign role: {str(e)}")
             return False
@@ -71,15 +52,7 @@ class UserRoleService:
             success = UserRoleRepository.remove_role_by_id(user_id, role_id, scope, team_id)
 
             if success and user_role:
-                dual_write_service = EnhancedDualWriteService()
-                dual_write_success = dual_write_service.delete_document(
-                    collection_name="user_roles", mongo_id=str(user_role.id)
-                )
-
-                if not dual_write_success:
-                    logger.warning(f"Failed to sync user role deletion {user_role.id} to Postgres")
-
-            return success
+                return success
         except Exception as e:
             logger.error(f"Failed to remove role: {str(e)}")
             return False

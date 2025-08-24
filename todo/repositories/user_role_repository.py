@@ -57,6 +57,7 @@ class UserRoleRepository(MongoRepository):
 
         if not dual_write_success:
             import logging
+
             logger = logging.getLogger(__name__)
             logger.warning(f"Failed to sync user role {user_role.id} to Postgres")
 
@@ -118,7 +119,6 @@ class UserRoleRepository(MongoRepository):
 
     @classmethod
     def remove_role_by_id(cls, user_id: str, role_id: str, scope: str, team_id: Optional[str] = None) -> bool:
-        """Remove a role from a user by role_id - simple deactivation."""
         collection = cls.get_collection()
 
         try:
@@ -133,6 +133,34 @@ class UserRoleRepository(MongoRepository):
         elif scope == "GLOBAL":
             query["team_id"] = None
 
+        # Get current role first
+        current_role = collection.find_one(query)
+        if not current_role:
+            return False
+
         result = collection.update_one(query, {"$set": {"is_active": False}})
+
+        if result.modified_count > 0:
+            # Sync to PostgreSQL
+            dual_write_service = EnhancedDualWriteService()
+            user_role_data = {
+                "user_id": str(current_role["user_id"]),
+                "role_name": current_role["role_name"],
+                "scope": current_role["scope"],
+                "team_id": str(current_role["team_id"]) if current_role.get("team_id") else None,
+                "is_active": False,
+                "created_at": current_role["created_at"],
+                "created_by": str(current_role["created_by"]),
+            }
+
+            dual_write_success = dual_write_service.update_document(
+                collection_name="user_roles", data=user_role_data, mongo_id=str(current_role["_id"])
+            )
+
+            if not dual_write_success:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to sync user role removal {current_role['_id']} to Postgres")
 
         return result.modified_count > 0

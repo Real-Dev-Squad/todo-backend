@@ -1,5 +1,6 @@
 from bson import ObjectId
 from todo.repositories.common.mongo_repository import MongoRepository
+from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
 
 
 class UserTeamDetailsRepository(MongoRepository):
@@ -48,9 +49,22 @@ class UserTeamDetailsRepository(MongoRepository):
             {"user_id": user_id, "team_id": team_id},
         ]
         for query in queries:
-            print(f"DEBUG: Trying user_team_details delete query: {query}")
-            result = collection.delete_one(query)
-            print(f"DEBUG: delete_one result: deleted={result.deleted_count}")
-            if result.deleted_count > 0:
-                return True
+            # Get the document first for dual write
+            document = collection.find_one(query)
+            if document:
+                result = collection.delete_one(query)
+                if result.deleted_count > 0:
+                    # Sync to PostgreSQL
+                    dual_write_service = EnhancedDualWriteService()
+                    dual_write_success = dual_write_service.delete_document(
+                        collection_name="user_team_details", mongo_id=str(document["_id"])
+                    )
+
+                    if not dual_write_success:
+                        import logging
+
+                        logger = logging.getLogger(__name__)
+                        logger.warning(f"Failed to sync user team details deletion {document['_id']} to Postgres")
+
+                    return True
         return False

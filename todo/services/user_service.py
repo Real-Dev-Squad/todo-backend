@@ -9,7 +9,6 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 from typing import List, Tuple
 from todo.dto.user_dto import UserDTO, UsersDTO
 from todo.repositories.task_assignment_repository import TaskAssignmentRepository
-from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
 
 
 class UserService:
@@ -18,26 +17,6 @@ class UserService:
         try:
             cls._validate_google_user_data(google_user_data)
             user = UserRepository.create_or_update(google_user_data)
-
-            dual_write_service = EnhancedDualWriteService()
-            user_data = {
-                "google_id": user.google_id,
-                "email_id": user.email_id,
-                "name": user.name,
-                "picture": user.picture,
-                "created_at": user.created_at,
-                "updated_at": user.updated_at,
-            }
-
-            dual_write_success = dual_write_service.create_document(
-                collection_name="users", data=user_data, mongo_id=str(user.id)
-            )
-
-            if not dual_write_success:
-                import logging
-
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Failed to sync user {user.id} to Postgres")
 
             return user
         except (UserNotFoundException, APIException, DRFValidationError):

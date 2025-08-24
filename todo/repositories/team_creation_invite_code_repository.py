@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from todo.repositories.common.mongo_repository import MongoRepository
 from todo.models.team_creation_invite_code import TeamCreationInviteCodeModel
 from todo.repositories.user_repository import UserRepository
+from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
 
 
 class TeamCreationInviteCodeRepository(MongoRepository):
@@ -38,13 +39,34 @@ class TeamCreationInviteCodeRepository(MongoRepository):
 
     @classmethod
     def create(cls, team_invite_code: TeamCreationInviteCodeModel) -> TeamCreationInviteCodeModel:
-        """Create a new team invite code."""
         collection = cls.get_collection()
         team_invite_code.created_at = datetime.now(timezone.utc)
 
         code_dict = team_invite_code.model_dump(mode="json", by_alias=True, exclude_none=True)
         insert_result = collection.insert_one(code_dict)
         team_invite_code.id = insert_result.inserted_id
+
+        dual_write_service = EnhancedDualWriteService()
+        invite_code_data = {
+            "code": team_invite_code.code,
+            "description": team_invite_code.description,
+            "is_used": team_invite_code.is_used,
+            "created_by": str(team_invite_code.created_by),
+            "used_by": str(team_invite_code.used_by) if team_invite_code.used_by else None,
+            "created_at": team_invite_code.created_at,
+            "used_at": team_invite_code.used_at,
+        }
+
+        dual_write_success = dual_write_service.create_document(
+            collection_name="team_creation_invite_codes", data=invite_code_data, mongo_id=str(team_invite_code.id)
+        )
+
+        if not dual_write_success:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to sync team creation invite code {team_invite_code.id} to Postgres")
+
         return team_invite_code
 
     @classmethod

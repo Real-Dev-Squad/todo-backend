@@ -8,6 +8,7 @@ from todo.models.common.pyobjectid import PyObjectId
 from todo_project.db.config import DatabaseManager
 from todo.constants.messages import RepositoryErrors
 from todo.exceptions.auth_exceptions import UserNotFoundException, APIException
+from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
 
 
 class UserRepository:
@@ -67,7 +68,29 @@ class UserRepository:
             if not result:
                 raise APIException(RepositoryErrors.USER_OPERATION_FAILED)
 
-            return UserModel(**result)
+            user_model = UserModel(**result)
+
+            dual_write_service = EnhancedDualWriteService()
+            user_data_for_postgres = {
+                "name": user_model.name,
+                "email_id": user_model.email_id,
+                "google_id": user_model.google_id,
+                "picture": user_model.picture,
+                "created_at": user_model.created_at,
+                "updated_at": user_model.updated_at,
+            }
+
+            dual_write_success = dual_write_service.create_document(
+                collection_name="users", data=user_data_for_postgres, mongo_id=str(user_model.id)
+            )
+
+            if not dual_write_success:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to sync user {user_model.id} to Postgres")
+
+            return user_model
 
         except Exception as e:
             if isinstance(e, APIException):

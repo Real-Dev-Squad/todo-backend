@@ -12,7 +12,7 @@ from typing import List
 from todo.models.audit_log import AuditLogModel
 from todo.repositories.audit_log_repository import AuditLogRepository
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
-from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
+
 
 DEFAULT_ROLE_ID = "1"
 
@@ -48,31 +48,6 @@ class TeamService:
                     )
                 )
 
-            # Dual write for invite code consumption
-            if code_data:
-                dual_write_service = EnhancedDualWriteService()
-                invite_code_data = {
-                    "code": code_data.get("code"),
-                    "description": code_data.get("description"),
-                    "created_by": str(code_data.get("created_by", "")),
-                    "used_by": str(code_data.get("used_by", "")),
-                    "is_used": code_data.get("is_used", True),
-                    "created_at": code_data.get("created_at"),
-                    "used_at": code_data.get("used_at"),
-                }
-
-                dual_write_success = dual_write_service.update_document(
-                    collection_name="team_creation_invite_codes",
-                    mongo_id=str(code_data.get("_id")),
-                    data=invite_code_data,
-                )
-
-                if not dual_write_success:
-                    import logging
-
-                    logger = logging.getLogger(__name__)
-                    logger.warning(f"Failed to sync invite code consumption {code_data.get('_id')} to Postgres")
-
             member_ids = dto.member_ids or []
 
             # Generate invite code
@@ -89,29 +64,6 @@ class TeamService:
             )
 
             created_team = TeamRepository.create(team)
-
-            dual_write_service = EnhancedDualWriteService()
-            team_data = {
-                "name": created_team.name,
-                "description": created_team.description,
-                "invite_code": created_team.invite_code,
-                "poc_id": str(created_team.poc_id) if created_team.poc_id else None,
-                "created_by": str(created_team.created_by),
-                "updated_by": str(created_team.updated_by),
-                "is_deleted": created_team.is_deleted,
-                "created_at": created_team.created_at,
-                "updated_at": created_team.updated_at,
-            }
-
-            dual_write_success = dual_write_service.create_document(
-                collection_name="teams", data=team_data, mongo_id=str(created_team.id)
-            )
-
-            if not dual_write_success:
-                import logging
-
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Failed to sync team {created_team.id} to Postgres")
 
             # Create user-team relationships
             user_teams = []
@@ -332,27 +284,6 @@ class TeamService:
         )
         UserTeamDetailsRepository.create(user_team)
 
-        dual_write_service = EnhancedDualWriteService()
-        user_team_data = {
-            "user_id": str(user_team.user_id),
-            "team_id": str(user_team.team_id),
-            "is_active": user_team.is_active,
-            "created_by": str(user_team.created_by),
-            "updated_by": str(user_team.updated_by),
-            "created_at": user_team.created_at,
-            "updated_at": user_team.updated_at,
-        }
-
-        dual_write_success = dual_write_service.create_document(
-            collection_name="user_team_details", data=user_team_data, mongo_id=str(user_team.id)
-        )
-
-        if not dual_write_success:
-            import logging
-
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to sync user team details {user_team.id} to Postgres")
-
         cls._assign_user_role(user_id, str(team.id), "member")
 
         # Audit log for team join
@@ -412,29 +343,6 @@ class TeamService:
             updated_team = TeamRepository.update(team_id, update_data, updated_by_user_id)
             if not updated_team:
                 raise ValueError(f"Failed to update team with id {team_id}")
-
-            dual_write_service = EnhancedDualWriteService()
-            team_data = {
-                "name": updated_team.name,
-                "description": updated_team.description,
-                "invite_code": updated_team.invite_code,
-                "poc_id": str(updated_team.poc_id) if updated_team.poc_id else None,
-                "created_by": str(updated_team.created_by),
-                "updated_by": str(updated_team.updated_by),
-                "is_deleted": updated_team.is_deleted,
-                "created_at": updated_team.created_at,
-                "updated_at": updated_team.updated_at,
-            }
-
-            dual_write_success = dual_write_service.update_document(
-                collection_name="teams", mongo_id=str(updated_team.id), data=team_data
-            )
-
-            if not dual_write_success:
-                import logging
-
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Failed to sync team update {updated_team.id} to Postgres")
 
             # Handle member updates if provided
             if dto.member_ids is not None:
@@ -534,28 +442,6 @@ class TeamService:
             if new_user_teams:
                 UserTeamDetailsRepository.create_many(new_user_teams)
 
-                dual_write_service = EnhancedDualWriteService()
-                for user_team in new_user_teams:
-                    user_team_data = {
-                        "user_id": str(user_team.user_id),
-                        "team_id": str(user_team.team_id),
-                        "is_active": user_team.is_active,
-                        "created_by": str(user_team.created_by),
-                        "updated_by": str(user_team.updated_by),
-                        "created_at": user_team.created_at,
-                        "updated_at": user_team.updated_at,
-                    }
-
-                    dual_write_success = dual_write_service.create_document(
-                        collection_name="user_team_details", data=user_team_data, mongo_id=str(user_team.id)
-                    )
-
-                    if not dual_write_success:
-                        import logging
-
-                        logger = logging.getLogger(__name__)
-                        logger.warning(f"Failed to sync user team details {user_team.id} to Postgres")
-
                 for member_id in member_ids:
                     cls._assign_user_role(member_id, team_id, "member")
 
@@ -600,23 +486,12 @@ class TeamService:
             raise cls.TeamOrUserNotFound()
 
         if user_team_details:
-            dual_write_service = EnhancedDualWriteService()
-            dual_write_success = dual_write_service.delete_document(
-                collection_name="user_team_details", mongo_id=str(user_team_details.id)
+            AuditLogRepository.create(
+                AuditLogModel(
+                    team_id=PyObjectId(team_id),
+                    action="member_removed_from_team",
+                    performed_by=PyObjectId(removed_by_user_id) if removed_by_user_id else PyObjectId(user_id),
+                )
             )
-
-            if not dual_write_success:
-                import logging
-
-                logger = logging.getLogger(__name__)
-                logger.warning(f"Failed to sync user team details deletion {user_team_details.id} to Postgres")
-
-        AuditLogRepository.create(
-            AuditLogModel(
-                team_id=PyObjectId(team_id),
-                action="member_removed_from_team",
-                performed_by=PyObjectId(removed_by_user_id) if removed_by_user_id else PyObjectId(user_id),
-            )
-        )
 
         return True

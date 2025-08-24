@@ -239,27 +239,6 @@ class TaskAssignmentDetailView(APIView):
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
 
-            # Dual write for executor update
-            from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
-
-            assignment_data = {
-                "mongo_id": str(updated_assignment.id),
-                "task_mongo_id": str(updated_assignment.task_id),
-                "user_mongo_id": str(updated_assignment.assignee_id),
-                "team_mongo_id": str(updated_assignment.team_id) if updated_assignment.team_id else None,
-                "status": "ASSIGNED",
-                "assigned_at": updated_assignment.created_at,
-                "started_at": None,
-                "completed_at": None,
-                "created_at": updated_assignment.created_at,
-                "updated_at": updated_assignment.updated_at,
-                "assigned_by": str(updated_assignment.created_by),
-                "updated_by": str(updated_assignment.updated_by) if updated_assignment.updated_by else None,
-            }
-
-            dual_write_service = EnhancedDualWriteService()
-            dual_write_service._sync_task_assignment_update(str(updated_assignment.task_id), assignment_data)
-
         except Exception as e:
             print(f"DEBUG: Exception in update_executor: {str(e)}")
             import traceback

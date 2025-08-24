@@ -490,12 +490,12 @@ class TeamService:
 
         # Authentication Checks
         if user_id == team.created_by:
-            raise CannotRemoveOwnerException
+            raise CannotRemoveOwnerException()
         if user_id == team.poc_id:
-            raise CannotRemoveTeamPOCException
+            raise CannotRemoveTeamPOCException()
         if user_id != removed_by_user_id:
             if not UserRoleService.has_role(removed_by_user_id, RoleName.ADMIN.value, RoleScope.TEAM.value, team_id):
-                raise NotTeamAdminException
+                raise NotTeamAdminException()
 
         # Remove User Roles
         user_roles = UserRoleService.get_user_roles(user_id, RoleScope.TEAM.value, team_id)

@@ -8,12 +8,12 @@ class BaseTeamException(Exception):
 
 
 class CannotRemoveOwnerException(BaseTeamException):
-    def __init__(self, message=ApiErrors.UNAUTHORIZED_TITLE):
+    def __init__(self, message=ApiErrors.CANNOT_REMOVE_OWNER):
         super().__init__(message)
 
 
 class NotTeamAdminException(BaseTeamException):
-    def __init__(self, message=ApiErrors.CANNOT_REMOVE_OWNER):
+    def __init__(self, message=ApiErrors.UNAUTHORIZED_TITLE):
         super().__init__(message)
 
 

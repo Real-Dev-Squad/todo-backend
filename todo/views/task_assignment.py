@@ -238,7 +238,6 @@ class TaskAssignmentDetailView(APIView):
                     {"error": "Failed to update assignment. Check server logs for details."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
-
         except Exception as e:
             print(f"DEBUG: Exception in update_executor: {str(e)}")
             import traceback

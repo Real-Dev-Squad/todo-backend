@@ -435,7 +435,6 @@ class TaskService:
             and current_task.deferredDetails
         ):
             update_payload["deferredDetails"] = None
-            cls._remove_deferred_details_from_postgres(task_id)
 
         if validated_data.get("status") == TaskStatus.DEFERRED.value:
             update_payload["status"] = current_task.status
@@ -682,7 +681,6 @@ class TaskService:
         deleted_task_model = TaskRepository.delete_by_id(task_id, user_id)
         if deleted_task_model is None:
             raise TaskNotFoundException(task_id)
-
         return None
 
     @classmethod

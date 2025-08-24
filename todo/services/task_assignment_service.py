@@ -3,6 +3,7 @@ from typing import Optional
 from todo.dto.task_assignment_dto import TaskAssignmentResponseDTO, CreateTaskAssignmentDTO
 from todo.dto.responses.create_task_assignment_response import CreateTaskAssignmentResponse
 from todo.models.common.pyobjectid import PyObjectId
+from todo.models.task_assignment import TaskAssignmentModel
 from todo.repositories.task_assignment_repository import TaskAssignmentRepository
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.user_repository import UserRepository
@@ -57,6 +58,18 @@ class TaskAssignmentService:
             if not updated_assignment:
                 raise ValueError("Failed to update task assignment")
             assignment = updated_assignment
+
+        else:
+            # Create new assignment
+            task_assignment = TaskAssignmentModel(
+                task_id=PyObjectId(dto.task_id),
+                assignee_id=PyObjectId(dto.assignee_id),
+                user_type=dto.user_type,
+                created_by=PyObjectId(user_id),
+                updated_by=None,
+                team_id=PyObjectId(dto.team_id) if dto.team_id else None,
+            )
+            assignment = TaskAssignmentRepository.create(task_assignment)
 
         # If new assignment is to a team, log assignment
         if assignment.user_type == "team":
@@ -133,9 +146,7 @@ class TaskAssignmentService:
 
     @classmethod
     def delete_task_assignment(cls, task_id: str, user_id: str) -> bool:
-        assignment = TaskAssignmentRepository.get_by_task_id(task_id)
-
-        success = TaskAssignmentRepository.delete_assignment(task_id, user_id)
-
-        if success and assignment:
-            return success
+        """
+        Delete task assignment by task ID.
+        """
+        return TaskAssignmentRepository.delete_assignment(task_id, user_id)

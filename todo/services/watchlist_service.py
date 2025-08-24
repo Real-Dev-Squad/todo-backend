@@ -137,8 +137,6 @@ class WatchlistService:
         if not updated_watchlist:
             raise TaskNotFoundException(taskId)
 
-        return CreateWatchlistResponse(data=updated_watchlist)
-
     @classmethod
     def _prepare_label_dtos(cls, label_ids: list[str]) -> list[LabelDTO]:
         object_ids = [ObjectId(id) for id in label_ids]  # Convert here!

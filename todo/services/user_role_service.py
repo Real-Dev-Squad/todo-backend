@@ -36,10 +36,8 @@ class UserRoleService:
             role_enum = RoleName(role_name)
             scope_enum = RoleScope(scope)
 
-            user_role = UserRoleRepository.assign_role(user_id, role_enum, scope_enum, team_id)
-
-            if user_role:
-                return True
+            UserRoleRepository.assign_role(user_id, role_enum, scope_enum, team_id)
+            return True
         except Exception as e:
             logger.error(f"Failed to assign role: {str(e)}")
             return False
@@ -47,12 +45,7 @@ class UserRoleService:
     @classmethod
     def remove_role_by_id(cls, user_id: str, role_id: str, scope: str, team_id: Optional[str] = None) -> bool:
         try:
-            user_role = UserRoleRepository.get_by_user_role_scope_team(user_id, role_id, scope, team_id)
-
-            success = UserRoleRepository.remove_role_by_id(user_id, role_id, scope, team_id)
-
-            if success and user_role:
-                return success
+            return UserRoleRepository.remove_role_by_id(user_id, role_id, scope, team_id)
         except Exception as e:
             logger.error(f"Failed to remove role: {str(e)}")
             return False

@@ -13,7 +13,6 @@ from todo.models.audit_log import AuditLogModel
 from todo.repositories.audit_log_repository import AuditLogRepository
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 
-
 DEFAULT_ROLE_ID = "1"
 
 
@@ -284,6 +283,7 @@ class TeamService:
         )
         UserTeamDetailsRepository.create(user_team)
 
+        # NEW: Assign default member role using new role system
         cls._assign_user_role(user_id, str(team.id), "member")
 
         # Audit log for team join
@@ -442,6 +442,7 @@ class TeamService:
             if new_user_teams:
                 UserTeamDetailsRepository.create_many(new_user_teams)
 
+                # NEW: Assign default member roles using new role system
                 for member_id in member_ids:
                     cls._assign_user_role(member_id, team_id, "member")
 
@@ -479,19 +480,17 @@ class TeamService:
     def remove_member_from_team(cls, user_id: str, team_id: str, removed_by_user_id: str = None):
         from todo.repositories.user_team_details_repository import UserTeamDetailsRepository
 
-        user_team_details = UserTeamDetailsRepository.get_by_user_and_team(user_id, team_id)
-
         success = UserTeamDetailsRepository.remove_member_from_team(user_id=user_id, team_id=team_id)
         if not success:
             raise cls.TeamOrUserNotFound()
 
-        if user_team_details:
-            AuditLogRepository.create(
-                AuditLogModel(
-                    team_id=PyObjectId(team_id),
-                    action="member_removed_from_team",
-                    performed_by=PyObjectId(removed_by_user_id) if removed_by_user_id else PyObjectId(user_id),
-                )
+        # Audit log for team member removal
+        AuditLogRepository.create(
+            AuditLogModel(
+                team_id=PyObjectId(team_id),
+                action="member_removed_from_team",
+                performed_by=PyObjectId(removed_by_user_id) if removed_by_user_id else PyObjectId(user_id),
             )
+        )
 
         return True

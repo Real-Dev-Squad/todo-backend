@@ -115,9 +115,12 @@ class DualWriteService:
                 labels = postgres_data.pop("labels", []) if collection_name == "tasks" else []
 
                 postgres_instance = postgres_model.objects.get(mongo_id=mongo_id)
+                preserve_fields = {"created_at", "mongo_id"}
+
                 for field, value in postgres_data.items():
-                    if hasattr(postgres_instance, field):
+                    if hasattr(postgres_instance, field) and field not in preserve_fields:
                         setattr(postgres_instance, field, value)
+
                 postgres_instance.sync_status = "SYNCED"
                 postgres_instance.sync_error = None
                 postgres_instance.save()
@@ -309,15 +312,13 @@ class DualWriteService:
         """Transform task assignment data for Postgres."""
         return {
             "task_mongo_id": str(data.get("task_mongo_id", "")),
-            "user_mongo_id": str(data.get("user_mongo_id", "")),
-            "team_mongo_id": str(data.get("team_mongo_id", "")) if data.get("team_mongo_id") else None,
-            "status": data.get("status", "ASSIGNED"),
-            "assigned_at": data.get("assigned_at"),
-            "started_at": data.get("started_at"),
-            "completed_at": data.get("completed_at"),
+            "assignee_id": str(data.get("assignee_id", "")),
+            "user_type": data.get("user_type", "user"),
+            "team_id": str(data.get("team_id", "")) if data.get("team_id") else None,
+            "is_active": data.get("is_active", True),
             "created_at": data.get("created_at"),
             "updated_at": data.get("updated_at"),
-            "assigned_by": str(data.get("assigned_by", "")),
+            "created_by": str(data.get("created_by", "")),
             "updated_by": str(data.get("updated_by", "")) if data.get("updated_by") else None,
         }
 

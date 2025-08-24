@@ -208,23 +208,31 @@ class TaskRepository(MongoRepository):
                     task.createdAt = datetime.now(timezone.utc)
                     task.updatedAt = None
 
+                    # Ensure createdAt is properly set
+                    if not task.createdAt:
+                        task.createdAt = datetime.now(timezone.utc)
+
                     task_dict = task.model_dump(mode="json", by_alias=True, exclude_none=True)
                     insert_result = tasks_collection.insert_one(task_dict, session=session)
 
                     task.id = insert_result.inserted_id
 
                     dual_write_service = EnhancedDualWriteService()
+
                     task_data = {
                         "title": task.title,
                         "description": task.description,
                         "priority": task.priority,
                         "status": task.status,
-                        "display_id": task.displayId,
-                        "created_by": str(task.createdBy),
-                        "updated_by": str(task.updatedBy) if task.updatedBy else None,
-                        "is_deleted": task.isDeleted,
-                        "created_at": task.createdAt,
-                        "updated_at": task.updatedAt,
+                        "displayId": task.displayId,
+                        "isAcknowledged": task.isAcknowledged,
+                        "isDeleted": task.isDeleted,
+                        "startedAt": task.startedAt,
+                        "dueAt": task.dueAt,
+                        "createdAt": task.createdAt or datetime.now(timezone.utc),
+                        "updatedAt": task.updatedAt,
+                        "createdBy": str(task.createdBy),
+                        "updatedBy": str(task.updatedBy) if task.updatedBy else None,
                     }
 
                     dual_write_success = dual_write_service.create_document(
@@ -313,12 +321,15 @@ class TaskRepository(MongoRepository):
                 "description": task_model.description,
                 "priority": task_model.priority,
                 "status": task_model.status,
-                "display_id": task_model.displayId,
-                "created_by": str(task_model.createdBy),
-                "updated_by": str(task_model.updatedBy) if task_model.updatedBy else None,
-                "is_deleted": task_model.isDeleted,
-                "created_at": task_model.createdAt,
-                "updated_at": task_model.updatedAt,
+                "displayId": task_model.displayId,
+                "isAcknowledged": task_model.isAcknowledged,
+                "isDeleted": task_model.isDeleted,
+                "startedAt": task_model.startedAt,
+                "dueAt": task_model.dueAt,
+                "createdAt": task_model.createdAt,
+                "updatedAt": task_model.updatedAt,
+                "createdBy": str(task_model.createdBy),
+                "updatedBy": str(task_model.updatedBy) if task_model.updatedBy else None,
             }
 
             dual_write_success = dual_write_service.update_document(

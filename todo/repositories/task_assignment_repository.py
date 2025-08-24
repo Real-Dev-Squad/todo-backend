@@ -24,15 +24,15 @@ class TaskAssignmentRepository(MongoRepository):
 
         dual_write_service = EnhancedDualWriteService()
         task_assignment_data = {
-            "task_id": str(task_assignment.task_id),
+            "task_mongo_id": str(task_assignment.task_id),
             "assignee_id": str(task_assignment.assignee_id),
             "user_type": task_assignment.user_type,
             "team_id": str(task_assignment.team_id) if task_assignment.team_id else None,
             "is_active": task_assignment.is_active,
-            "created_by": str(task_assignment.created_by),
-            "updated_by": str(task_assignment.updated_by) if task_assignment.updated_by else None,
             "created_at": task_assignment.created_at,
             "updated_at": task_assignment.updated_at,
+            "created_by": str(task_assignment.created_by),
+            "updated_by": str(task_assignment.updated_by) if task_assignment.updated_by else None,
         }
 
         dual_write_success = dual_write_service.create_document(
@@ -130,6 +130,31 @@ class TaskAssignmentRepository(MongoRepository):
                 },
             )
 
+            # Sync deactivation to PostgreSQL
+            if current_assignment:
+                dual_write_service = EnhancedDualWriteService()
+                deactivation_data = {
+                    "task_mongo_id": str(current_assignment.task_id),
+                    "assignee_id": str(current_assignment.assignee_id),
+                    "user_type": current_assignment.user_type,
+                    "team_id": str(current_assignment.team_id) if current_assignment.team_id else None,
+                    "is_active": False,
+                    "created_at": current_assignment.created_at,
+                    "updated_at": datetime.now(timezone.utc),
+                    "created_by": str(current_assignment.created_by),
+                    "updated_by": str(user_id),
+                }
+
+                dual_write_success = dual_write_service.update_document(
+                    collection_name="task_assignments", data=deactivation_data, mongo_id=str(current_assignment.id)
+                )
+
+                if not dual_write_success:
+                    import logging
+
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to sync task assignment deactivation {current_assignment.id} to Postgres")
+
             new_assignment = TaskAssignmentModel(
                 _id=PyObjectId(),
                 task_id=PyObjectId(task_id),
@@ -181,15 +206,15 @@ class TaskAssignmentRepository(MongoRepository):
                 # Sync to PostgreSQL
                 dual_write_service = EnhancedDualWriteService()
                 assignment_data = {
-                    "task_id": str(current_assignment.task_id),
+                    "task_mongo_id": str(current_assignment.task_id),
                     "assignee_id": str(current_assignment.assignee_id),
                     "user_type": current_assignment.user_type,
                     "team_id": str(current_assignment.team_id) if current_assignment.team_id else None,
                     "is_active": False,
-                    "created_by": str(current_assignment.created_by),
-                    "updated_by": str(user_id),
                     "created_at": current_assignment.created_at,
                     "updated_at": datetime.now(timezone.utc),
+                    "created_by": str(current_assignment.created_by),
+                    "updated_by": str(user_id),
                 }
 
                 dual_write_success = dual_write_service.update_document(
@@ -244,15 +269,15 @@ class TaskAssignmentRepository(MongoRepository):
                 # Sync to PostgreSQL
                 dual_write_service = EnhancedDualWriteService()
                 assignment_data = {
-                    "task_id": str(current_assignment.task_id),
+                    "task_mongo_id": str(current_assignment.task_id),
                     "assignee_id": str(executor_id),
                     "user_type": "user",
                     "team_id": str(current_assignment.team_id) if current_assignment.team_id else None,
                     "is_active": current_assignment.is_active,
-                    "created_by": str(current_assignment.created_by),
-                    "updated_by": str(user_id),
                     "created_at": current_assignment.created_at,
                     "updated_at": datetime.now(timezone.utc),
+                    "created_by": str(current_assignment.created_by),
+                    "updated_by": str(user_id),
                 }
 
                 dual_write_success = dual_write_service.update_document(
@@ -306,15 +331,15 @@ class TaskAssignmentRepository(MongoRepository):
                 # Sync to PostgreSQL for each assignment
                 dual_write_service = EnhancedDualWriteService()
                 assignment_data = {
-                    "task_id": str(active_assignments.task_id),
+                    "task_mongo_id": str(active_assignments.task_id),
                     "assignee_id": str(active_assignments.assignee_id),
                     "user_type": active_assignments.user_type,
                     "team_id": str(active_assignments.team_id) if active_assignments.team_id else None,
                     "is_active": False,
-                    "created_by": str(active_assignments.created_by),
-                    "updated_by": str(user_id),
                     "created_at": active_assignments.created_at,
                     "updated_at": datetime.now(timezone.utc),
+                    "created_by": str(active_assignments.created_by),
+                    "updated_by": str(user_id),
                 }
 
                 dual_write_success = dual_write_service.update_document(

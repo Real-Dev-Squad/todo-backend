@@ -12,28 +12,19 @@ class PostgresTaskAssignment(models.Model):
 
     # Assignment fields
     task_mongo_id = models.CharField(max_length=24)  # MongoDB ObjectId as string
-    user_mongo_id = models.CharField(max_length=24)  # MongoDB ObjectId as string
-    team_mongo_id = models.CharField(max_length=24, null=True, blank=True)  # MongoDB ObjectId as string
-
-    # Status
-    STATUS_CHOICES = [
-        ("ASSIGNED", "Assigned"),
-        ("IN_PROGRESS", "In Progress"),
-        ("COMPLETED", "Completed"),
-        ("REJECTED", "Rejected"),
-    ]
-
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="ASSIGNED")
+    assignee_id = models.CharField(max_length=24)  # MongoDB ObjectId as string (user or team ID)
+    user_type = models.CharField(max_length=10, choices=[("user", "User"), ("team", "Team")])  # user or team
+    team_id = models.CharField(
+        max_length=24, null=True, blank=True
+    )  # MongoDB ObjectId as string (only for team assignments)
+    is_active = models.BooleanField(default=True)  # Match MongoDB approach
 
     # Timestamps
-    assigned_at = models.DateTimeField(default=timezone.now)
-    started_at = models.DateTimeField(null=True, blank=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(null=True, blank=True)
 
     # References
-    assigned_by = models.CharField(max_length=24)  # MongoDB ObjectId as string
+    created_by = models.CharField(max_length=24)  # MongoDB ObjectId as string
     updated_by = models.CharField(max_length=24, null=True, blank=True)  # MongoDB ObjectId as string
 
     # Sync metadata
@@ -51,18 +42,18 @@ class PostgresTaskAssignment(models.Model):
 
     class Meta:
         db_table = "postgres_task_assignments"
-        unique_together = ["task_mongo_id", "user_mongo_id"]
         indexes = [
             models.Index(fields=["mongo_id"]),
             models.Index(fields=["task_mongo_id"]),
-            models.Index(fields=["user_mongo_id"]),
-            models.Index(fields=["team_mongo_id"]),
-            models.Index(fields=["status"]),
+            models.Index(fields=["assignee_id"]),
+            models.Index(fields=["user_type"]),
+            models.Index(fields=["team_id"]),
+            models.Index(fields=["is_active"]),
             models.Index(fields=["sync_status"]),
         ]
 
     def __str__(self):
-        return f"Task {self.task_mongo_id} assigned to User {self.user_mongo_id}"
+        return f"Task {self.task_mongo_id} assigned to {self.user_type} {self.assignee_id}"
 
     def save(self, *args, **kwargs):
         if not self.pk:  # New instance

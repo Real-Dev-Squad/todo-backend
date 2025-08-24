@@ -12,10 +12,14 @@ from typing import List
 from todo.models.audit_log import AuditLogModel
 from todo.repositories.audit_log_repository import AuditLogRepository
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
-from todo.services.user_role_service import UserRoleService
 from todo.constants.role import RoleScope, RoleName
-from todo.services.task_assignment_service import TaskAssignmentService
-from todo.exceptions.team_exceptions import (CannotRemoveOwnerException, NotTeamAdminException, CannotRemoveTeamPOC)
+
+from todo.exceptions.team_exceptions import (
+    CannotRemoveOwnerException,
+    NotTeamAdminException,
+    CannotRemoveTeamPOCException,
+)
+
 DEFAULT_ROLE_ID = "1"
 
 
@@ -480,26 +484,33 @@ class TeamService:
         pass
 
     @classmethod
-    def remove_member_from_team(cls, user_id: str, team_id: str, removed_by_user_id: str = None):
-        from todo.repositories.user_team_details_repository import UserTeamDetailsRepository
-        user_roles = UserRoleService.get_user_roles(user_id, RoleScope.TEAM.value, team_id)
-        user_role_ids = [roles["role_id"] for roles in user_roles]
+    def remove_member_from_team(cls, user_id: str, team_id: str, removed_by_user_id: str):
         team = TeamService.get_team_by_id(team_id)
+        from todo.services.user_role_service import UserRoleService
+
         # Authentication Checks
-        if user_id != removed_by_user_id:
-            if not UserRoleService.has_role(removed_by_user_id, RoleName.ADMIN.value, RoleScope.TEAM.value, team_id):
-                raise NotTeamAdminException
-            elif user_id == team.poc_id:
-                raise CannotRemoveTeamPOC
         if user_id == team.created_by:
             raise CannotRemoveOwnerException
         if user_id == team.poc_id:
-            cls.update_team(team_id, UpdateTeamDTO(poc_id=team.created_by), removed_by_user_id)
-        # # Remove User Roles
+            raise CannotRemoveTeamPOCException
+        if user_id != removed_by_user_id:
+            if not UserRoleService.has_role(removed_by_user_id, RoleName.ADMIN.value, RoleScope.TEAM.value, team_id):
+                raise NotTeamAdminException
+
+        # Remove User Roles
+        user_roles = UserRoleService.get_user_roles(user_id, RoleScope.TEAM.value, team_id)
+        user_role_ids = [roles["role_id"] for roles in user_roles]
         for role_id in user_role_ids:
             UserRoleService.remove_role_by_id(user_id, role_id, RoleScope.TEAM.value, team_id)
+
         # Reassign Tasks:
-        TaskAssignmentService.reassign_tasks_from_user_to_team(user_id, team_id, 'team', removed_by_user_id)
+        from todo.services.task_assignment_service import TaskAssignmentService
+
+        TaskAssignmentService.reassign_tasks_from_user_to_team(user_id, team_id, removed_by_user_id)
+
+        # Remove User
+        from todo.repositories.user_team_details_repository import UserTeamDetailsRepository
+
         success = UserTeamDetailsRepository.remove_member_from_team(user_id=user_id, team_id=team_id)
         if not success:
             raise cls.TeamOrUserNotFound()

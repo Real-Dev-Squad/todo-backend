@@ -24,4 +24,4 @@ class AuditLogModel(Document):
     # For general user reference (who performed the action)
     performed_by: PyObjectId | None = None
     # For multiple task reassignments
-    task_count: str | None = None
+    task_count: int | None = None

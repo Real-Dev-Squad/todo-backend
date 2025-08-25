@@ -119,6 +119,7 @@ class UserRoleRepository(MongoRepository):
 
     @classmethod
     def remove_role_by_id(cls, user_id: str, role_id: str, scope: str, team_id: Optional[str] = None) -> bool:
+        """Remove a role from a user by role_id - simple deactivation."""
         collection = cls.get_collection()
 
         try:
@@ -133,7 +134,6 @@ class UserRoleRepository(MongoRepository):
         elif scope == "GLOBAL":
             query["team_id"] = None
 
-        # Get current role first
         current_role = collection.find_one(query)
         if not current_role:
             return False
@@ -141,7 +141,6 @@ class UserRoleRepository(MongoRepository):
         result = collection.update_one(query, {"$set": {"is_active": False}})
 
         if result.modified_count > 0:
-            # Sync to PostgreSQL
             dual_write_service = EnhancedDualWriteService()
             user_role_data = {
                 "user_id": str(current_role["user_id"]),

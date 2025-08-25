@@ -49,12 +49,10 @@ class UserTeamDetailsRepository(MongoRepository):
             {"user_id": user_id, "team_id": team_id},
         ]
         for query in queries:
-            # Get the document first for dual write
             document = collection.find_one(query)
             if document:
                 result = collection.delete_one(query)
                 if result.deleted_count > 0:
-                    # Sync to PostgreSQL
                     dual_write_service = EnhancedDualWriteService()
                     dual_write_success = dual_write_service.delete_document(
                         collection_name="user_team_details", mongo_id=str(document["_id"])

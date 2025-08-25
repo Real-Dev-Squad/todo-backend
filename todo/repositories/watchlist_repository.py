@@ -305,9 +305,11 @@ class WatchlistRepository(MongoRepository):
 
     @classmethod
     def update(cls, taskId: ObjectId, isActive: bool, userId: ObjectId) -> dict:
+        """
+        Update the watchlist status of a task.
+        """
         watchlist_collection = cls.get_collection()
 
-        # Get current watchlist entry first
         current_watchlist = cls.get_by_user_and_task(str(userId), str(taskId))
         if not current_watchlist:
             return None
@@ -324,7 +326,6 @@ class WatchlistRepository(MongoRepository):
         )
 
         if update_result.modified_count > 0:
-            # Sync to PostgreSQL
             dual_write_service = EnhancedDualWriteService()
             watchlist_data = {
                 "task_id": str(current_watchlist.taskId),

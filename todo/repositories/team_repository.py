@@ -13,6 +13,9 @@ class TeamRepository(MongoRepository):
 
     @classmethod
     def create(cls, team: TeamModel) -> TeamModel:
+        """
+        Creates a new team in the repository.
+        """
         teams_collection = cls.get_collection()
         team.created_at = datetime.now(timezone.utc)
         team.updated_at = datetime.now(timezone.utc)
@@ -125,6 +128,9 @@ class UserTeamDetailsRepository(MongoRepository):
 
     @classmethod
     def create(cls, user_team: UserTeamDetailsModel) -> UserTeamDetailsModel:
+        """
+        Creates a new user-team relationship.
+        """
         collection = cls.get_collection()
         user_team.created_at = datetime.now(timezone.utc)
         user_team.updated_at = datetime.now(timezone.utc)
@@ -158,6 +164,9 @@ class UserTeamDetailsRepository(MongoRepository):
 
     @classmethod
     def create_many(cls, user_teams: list[UserTeamDetailsModel]) -> list[UserTeamDetailsModel]:
+        """
+        Creates multiple user-team relationships.
+        """
         collection = cls.get_collection()
         current_time = datetime.now(timezone.utc)
 
@@ -263,9 +272,11 @@ class UserTeamDetailsRepository(MongoRepository):
 
     @classmethod
     def remove_user_from_team(cls, team_id: str, user_id: str, updated_by_user_id: str) -> bool:
+        """
+        Remove a user from a team by setting is_active to False.
+        """
         collection = cls.get_collection()
         try:
-            # Get current user team relationship first
             current_relationship = collection.find_one({"team_id": team_id, "user_id": user_id, "is_active": True})
             if not current_relationship:
                 return False
@@ -282,7 +293,6 @@ class UserTeamDetailsRepository(MongoRepository):
             )
 
             if result.modified_count > 0:
-                # Sync to PostgreSQL
                 dual_write_service = EnhancedDualWriteService()
                 user_team_data = {
                     "user_id": str(current_relationship["user_id"]),

@@ -44,6 +44,13 @@ class DualWriteService:
 
     def __init__(self):
         self.sync_failures = []
+        try:
+            from django.db import connection
+
+            connection.ensure_connection()
+            self.postgres_available = True
+        except Exception:
+            self.postgres_available = False
 
     def create_document(self, collection_name: str, data: Dict[str, Any], mongo_id: str) -> bool:
         """
@@ -58,6 +65,11 @@ class DualWriteService:
             bool: True if both writes succeeded, False otherwise
         """
         try:
+            # Check if PostgreSQL is available
+            if not self.postgres_available:
+                logger.debug("PostgreSQL not available, skipping Postgres sync")
+                return True
+
             # First, write to MongoDB (this should already be done by the calling code)
             # Then, write to Postgres
             postgres_model = self._get_postgres_model(collection_name)

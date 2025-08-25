@@ -30,6 +30,13 @@ class PostgresSyncService:
         if not self.enabled:
             logger.info("PostgreSQL sync is disabled, skipping")
             return True
+        try:
+            from django.db import connection
+
+            connection.ensure_connection()
+        except Exception as e:
+            logger.warning(f"PostgreSQL not available, skipping sync: {str(e)}")
+            return True
 
         logger.info("Starting PostgreSQL table synchronization for labels and roles")
         logger.info(f"PostgreSQL sync enabled: {self.enabled}")
@@ -151,7 +158,11 @@ class PostgresSyncService:
             for label in labels:
                 try:
                     # Check if label already exists in PostgreSQL
-                    from todo.models.postgres.label import PostgresLabel
+                    try:
+                        from todo.models.postgres.label import PostgresLabel
+                    except Exception:
+                        logger.warning("PostgreSQL models not available, skipping sync")
+                        return False
 
                     existing = PostgresLabel.objects.filter(mongo_id=str(label["_id"])).first()
                     if existing:
@@ -203,7 +214,11 @@ class PostgresSyncService:
             synced_count = 0
             for role in roles:
                 try:
-                    from todo.models.postgres.role import PostgresRole
+                    try:
+                        from todo.models.postgres.role import PostgresRole
+                    except Exception:
+                        logger.warning("PostgreSQL models not available, skipping sync")
+                        return False
 
                     existing = PostgresRole.objects.filter(mongo_id=str(role["_id"])).first()
                     if existing:

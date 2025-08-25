@@ -1,10 +1,12 @@
 from .base import *
+import os
 
 DUAL_WRITE_ENABLED = False
+POSTGRES_SYNC_ENABLED = False
 
 # Remove PostgreSQL database configuration for tests
-# This prevents Django from trying to connect to PostgreSQL
 DATABASES = {}
 
-# Use MongoDB only for tests
-# The tests will use testcontainers to spin up their own MongoDB instance
+
+os.environ.setdefault("POSTGRES_SYNC_ENABLED", "False")
+os.environ.setdefault("DUAL_WRITE_ENABLED", "False")

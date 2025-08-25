@@ -14,6 +14,8 @@ jobs:
       ALLOWED_HOSTS: "localhost,127.0.0.1"
       MONGODB_URI: mongodb://db:27017
       DB_NAME: todo-app
+      POSTGRES_SYNC_ENABLED: "False"
+      DUAL_WRITE_ENABLED: "False"
       GOOGLE_OAUTH_CLIENT_ID: "test-client-id"
       GOOGLE_OAUTH_CLIENT_SECRET: "test-client-secret"
       GOOGLE_OAUTH_REDIRECT_URI: "http://localhost:8000/v1/auth/google/callback"

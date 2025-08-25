@@ -108,6 +108,8 @@ class TeamService:
 
             team_id_str = str(created_team.id)
 
+            cls._assign_user_role(created_by_user_id, team_id_str, "member")
+            cls._assign_user_role(created_by_user_id, team_id_str, "admin")
             cls._assign_user_role(created_by_user_id, team_id_str, "owner")
 
             for member_id in member_ids:
@@ -115,7 +117,7 @@ class TeamService:
                     cls._assign_user_role(member_id, team_id_str, "member")
 
             if dto.poc_id and dto.poc_id != created_by_user_id:
-                cls._assign_user_role(dto.poc_id, team_id_str, "owner")
+                cls._assign_user_role(dto.poc_id, team_id_str, "member")
 
             # Audit log for team creation
             AuditLogRepository.create(

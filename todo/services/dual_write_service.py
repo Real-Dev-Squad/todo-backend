@@ -294,8 +294,8 @@ class DualWriteService:
             "name": data.get("name"),
             "color": data.get("color", "#000000"),
             "description": data.get("description"),
-            "created_at": data.get("created_at"),
-            "updated_at": data.get("updated_at"),
+            "created_at": data.get("createdAt"),
+            "updated_at": data.get("updatedAt"),
         }
 
     def _transform_role_data(self, data: Dict[str, Any]) -> Dict[str, Any]:

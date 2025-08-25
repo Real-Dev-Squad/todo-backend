@@ -162,19 +162,28 @@ SERVICES = {
 }
 
 # Database Configuration
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": POSTGRES_NAME,
-        "USER": POSTGRES_USER,
-        "PASSWORD": POSTGRES_PASSWORD,
-        "HOST": POSTGRES_HOST,
-        "PORT": POSTGRES_PORT,
-        "OPTIONS": {
-            "sslmode": "prefer",
-        },
+# Only configure PostgreSQL if not in testing mode
+if not TESTING:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": POSTGRES_NAME,
+            "USER": POSTGRES_USER,
+            "PASSWORD": POSTGRES_PASSWORD,
+            "HOST": POSTGRES_HOST,
+            "PORT": POSTGRES_PORT,
+            "OPTIONS": {
+                "sslmode": "prefer",
+            },
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
+    }
 
 # Dual-Write Configuration
 DUAL_WRITE_ENABLED = os.getenv("DUAL_WRITE_ENABLED", "True").lower() == "true"

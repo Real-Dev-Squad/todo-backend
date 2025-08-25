@@ -8,6 +8,12 @@ services:
       DB_NAME: todo-app
       PYTHONUNBUFFERED: 1
       PYDEVD_DISABLE_FILE_VALIDATION: 1
+      # PostgreSQL Configuration
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_NAME: todo_postgres
+      POSTGRES_USER: todo_user
+      POSTGRES_PASSWORD: todo_password
     volumes:
       - .:/app
     ports:
@@ -15,9 +21,31 @@ services:
       - "5678:5678"  # Debug port
     depends_on:
       - db
+      - postgres
       - mongo-init
     stdin_open: true
     tty: true
+
+  postgres:
+    image: postgres:15
+    container_name: todo-postgres
+    environment:
+      POSTGRES_DB: todo_postgres
+      POSTGRES_USER: todo_user
+      POSTGRES_PASSWORD: todo_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U todo_user -d todo_postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
 
   db:
     image: mongo:latest
@@ -67,3 +95,6 @@ services:
     depends_on:
       - db
       - mongo-init
+
+volumes:
+  postgres_data:

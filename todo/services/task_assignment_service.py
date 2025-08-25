@@ -3,13 +3,13 @@ from typing import Optional
 from todo.dto.task_assignment_dto import TaskAssignmentResponseDTO, CreateTaskAssignmentDTO
 from todo.dto.responses.create_task_assignment_response import CreateTaskAssignmentResponse
 from todo.models.common.pyobjectid import PyObjectId
+from todo.models.task_assignment import TaskAssignmentModel
 from todo.repositories.task_assignment_repository import TaskAssignmentRepository
 from todo.repositories.task_repository import TaskRepository
 from todo.repositories.user_repository import UserRepository
 from todo.repositories.team_repository import TeamRepository
 from todo.exceptions.user_exceptions import UserNotFoundException
 from todo.exceptions.task_exceptions import TaskNotFoundException
-from todo.models.task_assignment import TaskAssignmentModel
 from todo.dto.task_assignment_dto import TaskAssignmentDTO
 from todo.models.audit_log import AuditLogModel
 from todo.repositories.audit_log_repository import AuditLogRepository
@@ -58,6 +58,7 @@ class TaskAssignmentService:
             if not updated_assignment:
                 raise ValueError("Failed to update task assignment")
             assignment = updated_assignment
+
         else:
             # Create new assignment
             task_assignment = TaskAssignmentModel(

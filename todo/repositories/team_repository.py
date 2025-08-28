@@ -5,6 +5,7 @@ from pymongo import ReturnDocument
 
 from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.repositories.common.mongo_repository import MongoRepository
+from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
 
 
 class TeamRepository(MongoRepository):
@@ -22,6 +23,30 @@ class TeamRepository(MongoRepository):
         team_dict = team.model_dump(mode="json", by_alias=True, exclude_none=True)
         insert_result = teams_collection.insert_one(team_dict)
         team.id = insert_result.inserted_id
+
+        dual_write_service = EnhancedDualWriteService()
+        team_data = {
+            "name": team.name,
+            "description": team.description,
+            "invite_code": team.invite_code,
+            "poc_id": str(team.poc_id) if team.poc_id else None,
+            "created_by": str(team.created_by),
+            "updated_by": str(team.updated_by),
+            "is_deleted": team.is_deleted,
+            "created_at": team.created_at,
+            "updated_at": team.updated_at,
+        }
+
+        dual_write_success = dual_write_service.create_document(
+            collection_name="teams", data=team_data, mongo_id=str(team.id)
+        )
+
+        if not dual_write_success:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to sync team {team.id} to Postgres")
+
         return team
 
     @classmethod
@@ -113,6 +138,28 @@ class UserTeamDetailsRepository(MongoRepository):
         user_team_dict = user_team.model_dump(mode="json", by_alias=True, exclude_none=True)
         insert_result = collection.insert_one(user_team_dict)
         user_team.id = insert_result.inserted_id
+
+        dual_write_service = EnhancedDualWriteService()
+        user_team_data = {
+            "user_id": str(user_team.user_id),
+            "team_id": str(user_team.team_id),
+            "created_by": str(user_team.created_by),
+            "updated_by": str(user_team.updated_by),
+            "is_active": user_team.is_active,
+            "created_at": user_team.created_at,
+            "updated_at": user_team.updated_at,
+        }
+
+        dual_write_success = dual_write_service.create_document(
+            collection_name="user_team_details", data=user_team_data, mongo_id=str(user_team.id)
+        )
+
+        if not dual_write_success:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to sync user team details {user_team.id} to Postgres")
+
         return user_team
 
     @classmethod
@@ -135,6 +182,28 @@ class UserTeamDetailsRepository(MongoRepository):
         # Set the inserted IDs
         for i, user_team in enumerate(user_teams):
             user_team.id = insert_result.inserted_ids[i]
+
+        dual_write_service = EnhancedDualWriteService()
+        for user_team in user_teams:
+            user_team_data = {
+                "user_id": str(user_team.user_id),
+                "team_id": str(user_team.team_id),
+                "created_by": str(user_team.created_by),
+                "updated_by": str(user_team.updated_by),
+                "is_active": user_team.is_active,
+                "created_at": user_team.created_at,
+                "updated_at": user_team.updated_at,
+            }
+
+            dual_write_success = dual_write_service.create_document(
+                collection_name="user_team_details", data=user_team_data, mongo_id=str(user_team.id)
+            )
+
+            if not dual_write_success:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to sync user team details {user_team.id} to Postgres")
 
         return user_teams
 
@@ -208,6 +277,10 @@ class UserTeamDetailsRepository(MongoRepository):
         """
         collection = cls.get_collection()
         try:
+            current_relationship = collection.find_one({"team_id": team_id, "user_id": user_id, "is_active": True})
+            if not current_relationship:
+                return False
+
             result = collection.update_one(
                 {"team_id": team_id, "user_id": user_id, "is_active": True},
                 {
@@ -218,6 +291,29 @@ class UserTeamDetailsRepository(MongoRepository):
                     }
                 },
             )
+
+            if result.modified_count > 0:
+                dual_write_service = EnhancedDualWriteService()
+                user_team_data = {
+                    "user_id": str(current_relationship["user_id"]),
+                    "team_id": str(current_relationship["team_id"]),
+                    "is_active": False,
+                    "created_by": str(current_relationship["created_by"]),
+                    "updated_by": str(updated_by_user_id),
+                    "created_at": current_relationship["created_at"],
+                    "updated_at": datetime.now(timezone.utc),
+                }
+
+                dual_write_success = dual_write_service.update_document(
+                    collection_name="user_team_details", data=user_team_data, mongo_id=str(current_relationship["_id"])
+                )
+
+                if not dual_write_success:
+                    import logging
+
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to sync user team removal {current_relationship['_id']} to Postgres")
+
             return result.modified_count > 0
         except Exception:
             return False

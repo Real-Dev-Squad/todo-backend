@@ -2,22 +2,64 @@ services:
   django-app:
     build: .
     container_name: todo-django-app
-    command: python -Xfrozen_modules=off manage.py runserver_debug 0.0.0.0:8000 --debug-port 5678
+    command: >
+      sh -c "
+        python manage.py makemigrations &&
+        python manage.py migrate &&
+        python manage.py shell -c 'from todo_project.db.init import initialize_database; initialize_database()' &&
+        python manage.py runserver 0.0.0.0:8000
+      "
     environment:
       MONGODB_URI: mongodb://db:27017
       DB_NAME: todo-app
       PYTHONUNBUFFERED: 1
       PYDEVD_DISABLE_FILE_VALIDATION: 1
+      # PostgreSQL Configuration
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: todo_postgres
+      POSTGRES_USER: todo_user
+      POSTGRES_PASSWORD: todo_password
     volumes:
       - .:/app
     ports:
       - "8000:8000"
       - "5678:5678"  # Debug port
     depends_on:
-      - db
-      - mongo-init
+      db:
+        condition: service_started
+      mongo-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     stdin_open: true
     tty: true
+
+  postgres:
+    image: postgres:15
+    container_name: todo-postgres
+    environment:
+      POSTGRES_DB: todo_postgres
+      POSTGRES_USER: todo_user
+      POSTGRES_PASSWORD: todo_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U todo_user -d todo_app && echo 'Postgres healthcheck passed'",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+
 
   db:
     image: mongo:latest
@@ -28,7 +70,14 @@ services:
     volumes:
       - ./mongo_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "if (db.runCommand({ping:1}).ok) process.exit(0); else process.exit(1)"]
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--eval",
+          "if (db.runCommand({ping:1}).ok) process.exit(0); else process.exit(1)",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -67,3 +116,6 @@ services:
     depends_on:
       - db
       - mongo-init
+
+volumes:
+  postgres_data:

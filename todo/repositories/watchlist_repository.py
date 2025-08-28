@@ -6,6 +6,7 @@ from todo.repositories.common.mongo_repository import MongoRepository
 from todo.models.watchlist import WatchlistModel
 from todo.dto.watchlist_dto import WatchlistDTO
 from bson import ObjectId
+from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
 
 
 def _convert_objectids_to_str(obj):
@@ -39,6 +40,28 @@ class WatchlistRepository(MongoRepository):
         doc.pop("_id", None)
         insert_result = cls.get_collection().insert_one(doc)
         watchlist_model.id = str(insert_result.inserted_id)
+
+        dual_write_service = EnhancedDualWriteService()
+        watchlist_data = {
+            "task_id": str(watchlist_model.taskId),
+            "user_id": str(watchlist_model.userId),
+            "is_active": watchlist_model.isActive,
+            "created_by": str(watchlist_model.createdBy),
+            "created_at": watchlist_model.createdAt,
+            "updated_by": str(watchlist_model.updatedBy) if watchlist_model.updatedBy else None,
+            "updated_at": watchlist_model.updatedAt,
+        }
+
+        dual_write_success = dual_write_service.create_document(
+            collection_name="watchlists", data=watchlist_data, mongo_id=str(watchlist_model.id)
+        )
+
+        if not dual_write_success:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to sync watchlist {watchlist_model.id} to Postgres")
+
         return watchlist_model
 
     @classmethod
@@ -306,6 +329,11 @@ class WatchlistRepository(MongoRepository):
         Update the watchlist status of a task.
         """
         watchlist_collection = cls.get_collection()
+
+        current_watchlist = cls.get_by_user_and_task(str(userId), str(taskId))
+        if not current_watchlist:
+            return None
+
         update_result = watchlist_collection.update_one(
             {"userId": str(userId), "taskId": str(taskId)},
             {
@@ -316,6 +344,28 @@ class WatchlistRepository(MongoRepository):
                 }
             },
         )
+
+        if update_result.modified_count > 0:
+            dual_write_service = EnhancedDualWriteService()
+            watchlist_data = {
+                "task_id": str(current_watchlist.taskId),
+                "user_id": str(current_watchlist.userId),
+                "is_active": isActive,
+                "created_by": str(current_watchlist.createdBy),
+                "created_at": current_watchlist.createdAt,
+                "updated_by": str(userId),
+                "updated_at": datetime.now(timezone.utc),
+            }
+
+            dual_write_success = dual_write_service.update_document(
+                collection_name="watchlists", data=watchlist_data, mongo_id=str(current_watchlist.id)
+            )
+
+            if not dual_write_success:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to sync watchlist update {current_watchlist.id} to Postgres")
 
         if update_result.modified_count == 0:
             return None

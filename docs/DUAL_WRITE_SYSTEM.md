@@ -46,7 +46,7 @@ DUAL_WRITE_RETRY_DELAY=5                  # Delay between retries (seconds)
 # Postgres Configuration
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
-POSTGRES_NAME=todo_postgres
+POSTGRES_DB=todo_postgres
 POSTGRES_USER=todo_user
 POSTGRES_PASSWORD=todo_password
 ```

@@ -22,7 +22,7 @@ DB_NAME = os.getenv("DB_NAME")
 # Postgres Configuration
 POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
-POSTGRES_NAME = os.getenv("POSTGRES_NAME", "todo_postgres")
+POSTGRES_DB = os.getenv("POSTGRES_DB", "todo_postgres")
 POSTGRES_USER = os.getenv("POSTGRES_USER", "todo_user")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "todo_password")
 
@@ -167,7 +167,7 @@ if not TESTING:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": POSTGRES_NAME,
+            "NAME": POSTGRES_DB,
             "USER": POSTGRES_USER,
             "PASSWORD": POSTGRES_PASSWORD,
             "HOST": POSTGRES_HOST,

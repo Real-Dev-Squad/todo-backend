@@ -4,30 +4,29 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('todo', '0001_initial_setup'),
+        ("todo", "0001_initial_setup"),
     ]
 
     operations = [
         migrations.RenameIndex(
-            model_name='postgrestaskassignment',
-            new_name='postgres_ta_assigne_f1c6e7_idx',
-            old_name='postgres_ta_assignee_95ca3b_idx',
+            model_name="postgrestaskassignment",
+            new_name="postgres_ta_assigne_f1c6e7_idx",
+            old_name="postgres_ta_assignee_95ca3b_idx",
         ),
         migrations.RenameIndex(
-            model_name='postgrestaskassignment',
-            new_name='postgres_ta_user_ty_5664c0_idx',
-            old_name='postgres_ta_user_typ_d13fa3_idx',
+            model_name="postgrestaskassignment",
+            new_name="postgres_ta_user_ty_5664c0_idx",
+            old_name="postgres_ta_user_typ_d13fa3_idx",
         ),
         migrations.RenameIndex(
-            model_name='postgrestaskassignment',
-            new_name='postgres_ta_team_id_982105_idx',
-            old_name='postgres_ta_team_id_a0605f_idx',
+            model_name="postgrestaskassignment",
+            new_name="postgres_ta_team_id_982105_idx",
+            old_name="postgres_ta_team_id_a0605f_idx",
         ),
         migrations.RenameIndex(
-            model_name='postgrestaskassignment',
-            new_name='postgres_ta_is_acti_8882a6_idx',
-            old_name='postgres_ta_is_acti_8b9698_idx',
+            model_name="postgrestaskassignment",
+            new_name="postgres_ta_is_acti_8882a6_idx",
+            old_name="postgres_ta_is_acti_8b9698_idx",
         ),
     ]

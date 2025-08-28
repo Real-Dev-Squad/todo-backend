@@ -149,3 +149,4 @@
 - Ensure VS Code Python extension is installed
 - Check that breakpoints are set in the correct files
 - Verify the debug server shows "Debug server listening on port 5678"
+- Contact Admin please :P

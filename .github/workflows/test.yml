@@ -32,6 +32,15 @@ jobs:
       TODO_BACKEND_BASE_URL: "http://localhost:8000"
       CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:8000"
       ADMIN_EMAILS: "admin@example.com"
+      POSTGRES_HOST: "localhost"
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: "todo-app"
+      POSTGRES_USER: "test-user"
+      POSTGRES_PASSWORD: "test-password"
+      DUAL_WRITE_ENABLED: "True"
+      DUAL_WRITE_SYNC_MODE: "async"
+      DUAL_WRITE_RETRY_ATTEMPTS: "3"
+      DUAL_WRITE_RETRY_DELAY: "5"
 
     steps:
       - name: Checkout code

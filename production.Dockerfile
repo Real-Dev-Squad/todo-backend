@@ -58,4 +58,4 @@ COPY . .
 EXPOSE 8000
 
 # Run the application.
-CMD ["gunicorn", "todo_project.wsgi", "--bind", "0.0.0.0:8000"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn todo_project.wsgi --bind 0.0.0.0:8000"]

@@ -8,7 +8,7 @@ services:
         python -Xfrozen_modules=off manage.py runserver_debug 0.0.0.0:8000 --debug-port 5678
       "
     environment:
-      MONGODB_URI: mongodb://db:27017
+      MONGODB_URI: mongodb://db:27017/?replicaSet=rs0
       DB_NAME: todo-app
       PYTHONUNBUFFERED: 1
       PYDEVD_DISABLE_FILE_VALIDATION: 1
@@ -43,12 +43,12 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U todo_user -d todo_postgres && echo 'Postgres healthcheck passed'",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
         ]
       interval: 10s
       timeout: 5s
@@ -61,7 +61,7 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - ./mongo_data:/data/db
+      - mongo_data:/data/db
     healthcheck:
       test:
         [
@@ -112,3 +112,4 @@ services:
 
 volumes:
   postgres_data:
+  mongo_data:

@@ -83,6 +83,28 @@
     ```
 4. On making changes to code and saving, live reload will work in this case as well
 
+## Database Migrations
+
+When making changes to Django models, you need to create and apply migrations:
+
+1. **Create migrations** (run this after modifying models):
+    ```
+    python manage.py makemigrations
+    ```
+
+2. **Apply migrations** (run this to update the database schema):
+    ```
+    python manage.py migrate
+    ```
+
+3. **In Docker environment:**
+    ```
+    docker compose exec django-app python manage.py makemigrations
+    docker compose exec django-app python manage.py migrate
+    ```
+
+**Note:** The docker-compose.yml automatically runs `migrate` on startup, but you must manually run `makemigrations` after model changes.
+
 ## Command reference
 1. To run the tests, run the following command
     ```

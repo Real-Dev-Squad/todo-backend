@@ -42,11 +42,38 @@
         cp .env.example .env
         ```
     - Edit the `.env` file and update the values according to your setup:
-        - `SECRET_KEY`: Generate a unique secret key for Django
+        - `SECRET_KEY`: Generate a unique secret key for Django using one of these methods:
+            ```bash
+            # Method 1: Using Django's built-in utility (Recommended)
+            python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+            
+            # Method 2: Using Python's secrets module
+            python -c "import secrets; print(secrets.token_urlsafe(50))"
+            
+            # Method 3: Using openssl (if available)
+            openssl rand -base64 50
+            ```
         - `MONGODB_URI`: MongoDB connection string (default: `mongodb://localhost:27017`)
         - `DB_NAME`: Your database name
         - `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET`: OAuth credentials for Google authentication
-        - `PRIVATE_KEY` and `PUBLIC_KEY`: Generate RSA key pairs for JWT token signing
+        - `PRIVATE_KEY` and `PUBLIC_KEY`: Generate RSA key pairs for JWT token signing using one of these methods:
+            ```bash
+            # Method 1: Using openssl (Recommended)
+            # Generate private key (2048-bit RSA)
+            openssl genrsa -out private_key.pem 2048
+            
+            # Generate public key from private key
+            openssl rsa -in private_key.pem -pubout -out public_key.pem
+            
+            # View the keys and copy them to your .env file
+            cat private_key.pem
+            cat public_key.pem
+            
+            # Method 2: Using ssh-keygen
+            ssh-keygen -t rsa -b 2048 -m PEM -f jwt_key -N ''
+            openssl rsa -in jwt_key -pubout -out jwt_key.pub
+            ```
+            **Note**: Copy the entire content including `-----BEGIN...-----` and `-----END...-----` headers
         - Other settings can be left as default for local development
 7. Install [docker](https://docs.docker.com/get-docker/) and [docker compose](https://docs.docker.com/compose/install/)
 8. Start MongoDB using docker
@@ -82,6 +109,28 @@
     }
     ```
 4. On making changes to code and saving, live reload will work in this case as well
+
+## Database Migrations
+
+When making changes to Django models, you need to create and apply migrations:
+
+1. **Create migrations** (run this after modifying models):
+    ```
+    python manage.py makemigrations
+    ```
+
+2. **Apply migrations** (run this to update the database schema):
+    ```
+    python manage.py migrate
+    ```
+
+3. **In Docker environment:**
+    ```
+    docker compose exec django-app python manage.py makemigrations
+    docker compose exec django-app python manage.py migrate
+    ```
+
+**Note:** The docker-compose.yml automatically runs `migrate` on startup, but you must manually run `makemigrations` after model changes.
 
 ## Command reference
 1. To run the tests, run the following command

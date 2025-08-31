@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import ClassVar
+
 from todo.models.common.document import Document
 
 

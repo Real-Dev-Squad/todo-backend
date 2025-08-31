@@ -1,0 +1,89 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: production.Dockerfile
+          platforms: linux/arm64
+          push: true
+          build-args: |
+            ENV=${{ vars.ENV }}
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.AWS_EC2_HOST }}
+          username: ${{ secrets.AWS_EC2_USERNAME }}
+          key: ${{ secrets.AWS_EC2_SSH_PRIVATE_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:latest
+            docker stop ${{ github.event.repository.name }}-${{ vars.ENV }} || true
+            docker rm ${{ github.event.repository.name }}-${{ vars.ENV }} || true
+            docker run -d -p ${{ vars.PORT }}:8000 \
+              --name ${{ github.event.repository.name }}-${{ vars.ENV }} \
+              --network=${{ vars.DOCKER_NETWORK }} \
+              -e ENV="${{ vars.ENV }}" \
+              -e SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+              -e DB_NAME="${{ secrets.DB_NAME }}" \
+              -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
+              -e ALLOWED_HOSTS="${{ vars.ALLOWED_HOSTS }}" \
+              -e GOOGLE_OAUTH_CLIENT_ID="${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}" \
+              -e GOOGLE_OAUTH_CLIENT_SECRET="${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}" \
+              -e GOOGLE_OAUTH_REDIRECT_URI="${{ vars.GOOGLE_OAUTH_REDIRECT_URI }}" \
+              -e PUBLIC_KEY="${{ secrets.PUBLIC_KEY }}" \
+              -e PRIVATE_KEY="${{ secrets.PRIVATE_KEY }}" \
+              -e ACCESS_LIFETIME="${{ vars.ACCESS_LIFETIME }}" \
+              -e REFRESH_LIFETIME="${{ vars.REFRESH_LIFETIME }}" \
+              -e ACCESS_TOKEN_COOKIE_NAME="${{ vars.ACCESS_TOKEN_COOKIE_NAME }}" \
+              -e REFRESH_TOKEN_COOKIE_NAME="${{ vars.REFRESH_TOKEN_COOKIE_NAME }}" \
+              -e COOKIE_DOMAIN="${{ vars.COOKIE_DOMAIN }}" \
+              -e COOKIE_SECURE="${{ vars.COOKIE_SECURE }}" \
+              -e COOKIE_HTTPONLY="${{ vars.COOKIE_HTTPONLY }}" \
+              -e COOKIE_SAMESITE="${{ vars.COOKIE_SAMESITE }}" \
+              -e TODO_BACKEND_BASE_URL="${{ vars.TODO_BACKEND_BASE_URL }}" \
+              -e TODO_UI_BASE_URL="${{ vars.TODO_UI_BASE_URL }}" \
+              -e TODO_UI_REDIRECT_PATH="${{ vars.TODO_UI_REDIRECT_PATH }}" \
+              -e CORS_ALLOWED_ORIGINS="${{ vars.CORS_ALLOWED_ORIGINS }}" \
+              -e SWAGGER_UI_PATH="${{ vars.SWAGGER_UI_PATH }}" \
+              -e ADMIN_EMAILS="${{ vars.ADMIN_EMAILS }}" \
+              -e POSTGRES_HOST="${{ secrets.POSTGRES_HOST }}" \
+              -e POSTGRES_PORT="${{ secrets.POSTGRES_PORT }}" \
+              -e POSTGRES_DB="${{ secrets.POSTGRES_DB }}" \
+              -e POSTGRES_USER="${{ secrets.POSTGRES_USER }}" \
+              -e POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}" \
+              -e DUAL_WRITE_ENABLED="${{ vars.DUAL_WRITE_ENABLED }}" \
+              -e DUAL_WRITE_SYNC_MODE="${{ vars.DUAL_WRITE_SYNC_MODE }}" \
+              -e DUAL_WRITE_RETRY_ATTEMPTS="${{ vars.DUAL_WRITE_RETRY_ATTEMPTS }}" \
+              -e DUAL_WRITE_RETRY_DELAY="${{ vars.DUAL_WRITE_RETRY_DELAY }}" \
+              ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}

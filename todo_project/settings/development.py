@@ -1,2 +1,4 @@
-# Add settings for development environment here
-from .base import *  # noqa: F403
+# Development specific settings
+from .base import *
+
+DEBUG = True

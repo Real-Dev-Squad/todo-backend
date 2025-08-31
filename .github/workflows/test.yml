@@ -7,15 +7,40 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    services:
-      db:
-        image: mongo:latest
-        ports:
-          - 27017:27017
-    
+    if: ${{ !contains(github.event.pull_request.title, '[skip tests]') }}
+
     env:
+      SECRET_KEY: "test-secret-key"
+      ALLOWED_HOSTS: "localhost,127.0.0.1"
       MONGODB_URI: mongodb://db:27017
       DB_NAME: todo-app
+      GOOGLE_OAUTH_CLIENT_ID: "test-client-id"
+      GOOGLE_OAUTH_CLIENT_SECRET: "test-client-secret"
+      GOOGLE_OAUTH_REDIRECT_URI: "http://localhost:8000/v1/auth/google/callback"
+      PRIVATE_KEY: "test-private-key"
+      PUBLIC_KEY: "test-public-key"
+      ACCESS_LIFETIME: "3600"
+      REFRESH_LIFETIME: "604800"
+      ACCESS_TOKEN_COOKIE_NAME: "todo-access"
+      REFRESH_TOKEN_COOKIE_NAME: "todo-refresh"
+      COOKIE_DOMAIN: "localhost"
+      COOKIE_SECURE: "False"
+      COOKIE_HTTPONLY: "True"
+      COOKIE_SAMESITE: "Lax"
+      TODO_UI_BASE_URL: "http://localhost:3000"
+      TODO_UI_REDIRECT_PATH: "dashboard"
+      TODO_BACKEND_BASE_URL: "http://localhost:8000"
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:8000"
+      ADMIN_EMAILS: "admin@example.com"
+      POSTGRES_HOST: "localhost"
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: "todo-app"
+      POSTGRES_USER: "test-user"
+      POSTGRES_PASSWORD: "test-password"
+      DUAL_WRITE_ENABLED: "True"
+      DUAL_WRITE_SYNC_MODE: "async"
+      DUAL_WRITE_RETRY_ATTEMPTS: "3"
+      DUAL_WRITE_RETRY_DELAY: "5"
 
     steps:
       - name: Checkout code
@@ -24,7 +49,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11.*'
+          python-version: "3.11.*"
 
       - name: Install dependencies
         run: |
@@ -33,6 +58,10 @@ jobs:
       - name: Lint check
         run: |
           ruff check
+
+      - name: Format check
+        run: |
+          ruff format --check
 
       - name: Run tests
         run: |

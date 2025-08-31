@@ -1,39 +1,115 @@
-version: "3"
-
 services:
   django-app:
     build: .
     container_name: todo-django-app
-    command: python manage.py runserver 0.0.0.0:8000
+    command: >
+      sh -c "
+        python manage.py migrate  --noinput &&
+        python -Xfrozen_modules=off manage.py runserver_debug 0.0.0.0:8000 --debug-port 5678
+      "
     environment:
-      MONGODB_URI: mongodb://db:27017
+      MONGODB_URI: mongodb://db:27017/?replicaSet=rs0
       DB_NAME: todo-app
+      PYTHONUNBUFFERED: 1
+      PYDEVD_DISABLE_FILE_VALIDATION: 1
+      # PostgreSQL Configuration
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: todo_postgres
+      POSTGRES_USER: todo_user
+      POSTGRES_PASSWORD: todo_password
     volumes:
       - .:/app
     ports:
       - "8000:8000"
+      - "5678:5678"  # Debug port
     depends_on:
-      - db
+      db:
+        condition: service_started
+      mongo-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+
+  postgres:
+    image: postgres:17.6
+    container_name: todo-postgres
+    environment:
+      POSTGRES_DB: todo_postgres
+      POSTGRES_USER: todo_user
+      POSTGRES_PASSWORD: todo_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   db:
     image: mongo:latest
+    command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017", "--quiet"]
     container_name: todo-mongo
     ports:
       - "27017:27017"
     volumes:
-      - ./mongo_data:/data/db
+      - mongo_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "'db.runCommand({ping:1})'"]
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--eval",
+          "if (db.runCommand({ping:1}).ok) process.exit(0); else process.exit(1)",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 15s
-
-    #to enable replica set, requirement for enabling transactions
+      
+  # Initialize replica set - this runs once and exits
+  mongo-init:
+    image: mongo:latest
+    depends_on:
+      db:
+        condition: service_healthy
     command: >
-      sh -c "
-        mongod --replSet rs0 --bind_ip_all --logpath /var/log/mongodb.log --logappend &
-        sleep 5 &&
-        mongosh --eval 'try { rs.initiate() } catch(e) { print(e) }' &&
-        tail -f /var/log/mongodb.log
+      mongosh --host db:27017 --eval "
+      try {
+        rs.status();
+        print('Replica set already initialized');
+      } catch(e) {
+        print('Initializing replica set...');
+        rs.initiate({
+          _id: 'rs0',
+          members: [{ _id: 0, host: 'db:27017' }]
+        });
+        print('Replica set initialized');
+      }
       "
+    restart: "no"
+ 
+  mongo-express:
+    image: mongo-express
+    container_name: todo-mongo-express
+    ports:
+      - 8081:8081
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://db:27017/
+      ME_CONFIG_BASICAUTH: false
+    depends_on:
+      - db
+      - mongo-init
+
+volumes:
+  postgres_data:
+  mongo_data:

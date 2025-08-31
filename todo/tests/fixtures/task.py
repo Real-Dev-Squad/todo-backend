@@ -3,6 +3,8 @@ from todo.models.task import TaskModel
 from todo.constants.task import TaskStatus
 from todo.dto.task_dto import TaskDTO
 from bson import ObjectId
+from todo.dto.task_assignment_dto import TaskAssignmentDTO
+from datetime import datetime
 
 tasks_db_data = [
     {
@@ -16,6 +18,7 @@ tasks_db_data = [
         "isAcknowledged": True,
         "labels": [ObjectId("67588c1ac2195684a575840c"), ObjectId("67478036eac9d93db7f59c35")],
         "createdAt": "2024-11-08T10:14:35",
+        "isDeleted": False,
         "updatedAt": "2024-11-08T15:14:35",
         "createdBy": "qMbT6M2GB65W7UHgJS4g",
         "updatedBy": "qMbT6M2GB65W7UHgJS4g",
@@ -47,9 +50,18 @@ task_dtos = [
         title="created rest api",
         priority=1,
         status="TODO",
-        assignee={"id": "qMbT6M2GB65W7UHgJS4g", "name": "SYSTEM"},
+        assignee=TaskAssignmentDTO(
+            id="assignment-1",
+            task_id="672f7c5b775ee9f4471ff1dd",
+            assignee_id="qMbT6M2GB65W7UHgJS4g",
+            user_type="user",
+            is_active=True,
+            created_by="xQ1CkCncM8Novk252oAj",
+            created_at=datetime(2024, 11, 9, 15, 14, 35, 724000),
+            assignee_name="SYSTEM",
+        ),
         isAcknowledged=False,
-        labels=[{"name": "Beginner Friendly", "color": "#fa1e4e"}],
+        labels=[{"id": "label-1", "name": "Beginner Friendly", "color": "#fa1e4e"}],
         isDeleted=False,
         startedAt="2024-11-09T15:14:35.724000",
         dueAt="2024-11-09T15:14:35.724000",
@@ -64,9 +76,18 @@ task_dtos = [
         title="task 2",
         priority=1,
         status="TODO",
-        assignee={"id": "qMbT6M2GB65W7UHgJS4g", "name": "SYSTEM"},
+        assignee=TaskAssignmentDTO(
+            id="assignment-2",
+            task_id="674c726ca89aab38040cb964",
+            assignee_id="qMbT6M2GB65W7UHgJS4g",
+            user_type="user",
+            is_active=True,
+            created_by="xQ1CkCncM8Novk252oAj",
+            created_at=datetime(2024, 11, 9, 15, 14, 35, 724000),
+            assignee_name="SYSTEM",
+        ),
         isAcknowledged=True,
-        labels=[{"name": "Beginner Friendly", "color": "#fa1e4e"}],
+        labels=[{"id": "label-1", "name": "Beginner Friendly", "color": "#fa1e4e"}],
         isDeleted=False,
         startedAt="2024-11-09T15:14:35.724000",
         dueAt="2024-11-09T15:14:35.724000",

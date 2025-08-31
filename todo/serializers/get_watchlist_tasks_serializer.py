@@ -1,0 +1,24 @@
+from rest_framework import serializers
+from django.conf import settings
+
+from todo.constants.messages import ValidationErrors
+
+
+class GetWatchlistTaskQueryParamsSerializer(serializers.Serializer):
+    page = serializers.IntegerField(
+        required=False,
+        default=1,
+        min_value=1,
+        error_messages={
+            "min_value": ValidationErrors.PAGE_POSITIVE,
+        },
+    )
+    limit = serializers.IntegerField(
+        required=False,
+        default=settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["DEFAULT_PAGE_LIMIT"],
+        min_value=1,
+        max_value=settings.REST_FRAMEWORK["DEFAULT_PAGINATION_SETTINGS"]["MAX_PAGE_LIMIT"],
+        error_messages={
+            "min_value": ValidationErrors.LIMIT_POSITIVE,
+        },
+    )

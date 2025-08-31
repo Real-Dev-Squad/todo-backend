@@ -7,6 +7,7 @@ class ApiErrorSource(Enum):
     PARAMETER = "parameter"
     POINTER = "pointer"
     HEADER = "header"
+    PATH = "path"
 
 
 class ApiErrorDetail(BaseModel):
@@ -19,3 +20,4 @@ class ApiErrorResponse(BaseModel):
     statusCode: int
     message: str
     errors: List[ApiErrorDetail]
+    authenticated: bool | None = None

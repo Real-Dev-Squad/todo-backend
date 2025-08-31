@@ -1,0 +1,1955 @@
+openapi: 3.0.3
+info:
+  title: Todo API
+  version: 1.0.0
+  description: A comprehensive Todo API with authentication and task management
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: MIT License
+    url: https://opensource.org/licenses/MIT
+paths:
+  /v1/auth/google/callback:
+    get:
+      operationId: google_callback
+      description: Processes the OAuth callback from Google and creates/updates user
+        account
+      summary: Handle Google OAuth callback
+      parameters:
+      - in: query
+        name: code
+        schema:
+          type: string
+        description: Authorization code from Google
+        required: true
+      - in: query
+        name: error
+        schema:
+          type: string
+        description: Error from Google OAuth
+      - in: query
+        name: state
+        schema:
+          type: string
+        description: State parameter for CSRF protection
+        required: true
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: OAuth callback processed successfully
+        '400':
+          description: Bad request - invalid parameters
+        '500':
+          description: Internal server error
+  /v1/auth/google/login:
+    get:
+      operationId: google_login
+      description: Redirects to Google OAuth authorization URL or returns JSON response
+        with auth URL
+      summary: Initiate Google OAuth login
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+        description: 'Response format: ''json'' for JSON response, otherwise redirects'
+      - in: query
+        name: redirectURL
+        schema:
+          type: string
+        description: URL to redirect after successful authentication
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: Google OAuth URL generated successfully
+        '302':
+          description: Redirect to Google OAuth URL
+  /v1/auth/logout:
+    post:
+      operationId: google_logout_post
+      description: Logout the user by clearing authentication cookies (POST method)
+      summary: Logout user (POST)
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: Logout successful
+  /v1/health:
+    get:
+      operationId: health_check
+      description: Check the health status of the application and its components
+      summary: Health check
+      tags:
+      - health
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: Application is healthy
+        '503':
+          description: Application is unhealthy
+  /v1/labels:
+    get:
+      operationId: labels_retrieve
+      description: Retrieve a paginated list of labels.
+      tags:
+      - labels
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /v1/roles:
+    get:
+      operationId: get_roles
+      description: Retrieve all roles with optional filtering
+      summary: Get all roles
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+        description: Filter by active status
+      - in: query
+        name: name
+        schema:
+          type: string
+        description: Filter by role name
+      - in: query
+        name: scope
+        schema:
+          type: string
+        description: Filter by role scope (GLOBAL/TEAM)
+      tags:
+      - roles
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: Roles retrieved successfully
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+    post:
+      operationId: create_role
+      description: Create a new role with the provided details
+      summary: Create a new role
+      tags:
+      - roles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          description: Role created successfully
+        '400':
+          description: Bad request
+        '409':
+          description: Role already exists
+        '500':
+          description: Internal server error
+  /v1/roles/{role_id}:
+    get:
+      operationId: get_role_by_id
+      description: Retrieve a single role by its unique identifier
+      summary: Get role by ID
+      parameters:
+      - in: path
+        name: role_id
+        schema:
+          type: string
+        description: Unique identifier of the role
+        required: true
+      tags:
+      - roles
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: Role retrieved successfully
+        '404':
+          description: Role not found
+        '500':
+          description: Internal server error
+    patch:
+      operationId: update_role
+      description: Update an existing role with the provided details
+      summary: Update role
+      parameters:
+      - in: path
+        name: role_id
+        schema:
+          type: string
+        description: Unique identifier of the role
+        required: true
+      tags:
+      - roles
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateRoleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateRoleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateRoleRequest'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: Role updated successfully
+        '400':
+          description: Bad request
+        '404':
+          description: Role not found
+        '409':
+          description: Role name already exists
+        '500':
+          description: Internal server error
+    delete:
+      operationId: delete_role
+      description: Delete a role by its unique identifier
+      summary: Delete role
+      parameters:
+      - in: path
+        name: role_id
+        schema:
+          type: string
+        description: Unique identifier of the role to delete
+        required: true
+      tags:
+      - roles
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: Role deleted successfully
+        '404':
+          description: Role not found
+        '500':
+          description: Internal server error
+  /v1/task-assignments:
+    post:
+      operationId: create_task_assignment
+      description: Assign a task to either a user or a team. The system will validate
+        that both the task and assignee exist before creating the assignment.
+      summary: Assign task to user or team
+      tags:
+      - task-assignments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskAssignmentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateTaskAssignmentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateTaskAssignmentRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateTaskAssignmentResponse'
+          description: Task assignment created successfully
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Bad request - validation error or assignee not found
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Task not found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Internal server error
+  /v1/task-assignments/{task_id}:
+    get:
+      operationId: get_task_assignment
+      description: Retrieve the assignment details for a specific task
+      summary: Get task assignment by task ID
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+        description: Unique identifier of the task
+        required: true
+      tags:
+      - task-assignments
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateTaskAssignmentResponse'
+          description: Task assignment retrieved successfully
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Task assignment not found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Internal server error
+    patch:
+      operationId: set_executor_for_team_task
+      description: Allows the SPOC of a team to set or update the executor (user within
+        the team) for a team-assigned task. All SPOC re-assignments are logged in
+        the audit trail.
+      summary: Set or update executor for a team-assigned task (SPOC only)
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+        description: Unique identifier of the task
+        required: true
+      tags:
+      - task-assignments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedExecutorUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedExecutorUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedExecutorUpdateRequest'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: Executor updated successfully
+        '403':
+          description: Forbidden - only SPOC can update executor for team task
+        '404':
+          description: Task assignment not found
+        '500':
+          description: Internal server error
+    delete:
+      operationId: delete_task_assignment
+      description: Remove the assignment for a specific task
+      summary: Delete task assignment
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+        description: Unique identifier of the task
+        required: true
+      tags:
+      - task-assignments
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: Task assignment deleted successfully
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Task assignment not found
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Internal server error
+  /v1/tasks:
+    get:
+      operationId: get_tasks
+      description: 'Retrieve a paginated list of tasks with optional filtering and
+        sorting. Each task now includes an ''in_watchlist'' property indicating the
+        watchlist status: true if actively watched, false if in watchlist but inactive,
+        or null if not in watchlist.'
+      summary: Get paginated list of tasks
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Number of tasks per page
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Page number for pagination
+      - in: query
+        name: teamId
+        schema:
+          type: string
+        description: If provided, filters tasks assigned to this team.
+      tags:
+      - tasks
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetTasksResponse'
+          description: Successful response
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+    post:
+      operationId: create_task
+      description: Create a new task with the provided details
+      summary: Create a new task
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          description: Task created successfully
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+  /v1/tasks/{task_id}:
+    get:
+      operationId: get_task_by_id
+      description: Retrieve a single task by its unique identifier
+      summary: Get task by ID
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+        description: Unique identifier of the task
+        required: true
+      tags:
+      - tasks
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: Task retrieved successfully
+        '404':
+          description: Task not found
+        '500':
+          description: Internal server error
+    patch:
+      operationId: update_task
+      description: Partially update a task or defer it based on the action parameter
+      summary: Update or defer task
+      parameters:
+      - in: query
+        name: action
+        schema:
+          type: string
+        description: 'Action to perform: ''update'' or ''defer'''
+      - in: path
+        name: task_id
+        schema:
+          type: string
+        description: Unique identifier of the task
+        required: true
+      tags:
+      - tasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateTaskRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateTaskRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateTaskRequest'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: Task updated successfully
+        '400':
+          description: Bad request
+        '404':
+          description: Task not found
+        '500':
+          description: Internal server error
+    delete:
+      operationId: delete_task
+      description: Delete a task by its unique identifier
+      summary: Delete task
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+        description: Unique identifier of the task to delete
+        required: true
+      tags:
+      - tasks
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '204':
+          description: Task deleted successfully
+        '404':
+          description: Task not found
+        '500':
+          description: Internal server error
+  /v1/teams:
+    get:
+      operationId: teams_retrieve
+      description: Get all teams assigned to the authenticated user.
+      tags:
+      - teams
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+    post:
+      operationId: create_team
+      description: Create a new team with the provided details. The creator is always
+        added as a member, even if not in member_ids or as POC.
+      summary: Create a new team
+      tags:
+      - teams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTeamRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateTeamRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateTeamRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateTeamResponse'
+          description: Team created successfully
+        '400':
+          description: Bad request - validation error
+        '500':
+          description: Internal server error
+  /v1/teams/{team_id}:
+    get:
+      operationId: get_team_by_id
+      description: Retrieve a single team by its unique identifier. Optionally, set
+        ?member=true to get users belonging to this team.
+      summary: Get team by ID
+      parameters:
+      - in: query
+        name: member
+        schema:
+          type: boolean
+        description: If true, returns users that belong to this team instead of team
+          details.
+      - in: path
+        name: team_id
+        schema:
+          type: string
+        description: Unique identifier of the team
+        required: true
+      tags:
+      - teams
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: Team or team members retrieved successfully
+        '404':
+          description: Team not found
+        '500':
+          description: Internal server error
+    patch:
+      operationId: update_team
+      description: 'Update a team''s details including name, description, point of
+        contact (POC), and team members. All fields are optional - only include the
+        fields you want to update. For member management: if member_ids is provided,
+        it completely replaces the current team members; if member_ids is not provided,
+        existing members remain unchanged.'
+      summary: Update team by ID
+      parameters:
+      - in: path
+        name: team_id
+        schema:
+          type: string
+        description: Unique identifier of the team
+        required: true
+      tags:
+      - teams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateTeamRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateTeamRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateTeamRequest'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamDTO'
+          description: Team updated successfully
+        '400':
+          description: Bad request - validation error or invalid member IDs
+        '404':
+          description: Team not found
+        '500':
+          description: Internal server error
+  /v1/teams/{team_id}/members:
+    post:
+      operationId: add_team_members
+      description: Add new members to a team. Only existing team members can add other
+        members.
+      summary: Add members to a team
+      parameters:
+      - in: path
+        name: team_id
+        schema:
+          type: string
+        description: Unique identifier of the team
+        required: true
+      tags:
+      - teams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddTeamMemberRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AddTeamMemberRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AddTeamMemberRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamDTO'
+          description: Team members added successfully
+        '400':
+          description: Bad request - validation error or user not a team member
+        '404':
+          description: Team not found
+        '500':
+          description: Internal server error
+  /v1/teams/join-by-invite:
+    post:
+      operationId: join_team_by_invite_code
+      description: Join a team using a valid invite code. Returns the joined team
+        details.
+      summary: Join a team by invite code
+      tags:
+      - teams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JoinTeamByInviteCodeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/JoinTeamByInviteCodeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/JoinTeamByInviteCodeRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamDTO'
+          description: Joined team successfully
+        '400':
+          description: Bad request - validation error or already a member
+        '404':
+          description: Team not found or invalid invite code
+        '500':
+          description: Internal server error
+  /v1/users:
+    get:
+      operationId: get_users
+      description: Get user profile details or search users with fuzzy search. Use
+        'profile=true' to get current user details, or use search parameter to find
+        users.
+      summary: Get users with search and pagination
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: 'Number of results per page (default: 10, max: 100)'
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: 'Page number for pagination (default: 1)'
+      - in: query
+        name: profile
+        schema:
+          type: string
+        description: Set to 'true' to get current user profile
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Search query for name or email (fuzzy search)
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSearchResponseDTO'
+          description: ''
+        '204':
+          description: No users found
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: ''
+        '400':
+          description: Bad request - invalid parameters
+        '404':
+          description: Route does not exist
+        '500':
+          description: Internal server error
+  /v1/watchlist/tasks:
+    get:
+      operationId: get_watchlist_tasks
+      description: Retrieve a paginated list of tasks that are added to the authenticated
+        user's watchlist.
+      summary: Get paginated list of watchlisted tasks
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: 'Number of tasks per page (default: 10, max: 100)'
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: 'Page number for pagination (default: 1)'
+      tags:
+      - watchlist
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetWatchlistTasksResponse'
+          description: Paginated list of watchlisted tasks returned successfully
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Bad request - validation error
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Internal server error
+    post:
+      operationId: add_task_to_watchlist
+      description: Add a task to the authenticated user's watchlist.
+      summary: Add a task to the watchlist
+      tags:
+      - watchlist
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWatchlistRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateWatchlistRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateWatchlistRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateWatchlistResponse'
+          description: Task added to watchlist successfully
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Bad request - validation error or already in watchlist
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Internal server error
+  /v1/watchlist/tasks/{task_id}:
+    patch:
+      operationId: update_watchlist_task
+      description: Update the isActive status of a task in the authenticated user's
+        watchlist. This allows users to activate or deactivate watching a specific
+        task.
+      summary: Update watchlist status of a task
+      parameters:
+      - in: path
+        name: task_id
+        schema:
+          type: string
+        description: Unique identifier of the task to update in the watchlist
+        required: true
+      tags:
+      - watchlist
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWatchlistRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWatchlistRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUpdateWatchlistRequest'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: Watchlist task status updated successfully
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Bad request - validation error
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Task not found in watchlist
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Internal server error
+  /v1/watchlist/tasks/check:
+    get:
+      operationId: check_task_in_watchlist
+      description: 'Returns the watchlist status for the given task_id: true if actively
+        watched, false if in watchlist but inactive, or null if not in watchlist.'
+      summary: Check if a task is in the user's watchlist
+      parameters:
+      - in: query
+        name: task_id
+        schema:
+          type: string
+        description: Task ID to check
+        required: true
+      tags:
+      - watchlist
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          description: 'Returns { ''in_watchlist'': true/false/null }'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Bad request - validation error
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiErrorResponse'
+          description: Unauthorized
+components:
+  schemas:
+    AddTeamMemberRequest:
+      type: object
+      properties:
+        member_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: List of user IDs to add to the team
+          minItems: 1
+      required:
+      - member_ids
+    ApiErrorDetail:
+      properties:
+        source:
+          anyOf:
+          - additionalProperties:
+              type: string
+            propertyNames:
+              enum:
+              - parameter
+              - pointer
+              - header
+              - path
+            type: object
+          - type: 'null'
+          default: null
+          title: Source
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Title
+        detail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Detail
+      title: ApiErrorDetail
+      type: object
+    ApiErrorResponse:
+      properties:
+        statusCode:
+          title: Statuscode
+          type: integer
+        message:
+          title: Message
+          type: string
+        errors:
+          items:
+            $ref: '#/components/schemas/ApiErrorDetail'
+          title: Errors
+          type: array
+        authenticated:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Authenticated
+      required:
+      - statusCode
+      - message
+      - errors
+      title: ApiErrorResponse
+      type: object
+    AssigneeInfoDTO:
+      properties:
+        id:
+          title: Id
+          type: string
+        name:
+          title: Name
+          type: string
+        relation_type:
+          allOf:
+          - $ref: '#/components/schemas/RelationTypeEnum'
+          title: Relation Type
+        is_action_taken:
+          title: Is Action Taken
+          type: boolean
+        is_active:
+          title: Is Active
+          type: boolean
+      required:
+      - id
+      - name
+      - relation_type
+      - is_action_taken
+      - is_active
+      title: AssigneeInfoDTO
+      type: object
+    CreateRoleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        scope:
+          allOf:
+          - $ref: '#/components/schemas/ScopeEnum'
+          default: GLOBAL
+        is_active:
+          type: boolean
+          default: true
+      required:
+      - name
+    CreateTaskAssignmentRequest:
+      type: object
+      properties:
+        task_id:
+          type: string
+          minLength: 1
+        assignee_id:
+          type: string
+          minLength: 1
+        user_type:
+          allOf:
+          - $ref: '#/components/schemas/UserTypeEnum'
+          description: |-
+            Type of assignee: 'user' or 'team'
+
+            * `user` - user
+            * `team` - team
+      required:
+      - assignee_id
+      - task_id
+      - user_type
+    CreateTaskAssignmentResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/TaskAssignmentResponseDTO'
+        message:
+          default: Task assignment created successfully
+          title: Message
+          type: string
+      required:
+      - data
+      title: CreateTaskAssignmentResponse
+      type: object
+    CreateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          nullable: true
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/PriorityEnum'
+          default: LOW
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          default: TODO
+        assignee:
+          type: object
+          additionalProperties: {}
+          nullable: true
+        labels:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        dueAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - title
+    CreateTeamRequest:
+      type: object
+      description: The poc_id represents the team's point of contact and is optional.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        member_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        poc_id:
+          type: string
+          nullable: true
+      required:
+      - name
+    CreateTeamResponse:
+      description: |-
+        Response model for team creation endpoint.
+
+        Attributes:
+            team: The newly created team details
+            message: Success or status message from the operation
+      properties:
+        team:
+          $ref: '#/components/schemas/TeamDTO'
+        message:
+          title: Message
+          type: string
+      required:
+      - team
+      - message
+      title: CreateTeamResponse
+      type: object
+    CreateWatchlistDTO:
+      properties:
+        taskId:
+          title: Taskid
+          type: string
+        userId:
+          title: Userid
+          type: string
+        isActive:
+          default: true
+          title: Isactive
+          type: boolean
+        createdAt:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          default: null
+          title: Createdat
+        createdBy:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Createdby
+        updatedAt:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          default: null
+          title: Updatedat
+        updatedBy:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Updatedby
+      required:
+      - taskId
+      - userId
+      title: CreateWatchlistDTO
+      type: object
+    CreateWatchlistRequest:
+      type: object
+      properties:
+        taskId:
+          type: string
+          minLength: 1
+      required:
+      - taskId
+    CreateWatchlistResponse:
+      properties:
+        statusCode:
+          default: 201
+          title: Statuscode
+          type: integer
+        successMessage:
+          default: Task added to watchlist successfully
+          title: Successmessage
+          type: string
+        data:
+          $ref: '#/components/schemas/CreateWatchlistDTO'
+      required:
+      - data
+      title: CreateWatchlistResponse
+      type: object
+    DeferredDetailsDTO:
+      properties:
+        deferredAt:
+          format: date-time
+          title: Deferredat
+          type: string
+        deferredTill:
+          format: date-time
+          title: Deferredtill
+          type: string
+        deferredBy:
+          $ref: '#/components/schemas/UserDTO'
+      required:
+      - deferredAt
+      - deferredTill
+      - deferredBy
+      title: DeferredDetailsDTO
+      type: object
+    GetTasksResponse:
+      properties:
+        links:
+          anyOf:
+          - $ref: '#/components/schemas/LinksData'
+          - type: 'null'
+          default: null
+        error:
+          anyOf:
+          - type: object
+          - type: 'null'
+          default: null
+          title: Error
+        tasks:
+          default: []
+          items:
+            $ref: '#/components/schemas/TaskDTO'
+          title: Tasks
+          type: array
+      title: GetTasksResponse
+      type: object
+    GetWatchlistTasksResponse:
+      properties:
+        links:
+          anyOf:
+          - $ref: '#/components/schemas/LinksData'
+          - type: 'null'
+          default: null
+        error:
+          anyOf:
+          - type: object
+          - type: 'null'
+          default: null
+          title: Error
+        tasks:
+          default: []
+          items:
+            $ref: '#/components/schemas/WatchlistDTO'
+          title: Tasks
+          type: array
+      title: GetWatchlistTasksResponse
+      type: object
+    JoinTeamByInviteCodeRequest:
+      type: object
+      properties:
+        invite_code:
+          type: string
+          minLength: 1
+          maxLength: 100
+      required:
+      - invite_code
+    LabelDTO:
+      properties:
+        id:
+          title: Id
+          type: string
+        name:
+          title: Name
+          type: string
+        color:
+          title: Color
+          type: string
+        createdAt:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          default: null
+          title: Createdat
+        updatedAt:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          default: null
+          title: Updatedat
+        createdBy:
+          anyOf:
+          - $ref: '#/components/schemas/UserDTO'
+          - type: 'null'
+          default: null
+        updatedBy:
+          anyOf:
+          - $ref: '#/components/schemas/UserDTO'
+          - type: 'null'
+          default: null
+      required:
+      - id
+      - name
+      - color
+      title: LabelDTO
+      type: object
+    LinksData:
+      properties:
+        next:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Next
+        prev:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Prev
+      title: LinksData
+      type: object
+    NullEnum:
+      enum:
+      - null
+    PatchedExecutorUpdateRequest:
+      type: object
+      properties:
+        executor_id:
+          type: string
+          minLength: 1
+          description: User ID of the new executor (must be a member of the team)
+    PatchedUpdateRoleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        scope:
+          $ref: '#/components/schemas/ScopeEnum'
+        is_active:
+          type: boolean
+    PatchedUpdateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        priority:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/PriorityEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        status:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        assignee:
+          type: object
+          additionalProperties: {}
+          nullable: true
+        labels:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          nullable: true
+        dueAt:
+          type: string
+          format: date-time
+          nullable: true
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        isAcknowledged:
+          type: boolean
+    PatchedUpdateTeamRequest:
+      type: object
+      description: |-
+        Serializer for updating team details.
+        All fields are optional for PATCH operations.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          nullable: true
+          maxLength: 500
+        poc_id:
+          type: string
+          nullable: true
+          minLength: 1
+        member_ids:
+          type: array
+          items:
+            type: string
+            minLength: 1
+    PatchedUpdateWatchlistRequest:
+      type: object
+      properties:
+        isActive:
+          type: boolean
+    PriorityEnum:
+      enum:
+      - HIGH
+      - MEDIUM
+      - LOW
+      type: string
+      description: |-
+        * `HIGH` - HIGH
+        * `MEDIUM` - MEDIUM
+        * `LOW` - LOW
+    RelationTypeEnum:
+      enum:
+      - team
+      - user
+      type: string
+    ScopeEnum:
+      enum:
+      - GLOBAL
+      - TEAM
+      type: string
+      description: |-
+        * `GLOBAL` - Global
+        * `TEAM` - Team
+    StatusEnum:
+      enum:
+      - TODO
+      - IN_PROGRESS
+      - DEFERRED
+      - BLOCKED
+      - DONE
+      type: string
+      description: |-
+        * `TODO` - TODO
+        * `IN_PROGRESS` - IN_PROGRESS
+        * `DEFERRED` - DEFERRED
+        * `BLOCKED` - BLOCKED
+        * `DONE` - DONE
+    TaskAssignmentResponseDTO:
+      properties:
+        id:
+          title: Id
+          type: string
+        task_id:
+          title: Task Id
+          type: string
+        assignee_id:
+          title: Assignee Id
+          type: string
+        user_type:
+          allOf:
+          - $ref: '#/components/schemas/UserTypeEnum'
+          title: User Type
+        assignee_name:
+          title: Assignee Name
+          type: string
+        is_active:
+          title: Is Active
+          type: boolean
+        created_by:
+          title: Created By
+          type: string
+        updated_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Updated By
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        updated_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          default: null
+          title: Updated At
+      required:
+      - id
+      - task_id
+      - assignee_id
+      - user_type
+      - assignee_name
+      - is_active
+      - created_by
+      - created_at
+      title: TaskAssignmentResponseDTO
+      type: object
+    TaskDTO:
+      properties:
+        id:
+          title: Id
+          type: string
+        displayId:
+          title: Displayid
+          type: string
+        title:
+          title: Title
+          type: string
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Description
+        priority:
+          anyOf:
+          - $ref: '#/components/schemas/TaskPriority'
+          - type: 'null'
+          default: null
+        status:
+          anyOf:
+          - $ref: '#/components/schemas/TaskStatus'
+          - type: 'null'
+          default: null
+        assignee:
+          anyOf:
+          - $ref: '#/components/schemas/AssigneeInfoDTO'
+          - type: 'null'
+          default: null
+        isAcknowledged:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Isacknowledged
+        labels:
+          default: []
+          items:
+            $ref: '#/components/schemas/LabelDTO'
+          title: Labels
+          type: array
+        startedAt:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          default: null
+          title: Startedat
+        dueAt:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          default: null
+          title: Dueat
+        deferredDetails:
+          anyOf:
+          - $ref: '#/components/schemas/DeferredDetailsDTO'
+          - type: 'null'
+          default: null
+        in_watchlist:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: In Watchlist
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        updatedAt:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          default: null
+          title: Updatedat
+        createdBy:
+          $ref: '#/components/schemas/UserDTO'
+        updatedBy:
+          anyOf:
+          - $ref: '#/components/schemas/UserDTO'
+          - type: 'null'
+          default: null
+      required:
+      - id
+      - displayId
+      - title
+      - createdAt
+      - createdBy
+      title: TaskDTO
+      type: object
+    TaskPriority:
+      enum:
+      - 1
+      - 2
+      - 3
+      title: TaskPriority
+      type: integer
+    TaskStatus:
+      enum:
+      - TODO
+      - IN_PROGRESS
+      - DEFERRED
+      - BLOCKED
+      - DONE
+      title: TaskStatus
+      type: string
+    TeamDTO:
+      properties:
+        id:
+          title: Id
+          type: string
+        name:
+          title: Name
+          type: string
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Description
+        poc_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Poc Id
+        invite_code:
+          title: Invite Code
+          type: string
+        created_by:
+          title: Created By
+          type: string
+        updated_by:
+          title: Updated By
+          type: string
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        updated_at:
+          format: date-time
+          title: Updated At
+          type: string
+        users:
+          anyOf:
+          - items: {}
+            type: array
+          - type: 'null'
+          default: null
+          title: Users
+      required:
+      - id
+      - name
+      - invite_code
+      - created_by
+      - updated_by
+      - created_at
+      - updated_at
+      title: TeamDTO
+      type: object
+    UserDTO:
+      properties:
+        id:
+          title: Id
+          type: string
+        name:
+          title: Name
+          type: string
+        addedOn:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          default: null
+          title: Addedon
+        tasksAssignedCount:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          default: null
+          title: Tasksassignedcount
+      required:
+      - id
+      - name
+      title: UserDTO
+      type: object
+    UserSearchDTO:
+      properties:
+        id:
+          title: Id
+          type: string
+        name:
+          title: Name
+          type: string
+        email_id:
+          title: Email Id
+          type: string
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        updated_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          default: null
+          title: Updated At
+      required:
+      - id
+      - name
+      - email_id
+      - created_at
+      title: UserSearchDTO
+      type: object
+    UserSearchResponseDTO:
+      properties:
+        users:
+          items:
+            $ref: '#/components/schemas/UserSearchDTO'
+          title: Users
+          type: array
+        total_count:
+          title: Total Count
+          type: integer
+        page:
+          title: Page
+          type: integer
+        limit:
+          title: Limit
+          type: integer
+      required:
+      - users
+      - total_count
+      - page
+      - limit
+      title: UserSearchResponseDTO
+      type: object
+    UserTypeEnum:
+      enum:
+      - user
+      - team
+      type: string
+      description: |-
+        * `user` - user
+        * `team` - team
+    WatchlistDTO:
+      properties:
+        taskId:
+          title: Taskid
+          type: string
+        displayId:
+          title: Displayid
+          type: string
+        title:
+          title: Title
+          type: string
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Description
+        priority:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          default: null
+          title: Priority
+        status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          default: null
+          title: Status
+        isAcknowledged:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Isacknowledged
+        isDeleted:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          default: null
+          title: Isdeleted
+        labels:
+          default: []
+          items: {}
+          title: Labels
+          type: array
+        dueAt:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          default: null
+          title: Dueat
+        createdAt:
+          format: date-time
+          title: Createdat
+          type: string
+        createdBy:
+          title: Createdby
+          type: string
+        watchlistId:
+          title: Watchlistid
+          type: string
+      required:
+      - taskId
+      - displayId
+      - title
+      - createdAt
+      - createdBy
+      - watchlistId
+      title: WatchlistDTO
+      type: object
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+servers:
+- url: http://localhost:8000
+  description: Development server
+tags:
+- name: tasks
+  description: Task management operations
+- name: auth
+  description: Authentication operations
+- name: health
+  description: Health check endpoints
+externalDocs:
+  description: Find more info here
+  url: https://github.com/your-repo/todo-backend

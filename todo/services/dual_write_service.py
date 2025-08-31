@@ -16,6 +16,8 @@ from todo.models.postgres import (
     PostgresUserRole,
     PostgresAuditLog,
     PostgresTeamCreationInviteCode,
+    PostgresRateLimitRule,
+    PostgresRateLimitCache,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,6 +42,9 @@ class DualWriteService:
         "user_roles": PostgresUserRole,
         "audit_logs": PostgresAuditLog,
         "team_creation_invite_codes": PostgresTeamCreationInviteCode,
+        # Rate limiting collections
+        "rate_limit_rules": PostgresRateLimitRule,
+        "rate_limit_cache": PostgresRateLimitCache,
     }
 
     def __init__(self):

@@ -10,6 +10,7 @@ from .watchlist import PostgresWatchlist
 from .user_role import PostgresUserRole
 from .audit_log import PostgresAuditLog
 from .team_creation_invite_code import PostgresTeamCreationInviteCode
+from .rate_limit import PostgresRateLimitRule, PostgresRateLimitCache
 
 __all__ = [
     "PostgresUser",
@@ -25,4 +26,6 @@ __all__ = [
     "PostgresUserRole",
     "PostgresAuditLog",
     "PostgresTeamCreationInviteCode",
+    "PostgresRateLimitRule",
+    "PostgresRateLimitCache",
 ]

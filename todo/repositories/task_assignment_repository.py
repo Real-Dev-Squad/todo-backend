@@ -399,27 +399,29 @@ class TaskAssignmentRepository(MongoRepository):
                 {"assignee_id": user_id, "team_id": team_id, "is_active": True},
                 {"$set": {"is_active": False, "updated_by": ObjectId(performed_by_user_id), "updated_at": now}},
             )
-            
+
             new_assignments = []
             operations = []
             dual_write_service = EnhancedDualWriteService()
             for task in user_task_assignments:
-                operations.append({
-                    "collection_name": "task_assignments",
-                    "operation": "update",
-                    "mongo_id": task["_id"],
-                    "data": {
-                        "task_mongo_id": str(task["task_id"]),
-                        "assignee_id": str(task["assignee_id"]),
-                        "user_type": task["user_type"],
-                        "team_id": str(task["team_id"]),
-                        "is_active": False,
-                        "created_at": task["created_at"],
-                        "updated_at": datetime.now(timezone.utc),
-                        "created_by": str(task["created_by"]),
-                        "updated_by": str(performed_by_user_id)
-                    } 
-                })
+                operations.append(
+                    {
+                        "collection_name": "task_assignments",
+                        "operation": "update",
+                        "mongo_id": task["_id"],
+                        "data": {
+                            "task_mongo_id": str(task["task_id"]),
+                            "assignee_id": str(task["assignee_id"]),
+                            "user_type": task["user_type"],
+                            "team_id": str(task["team_id"]),
+                            "is_active": False,
+                            "created_at": task["created_at"],
+                            "updated_at": datetime.now(timezone.utc),
+                            "created_by": str(task["created_by"]),
+                            "updated_by": str(performed_by_user_id),
+                        },
+                    }
+                )
                 new_assignment_id = PyObjectId()
                 new_assignments.append(
                     TaskAssignmentModel(
@@ -432,22 +434,24 @@ class TaskAssignmentRepository(MongoRepository):
                         team_id=PyObjectId(team_id),
                     ).model_dump(mode="json", by_alias=True, exclude_none=True)
                 )
-                operations.append({
-                    "collection_name": "task_assignments",
-                    "operation": "create",
-                    "mongo_id": new_assignment_id,
-                    "data": {
-                        "task_mongo_id": str(task["task_id"]),
-                        "assignee_id": str(team_id),
-                        "user_type": "team",
-                        "team_id": str(team_id),
-                        "is_active": True,
-                        "created_at": datetime.now(timezone.utc),
-                        "updated_at": None,
-                        "created_by": str(performed_by_user_id),
-                        "updated_by": str(performed_by_user_id)
+                operations.append(
+                    {
+                        "collection_name": "task_assignments",
+                        "operation": "create",
+                        "mongo_id": new_assignment_id,
+                        "data": {
+                            "task_mongo_id": str(task["task_id"]),
+                            "assignee_id": str(team_id),
+                            "user_type": "team",
+                            "team_id": str(team_id),
+                            "is_active": True,
+                            "created_at": datetime.now(timezone.utc),
+                            "updated_at": None,
+                            "created_by": str(performed_by_user_id),
+                            "updated_by": str(performed_by_user_id),
+                        },
                     }
-                })
+                )
             if new_assignments:
                 collection.insert_many(new_assignments)
                 dual_write_success = dual_write_service.batch_operations(operations)

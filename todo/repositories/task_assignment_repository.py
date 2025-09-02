@@ -362,56 +362,100 @@ class TaskAssignmentRepository(MongoRepository):
         """
         Reassign all tasks of user to team
         """
-        collection = cls.get_collection()
-        now = datetime.now(timezone.utc)
-        pipeline = [
-            {
-                "$match": {
-                    "team_id": {"$in": [team_id, ObjectId(team_id)]},
-                    "assignee_id": {"$in": [user_id, ObjectId(user_id)]},
-                    "user_type": "user",
-                    "is_active": True,
-                }
-            },
-            {
-                "$addFields": {
-                    "task_id_obj": {
-                        "$convert": {"input": "$task_id", "to": "objectId", "onError": "$task_id", "onNull": None}
+        try:
+            collection = cls.get_collection()
+            now = datetime.now(timezone.utc)
+            pipeline = [
+                {
+                    "$match": {
+                        "team_id": {"$in": [team_id, ObjectId(team_id)]},
+                        "assignee_id": {"$in": [user_id, ObjectId(user_id)]},
+                        "user_type": "user",
+                        "is_active": True,
                     }
-                }
-            },
-            {"$lookup": {"from": "tasks", "localField": "task_id_obj", "foreignField": "_id", "as": "task_info"}},
-            {"$unwind": "$task_info"},
-            {"$match": {"task_info.status": {"$ne": TaskStatus.DONE.value}}},
-        ]
-        user_task_assignments = list(collection.aggregate(pipeline))
-        if not user_task_assignments:
-            return 0
+                },
+                {
+                    "$addFields": {
+                        "task_id_obj": {
+                            "$convert": {"input": "$task_id", "to": "objectId", "onError": "$task_id", "onNull": None}
+                        }
+                    }
+                },
+                {"$lookup": {"from": "tasks", "localField": "task_id_obj", "foreignField": "_id", "as": "task_info"}},
+                {"$unwind": "$task_info"},
+                {"$match": {"task_info.status": {"$ne": TaskStatus.DONE.value}}},
+            ]
+            user_task_assignments = list(collection.aggregate(pipeline))
+            if not user_task_assignments:
+                return 0
 
-        # Deactivate current assignment (try using both ObjectId and string)
-        collection.update_many(
-            {"assignee_id": ObjectId(user_id), "team_id": ObjectId(team_id), "is_active": True},
-            {"$set": {"is_active": False, "updated_by": ObjectId(performed_by_user_id), "updated_at": now}},
-        )
-
-        collection.update_many(
-            {"assignee_id": user_id, "team_id": team_id, "is_active": True},
-            {"$set": {"is_active": False, "updated_by": ObjectId(performed_by_user_id), "updated_at": now}},
-        )
-
-        new_assignments = []
-        for task in user_task_assignments:
-            new_assignments.append(
-                TaskAssignmentModel(
-                    _id=PyObjectId(),
-                    task_id=task["task_id_obj"],
-                    assignee_id=PyObjectId(team_id),
-                    user_type="team",
-                    created_by=PyObjectId(performed_by_user_id),
-                    updated_by=None,
-                    team_id=PyObjectId(team_id),
-                ).model_dump(mode="json", by_alias=True, exclude_none=True)
+            # Deactivate current assignment (try using both ObjectId and string)
+            collection.update_many(
+                {"assignee_id": ObjectId(user_id), "team_id": ObjectId(team_id), "is_active": True},
+                {"$set": {"is_active": False, "updated_by": ObjectId(performed_by_user_id), "updated_at": now}},
             )
-        if new_assignments:
-            collection.insert_many(new_assignments)
-        return len(new_assignments)
+
+            collection.update_many(
+                {"assignee_id": user_id, "team_id": team_id, "is_active": True},
+                {"$set": {"is_active": False, "updated_by": ObjectId(performed_by_user_id), "updated_at": now}},
+            )
+            
+            new_assignments = []
+            operations = []
+            dual_write_service = EnhancedDualWriteService()
+            for task in user_task_assignments:
+                operations.append({
+                    "collection_name": "task_assignments",
+                    "operation": "update",
+                    "mongo_id": task["_id"],
+                    "data": {
+                        "task_mongo_id": str(task["task_id"]),
+                        "assignee_id": str(task["assignee_id"]),
+                        "user_type": task["user_type"],
+                        "team_id": str(task["team_id"]),
+                        "is_active": False,
+                        "created_at": task["created_at"],
+                        "updated_at": datetime.now(timezone.utc),
+                        "created_by": str(task["created_by"]),
+                        "updated_by": str(performed_by_user_id)
+                    } 
+                })
+                new_assignment_id = PyObjectId()
+                new_assignments.append(
+                    TaskAssignmentModel(
+                        _id=new_assignment_id,
+                        task_id=task["task_id_obj"],
+                        assignee_id=PyObjectId(team_id),
+                        user_type="team",
+                        created_by=PyObjectId(performed_by_user_id),
+                        updated_by=None,
+                        team_id=PyObjectId(team_id),
+                    ).model_dump(mode="json", by_alias=True, exclude_none=True)
+                )
+                operations.append({
+                    "collection_name": "task_assignments",
+                    "operation": "create",
+                    "mongo_id": new_assignment_id,
+                    "data": {
+                        "task_mongo_id": str(task["task_id"]),
+                        "assignee_id": str(team_id),
+                        "user_type": "team",
+                        "team_id": str(team_id),
+                        "is_active": True,
+                        "created_at": datetime.now(timezone.utc),
+                        "updated_at": None,
+                        "created_by": str(performed_by_user_id),
+                        "updated_by": str(performed_by_user_id)
+                    }
+                })
+            if new_assignments:
+                collection.insert_many(new_assignments)
+                dual_write_success = dual_write_service.batch_operations(operations)
+                if not dual_write_success:
+                    import logging
+
+                    logger = logging.getLogger(__name__)
+                    logger.warning("Failed to sync task reassignments to Postgres")
+            return len(new_assignments)
+        except Exception:
+            return 0

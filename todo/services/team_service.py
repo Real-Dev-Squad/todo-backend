@@ -515,6 +515,7 @@ class TeamService:
 
         # Remove User
         from todo.repositories.user_team_details_repository import UserTeamDetailsRepository
+
         success = UserTeamDetailsRepository.remove_member_from_team(user_id=user_id, team_id=team_id)
         if not success:
             raise cls.TeamOrUserNotFound()

@@ -447,7 +447,7 @@ class TaskAssignmentRepository(MongoRepository):
                             "created_at": datetime.now(timezone.utc),
                             "updated_at": None,
                             "created_by": str(performed_by_user_id),
-                            "updated_by": str(performed_by_user_id),
+                            "updated_by": None,
                         },
                     }
                 )

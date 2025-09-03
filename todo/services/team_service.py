@@ -514,6 +514,7 @@ class TeamService:
         TaskAssignmentService.reassign_tasks_from_user_to_team(user_id, team_id, removed_by_user_id)
 
         # Remove User
+        from todo.repositories.user_team_details_repository import UserTeamDetailsRepository
         success = UserTeamDetailsRepository.remove_member_from_team(user_id=user_id, team_id=team_id)
         if not success:
             raise cls.TeamOrUserNotFound()

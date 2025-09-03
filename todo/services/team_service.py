@@ -12,7 +12,7 @@ from typing import List
 from todo.models.audit_log import AuditLogModel
 from todo.repositories.audit_log_repository import AuditLogRepository
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
-from todo.constants.role import RoleScope, RoleName
+
 
 from todo.exceptions.team_exceptions import (
     CannotRemoveOwnerException,
@@ -487,6 +487,7 @@ class TeamService:
     def remove_member_from_team(cls, user_id: str, team_id: str, removed_by_user_id: str):
         team = TeamService.get_team_by_id(team_id)
         from todo.services.user_role_service import UserRoleService
+        from todo.constants.role import RoleScope, RoleName
 
         # Authentication Checks
         if user_id == team.created_by:

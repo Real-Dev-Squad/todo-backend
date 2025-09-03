@@ -7,6 +7,7 @@ from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.team_creation_invite_code_repository import TeamCreationInviteCodeRepository
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
 from todo.constants.messages import AppMessages
+from todo.constants.role import RoleName
 from todo.utils.invite_code_utils import generate_invite_code
 from typing import List
 from todo.models.audit_log import AuditLogModel
@@ -115,14 +116,19 @@ class TeamService:
 
             team_id_str = str(created_team.id)
 
-            cls._assign_user_role(created_by_user_id, team_id_str, "owner")
+            cls._assign_user_role(created_by_user_id, team_id_str, RoleName.MEMBER.value)
+            cls._assign_user_role(created_by_user_id, team_id_str, RoleName.ADMIN.value)
+            cls._assign_user_role(created_by_user_id, team_id_str, RoleName.OWNER.value)
+
+            users_with_roles = {created_by_user_id}
 
             for member_id in member_ids:
-                if member_id != created_by_user_id:
-                    cls._assign_user_role(member_id, team_id_str, "member")
+                if member_id not in users_with_roles:
+                    cls._assign_user_role(member_id, team_id_str, RoleName.MEMBER.value)
+                    users_with_roles.add(member_id)
 
-            if dto.poc_id and dto.poc_id != created_by_user_id:
-                cls._assign_user_role(dto.poc_id, team_id_str, "owner")
+            if dto.poc_id and dto.poc_id not in users_with_roles:
+                cls._assign_user_role(dto.poc_id, team_id_str, RoleName.MEMBER.value)
 
             # Audit log for team creation
             AuditLogRepository.create(
@@ -291,7 +297,7 @@ class TeamService:
         UserTeamDetailsRepository.create(user_team)
 
         # NEW: Assign default member role using new role system
-        cls._assign_user_role(user_id, str(team.id), "member")
+        cls._assign_user_role(user_id, str(team.id), RoleName.MEMBER.value)
 
         # Audit log for team join
         AuditLogRepository.create(
@@ -451,7 +457,7 @@ class TeamService:
 
                 # NEW: Assign default member roles using new role system
                 for member_id in member_ids:
-                    cls._assign_user_role(member_id, team_id, "member")
+                    cls._assign_user_role(member_id, team_id, RoleName.MEMBER.value)
 
             # Audit log for team member addition
             for member_id in member_ids:

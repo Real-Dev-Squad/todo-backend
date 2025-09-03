@@ -391,12 +391,11 @@ class TaskAssignmentRepository(MongoRepository):
 
             # Deactivate current assignment (try using both ObjectId and string)
             collection.update_many(
-                {"assignee_id": ObjectId(user_id), "team_id": ObjectId(team_id), "is_active": True},
-                {"$set": {"is_active": False, "updated_by": ObjectId(performed_by_user_id), "updated_at": now}},
-            )
-
-            collection.update_many(
-                {"assignee_id": user_id, "team_id": team_id, "is_active": True},
+                {
+                    "assignee_id": {"$in": [user_id, ObjectId(user_id)]},
+                    "team_id": {"$in": [team_id, ObjectId(team_id)]},
+                    "is_active": True,
+                },
                 {"$set": {"is_active": False, "updated_by": ObjectId(performed_by_user_id), "updated_at": now}},
             )
 

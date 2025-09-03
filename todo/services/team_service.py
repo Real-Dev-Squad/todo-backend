@@ -13,7 +13,9 @@ from typing import List
 from todo.models.audit_log import AuditLogModel
 from todo.repositories.audit_log_repository import AuditLogRepository
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
-from todo.constants.role import RoleScope, RoleName
+from todo.constants.role import RoleScope
+from todo.services.user_role_service import UserRoleService
+from todo.services.task_assignment_service import TaskAssignmentService
 
 from todo.exceptions.team_exceptions import (
     CannotRemoveOwnerException,
@@ -492,7 +494,6 @@ class TeamService:
     @classmethod
     def remove_member_from_team(cls, user_id: str, team_id: str, removed_by_user_id: str):
         team = TeamService.get_team_by_id(team_id)
-        from todo.services.user_role_service import UserRoleService
 
         # Authentication Checks
         if user_id == team.created_by:
@@ -510,13 +511,9 @@ class TeamService:
             UserRoleService.remove_role_by_id(user_id, role_id, RoleScope.TEAM.value, team_id)
 
         # Reassign Tasks:
-        from todo.services.task_assignment_service import TaskAssignmentService
-
         TaskAssignmentService.reassign_tasks_from_user_to_team(user_id, team_id, removed_by_user_id)
 
         # Remove User
-        from todo.repositories.user_team_details_repository import UserTeamDetailsRepository
-
         success = UserTeamDetailsRepository.remove_member_from_team(user_id=user_id, team_id=team_id)
         if not success:
             raise cls.TeamOrUserNotFound()

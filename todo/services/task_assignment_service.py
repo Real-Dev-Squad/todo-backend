@@ -167,7 +167,7 @@ class TaskAssignmentService:
                     task_count=reassigned_tasks_count,
                     action="tasks_reassigned_to_team",
                     assignee_from=PyObjectId(user_id),
-                    assignee_to=PyObjectId(team_id)
+                    assignee_to=PyObjectId(team_id),
                 )
             )
         return reassigned_tasks_count

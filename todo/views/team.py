@@ -22,7 +22,12 @@ from todo.repositories.team_repository import TeamRepository
 from todo.repositories.audit_log_repository import AuditLogRepository
 from todo.repositories.user_repository import UserRepository
 from todo.repositories.task_repository import TaskRepository
-from todo.exceptions.team_exceptions import NotTeamAdminException, CannotRemoveOwnerException, CannotRemoveTeamPOCException
+from todo.exceptions.team_exceptions import (
+    NotTeamAdminException,
+    CannotRemoveOwnerException,
+    CannotRemoveTeamPOCException,
+)
+
 
 class TeamListView(APIView):
     def get(self, request: Request):

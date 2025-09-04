@@ -364,7 +364,7 @@ class TaskAssignmentRepository(MongoRepository):
         """
         client = cls.get_client()
         collection = cls.get_collection()
-        
+
         with client.start_session() as session:
             try:
                 with session.start_transaction():
@@ -381,15 +381,27 @@ class TaskAssignmentRepository(MongoRepository):
                         {
                             "$addFields": {
                                 "task_id_obj": {
-                                    "$convert": {"input": "$task_id", "to": "objectId", "onError": "$task_id", "onNull": None}
+                                    "$convert": {
+                                        "input": "$task_id",
+                                        "to": "objectId",
+                                        "onError": "$task_id",
+                                        "onNull": None,
+                                    }
                                 }
                             }
                         },
-                        {"$lookup": {"from": "tasks", "localField": "task_id_obj", "foreignField": "_id", "as": "task_info"}},
+                        {
+                            "$lookup": {
+                                "from": "tasks",
+                                "localField": "task_id_obj",
+                                "foreignField": "_id",
+                                "as": "task_info",
+                            }
+                        },
                         {"$unwind": "$task_info"},
                         {"$match": {"task_info.status": {"$ne": TaskStatus.DONE.value}}},
                     ]
-                        
+
                     user_task_assignments = list(collection.aggregate(pipeline))
                     if not user_task_assignments:
                         return 0
@@ -402,7 +414,7 @@ class TaskAssignmentRepository(MongoRepository):
                             "is_active": True,
                         },
                         {"$set": {"is_active": False, "updated_by": ObjectId(performed_by_user_id), "updated_at": now}},
-                        session=session
+                        session=session,
                     )
 
                     new_assignments = []

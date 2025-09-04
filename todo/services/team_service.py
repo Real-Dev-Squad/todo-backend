@@ -6,7 +6,7 @@ from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.team_creation_invite_code_repository import TeamCreationInviteCodeRepository
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
-from todo.constants.messages import AppMessages
+from todo.constants.messages import ApiErrors, AppMessages
 from todo.constants.role import RoleName
 from todo.utils.invite_code_utils import generate_invite_code
 from typing import List
@@ -16,7 +16,7 @@ from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
 from todo.constants.role import RoleScope
 from todo.services.user_role_service import UserRoleService
 from todo.services.task_assignment_service import TaskAssignmentService
-
+from todo.services.user_service import UserService
 from todo.exceptions.team_exceptions import (
     CannotRemoveOwnerException,
     NotTeamAdminException,
@@ -494,8 +494,12 @@ class TeamService:
     @classmethod
     def remove_member_from_team(cls, user_id: str, team_id: str, removed_by_user_id: str):
         team = TeamService.get_team_by_id(team_id)
-
+        team_members = UserService.get_users_by_team_id(team_id)
+        team_member_ids = [user.id for user in team_members]
+        
         # Authentication Checks
+        if user_id not in team_member_ids:
+            raise cls.TeamOrUserNotFound
         if user_id == team.created_by:
             raise CannotRemoveOwnerException()
         if user_id == team.poc_id:

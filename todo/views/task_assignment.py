@@ -2,13 +2,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.request import Request
-from rest_framework.exceptions import AuthenticationFailed
 from django.conf import settings
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 from rest_framework import serializers
 
-from todo.middlewares.jwt_auth import get_current_user_info
 from todo.serializers.create_task_assignment_serializer import CreateTaskAssignmentSerializer
 from todo.services.task_assignment_service import TaskAssignmentService
 from todo.dto.task_assignment_dto import CreateTaskAssignmentDTO
@@ -53,17 +51,13 @@ class TaskAssignmentView(APIView):
         Returns:
             Response: HTTP response with created assignment data or error details
         """
-        user = get_current_user_info(request)
-        if not user:
-            raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
-
         serializer = CreateTaskAssignmentSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(data={"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             dto = CreateTaskAssignmentDTO(**serializer.validated_data)
-            response: CreateTaskAssignmentResponse = TaskAssignmentService.create_task_assignment(dto, user["user_id"])
+            response: CreateTaskAssignmentResponse = TaskAssignmentService.create_task_assignment(dto, request.user_id)
 
             return Response(data=response.model_dump(mode="json"), status=status.HTTP_201_CREATED)
 
@@ -177,10 +171,6 @@ class TaskAssignmentDetailView(APIView):
         Set or update the executor for a team-assigned task. Only the SPOC can perform this action.
         For user assignments, this endpoint is not applicable.
         """
-        user = get_current_user_info(request)
-        if not user:
-            raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
-
         executor_id = request.data.get("executor_id")
         if not executor_id:
             return Response({"error": "executor_id is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -204,7 +194,7 @@ class TaskAssignmentDetailView(APIView):
             )
 
         # Only SPOC can update executor
-        if not TeamRepository.is_user_spoc(str(assignment.assignee_id), user["user_id"]):
+        if not TeamRepository.is_user_spoc(str(assignment.assignee_id), request.user_id):
             return Response(
                 {"error": "Only the SPOC can update executor for this team task."}, status=status.HTTP_403_FORBIDDEN
             )
@@ -224,14 +214,14 @@ class TaskAssignmentDetailView(APIView):
         # Update executor_id
         try:
             updated_assignment = TaskAssignmentRepository.update_assignment(
-                task_id, executor_id, "user", user["user_id"]
+                task_id, executor_id, "user", request.user_id
             )
             if not updated_assignment:
                 # Get more details about why it failed
                 import traceback
 
                 print(
-                    f"DEBUG: update_executor failed for task_id={task_id}, executor_id={executor_id}, user_id={user['user_id']}"
+                    f"DEBUG: update_executor failed for task_id={task_id}, executor_id={executor_id}, user_id={request.user_id}"
                 )
                 print(f"DEBUG: assignment details: {assignment}")
                 return Response(
@@ -257,7 +247,7 @@ class TaskAssignmentDetailView(APIView):
             team_id=assignment.assignee_id,
             previous_executor_id=previous_executor_id,
             new_executor_id=executor_id,
-            spoc_id=user["user_id"],
+            spoc_id=request.user_id,
             action="reassign_executor",
         )
         AuditLogRepository.create(audit_log)
@@ -295,12 +285,8 @@ class TaskAssignmentDetailView(APIView):
         Returns:
             Response: HTTP response with success or error details
         """
-        user = get_current_user_info(request)
-        if not user:
-            raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
-
         try:
-            success = TaskAssignmentService.delete_task_assignment(task_id, user["user_id"])
+            success = TaskAssignmentService.delete_task_assignment(task_id, request.user_id)
             if not success:
                 error_response = ApiErrorResponse(
                     statusCode=404,

@@ -22,6 +22,11 @@ from todo.repositories.team_repository import TeamRepository
 from todo.repositories.audit_log_repository import AuditLogRepository
 from todo.repositories.user_repository import UserRepository
 from todo.repositories.task_repository import TaskRepository
+from todo.exceptions.team_exceptions import (
+    NotTeamAdminException,
+    CannotRemoveOwnerException,
+    CannotRemoveTeamPOCException,
+)
 
 
 class TeamListView(APIView):
@@ -448,6 +453,8 @@ class TeamActivityTimelineView(APIView):
                 entry["status_from"] = log.status_from
             if log.status_to:
                 entry["status_to"] = log.status_to
+            if log.task_count:
+                entry["task_count"] = log.task_count
             timeline.append(entry)
         return Response({"timeline": timeline}, status=status.HTTP_200_OK)
 
@@ -479,5 +486,11 @@ class RemoveTeamMemberView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except TeamService.TeamOrUserNotFound:
             return Response({"detail": "Team or user not found."}, status=status.HTTP_404_NOT_FOUND)
+        except NotTeamAdminException as e:
+            return Response({"detail": e.message}, status=status.HTTP_403_FORBIDDEN)
+        except CannotRemoveTeamPOCException as e:
+            return Response({"detail": e.message}, status=status.HTTP_403_FORBIDDEN)
+        except CannotRemoveOwnerException as e:
+            return Response({"detail": e.message}, status=status.HTTP_403_FORBIDDEN)
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)

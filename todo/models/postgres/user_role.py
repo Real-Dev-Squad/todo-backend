@@ -27,7 +27,7 @@ class PostgresUserRole(models.Model):
 
     class Meta:
         db_table = "postgres_user_roles"
-        unique_together = ["user_id", "role_name", "scope", "team_id"]
+        unique_together = ["user_id", "role_name", "scope", "team_id", "is_active"]
         indexes = [
             models.Index(fields=["mongo_id"]),
             models.Index(fields=["user_id"]),

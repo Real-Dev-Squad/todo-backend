@@ -54,6 +54,8 @@ class ApiErrors:
     USER_NOT_FOUND_GENERIC = "User not found."
     SEARCH_QUERY_EMPTY = "Search query cannot be empty"
     TASK_ALREADY_IN_WATCHLIST = "Task is already in the watchlist"
+    CANNOT_REMOVE_OWNER = "Owner cannot be removed from the team"
+    CANNOT_REMOVE_POC = "POC cannot be removed from a team. Reassign the POC first."
 
 
 # Validation error messages

@@ -3,11 +3,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.request import Request
-from rest_framework.exceptions import AuthenticationFailed, ValidationError
+from rest_framework.exceptions import ValidationError
 from django.conf import settings
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
-from todo.middlewares.jwt_auth import get_current_user_info
 from todo.serializers.get_tasks_serializer import GetTaskQueryParamsSerializer
 from todo.serializers.create_task_serializer import CreateTaskSerializer
 from todo.serializers.update_task_serializer import UpdateTaskSerializer
@@ -78,22 +77,18 @@ class TaskListView(APIView):
         query = GetTaskQueryParamsSerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
         if query.validated_data["profile"]:
-            user = get_current_user_info(request)
-            if not user:
-                raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
             status_filter = query.validated_data.get("status", "").upper()
             response = TaskService.get_tasks_for_user(
-                user_id=user["user_id"],
+                user_id=request.user_id,
                 page=query.validated_data["page"],
                 limit=query.validated_data["limit"],
                 status_filter=status_filter,
             )
             return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
 
-        user = get_current_user_info(request)
         if query.validated_data["profile"]:
             response = TaskService.get_tasks_for_user(
-                user_id=user["user_id"],
+                user_id=request.user_id,
                 page=query.validated_data["page"],
                 limit=query.validated_data["limit"],
             )
@@ -109,7 +104,7 @@ class TaskListView(APIView):
             limit=query.validated_data["limit"],
             sort_by=query.validated_data["sort_by"],
             order=query.validated_data.get("order"),
-            user_id=user["user_id"],
+            user_id=request.user_id,
             team_id=team_id,
             status_filter=status_filter,
         )
@@ -137,15 +132,13 @@ class TaskListView(APIView):
         Returns:
             Response: HTTP response with created task data or error details
         """
-        user = get_current_user_info(request)
-
         serializer = CreateTaskSerializer(data=request.data)
 
         if not serializer.is_valid():
             return self._handle_validation_errors(serializer.errors)
 
         try:
-            dto = CreateTaskDTO(**serializer.validated_data, createdBy=user["user_id"])
+            dto = CreateTaskDTO(**serializer.validated_data, createdBy=request.user_id)
             response: CreateTaskResponse = TaskService.create_task(dto)
 
             return Response(data=response.model_dump(mode="json"), status=status.HTTP_201_CREATED)
@@ -245,9 +238,8 @@ class TaskDetailView(APIView):
         },
     )
     def delete(self, request: Request, task_id: str):
-        user = get_current_user_info(request)
         task_id = ObjectId(task_id)
-        TaskService.delete_task(task_id, user["user_id"])
+        TaskService.delete_task(task_id, request.user_id)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @extend_schema(
@@ -283,8 +275,6 @@ class TaskDetailView(APIView):
         Can also be used to defer a task by using ?action=defer query parameter.
         """
         action = request.query_params.get("action", "update")
-        user = get_current_user_info(request)
-
         if action == "defer":
             serializer = DeferTaskSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
@@ -292,7 +282,7 @@ class TaskDetailView(APIView):
             updated_task_dto = TaskService.defer_task(
                 task_id=task_id,
                 deferred_till=serializer.validated_data["deferredTill"],
-                user_id=user["user_id"],
+                user_id=request.user_id,
             )
         elif action == "update":
             serializer = UpdateTaskSerializer(data=request.data, partial=True)
@@ -302,7 +292,7 @@ class TaskDetailView(APIView):
             updated_task_dto = TaskService.update_task(
                 task_id=task_id,
                 validated_data=serializer.validated_data,
-                user_id=user["user_id"],
+                user_id=request.user_id,
             )
         else:
             raise ValidationError({"action": ValidationErrors.UNSUPPORTED_ACTION.format(action)})
@@ -338,10 +328,6 @@ class TaskUpdateView(APIView):
         Update both task details and assignee information in a single request.
         Similar to task creation but for updates.
         """
-        user = get_current_user_info(request)
-        if not user:
-            raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
-
         serializer = UpdateTaskSerializer(data=request.data, partial=True)
 
         if not serializer.is_valid():
@@ -350,7 +336,7 @@ class TaskUpdateView(APIView):
         try:
             # Update the task using the service with validated data
             updated_task_dto = TaskService.update_task_with_assignee_from_dict(
-                task_id=task_id, validated_data=serializer.validated_data, user_id=user["user_id"]
+                task_id=task_id, validated_data=serializer.validated_data, user_id=request.user_id
             )
 
             return Response(data=updated_task_dto.model_dump(mode="json"), status=status.HTTP_200_OK)
@@ -429,10 +415,6 @@ class AssignTaskToUserView(APIView):
         },
     )
     def patch(self, request: Request, task_id: str):
-        user = get_current_user_info(request)
-        if not user:
-            raise AuthenticationFailed(ApiErrors.AUTHENTICATION_FAILED)
-
         serializer = AssignTaskToUserSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(data={"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
@@ -441,7 +423,7 @@ class AssignTaskToUserView(APIView):
             dto = CreateTaskAssignmentDTO(
                 task_id=task_id, assignee_id=serializer.validated_data["assignee_id"], user_type="user"
             )
-            response: CreateTaskAssignmentResponse = TaskAssignmentService.create_task_assignment(dto, user["user_id"])
+            response: CreateTaskAssignmentResponse = TaskAssignmentService.create_task_assignment(dto, request.user_id)
             return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
         except Exception as e:
             error_response = ApiErrorResponse(

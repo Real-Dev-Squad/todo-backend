@@ -108,6 +108,14 @@ class TaskListView(APIView):
             team_id=team_id,
             status_filter=status_filter,
         )
+
+        # Check if response contains an error and return appropriate status code
+        if response.error:
+            if response.error.get("code") == "FORBIDDEN":
+                return Response(data=response.model_dump(mode="json"), status=status.HTTP_403_FORBIDDEN)
+            else:
+                return Response(data=response.model_dump(mode="json"), status=status.HTTP_400_BAD_REQUEST)
+
         return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
 
     @extend_schema(

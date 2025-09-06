@@ -12,12 +12,10 @@ def has_team_access(user_id: str, team_id: str) -> bool:
     try:
         user_team_roles = UserRoleService.get_user_roles(user_id=user_id, scope=RoleScope.TEAM.value, team_id=team_id)
 
-        print(user_team_roles)
         if user_team_roles:
             return True
 
         team = TeamRepository.get_by_id(team_id)
-        print(team)
         if team:
             if str(team.poc_id) == str(user_id) or str(team.created_by) == str(user_id):
                 return True

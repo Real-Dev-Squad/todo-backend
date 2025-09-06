@@ -143,8 +143,10 @@ class RemoveTeamMemberViewTests(TestCase):
         self.user_id = "507f1f77bcf86cd799439011"
         self.mock_user_id = "507f1f77bcf86cd799439013"
 
+    @patch("todo.utils.team_access.has_team_access")
     @patch("todo.views.team.TeamService.remove_member_from_team")
-    def test_remove_member_success(self, mock_remove):
+    def test_remove_member_success(self, mock_remove, mock_has_team_access):
+        mock_has_team_access.return_value = True
         mock_remove.return_value = True
 
         mock_request = MagicMock()
@@ -157,10 +159,12 @@ class RemoveTeamMemberViewTests(TestCase):
             user_id=self.user_id, team_id=self.team_id, removed_by_user_id=self.mock_user_id
         )
 
+    @patch("todo.utils.team_access.has_team_access")
     @patch("todo.views.team.TeamService.remove_member_from_team")
-    def test_remove_member_not_found(self, mock_remove):
+    def test_remove_member_not_found(self, mock_remove, mock_has_team_access):
         from todo.services.team_service import TeamService
 
+        mock_has_team_access.return_value = True
         mock_remove.side_effect = TeamService.TeamOrUserNotFound()
 
         mock_request = MagicMock()
@@ -171,8 +175,10 @@ class RemoveTeamMemberViewTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn("not found", response.data["detail"])
 
+    @patch("todo.utils.team_access.has_team_access")
     @patch("todo.views.team.TeamService.remove_member_from_team")
-    def test_remove_member_generic_error(self, mock_remove):
+    def test_remove_member_generic_error(self, mock_remove, mock_has_team_access):
+        mock_has_team_access.return_value = True
         mock_remove.side_effect = Exception("Something went wrong")
 
         mock_request = MagicMock()

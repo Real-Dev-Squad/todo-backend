@@ -109,12 +109,8 @@ class TaskListView(APIView):
             status_filter=status_filter,
         )
 
-        # Check if response contains an error and return appropriate status code
-        if response.error:
-            if response.error.get("code") == "FORBIDDEN":
-                return Response(data=response.model_dump(mode="json"), status=status.HTTP_403_FORBIDDEN)
-            else:
-                return Response(data=response.model_dump(mode="json"), status=status.HTTP_400_BAD_REQUEST)
+        if response.error and response.error.get("code") == "FORBIDDEN":
+            return Response(data=response.model_dump(mode="json"), status=status.HTTP_403_FORBIDDEN)
 
         return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
 

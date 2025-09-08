@@ -7,6 +7,8 @@ from todo.constants.role import RoleScope
 from todo.repositories.team_repository import TeamRepository
 from todo.services.user_role_service import UserRoleService
 
+logger = logging.getLogger(__name__)
+
 
 def has_team_access(user_id: str, team_id: str) -> bool:
     try:
@@ -17,13 +19,12 @@ def has_team_access(user_id: str, team_id: str) -> bool:
 
         team = TeamRepository.get_by_id(team_id)
         if team:
-            if str(team.poc_id) == str(user_id) or str(team.created_by) == str(user_id):
+            if team.poc_id == user_id or team.created_by == user_id:
                 return True
 
         return False
 
     except Exception as e:
-        logger = logging.getLogger(__name__)
         logger.error(f"Error checking team access for user {user_id} and team {team_id}: {str(e)}")
         return False
 

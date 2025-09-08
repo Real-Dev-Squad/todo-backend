@@ -67,6 +67,7 @@ class TaskListView(APIView):
         responses={
             200: OpenApiResponse(response=GetTasksResponse, description="Successful response"),
             400: OpenApiResponse(description="Bad request"),
+            403: OpenApiResponse(description="Forbidden"),
             500: OpenApiResponse(description="Internal server error"),
         },
     )

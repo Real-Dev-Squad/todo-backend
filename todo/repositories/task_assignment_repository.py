@@ -401,40 +401,36 @@ class TaskAssignmentRepository(MongoRepository):
                         {"$unwind": "$task_info"},
                         {"$match": {"task_info.status": {"$ne": TaskStatus.DONE.value}}},
                     ]
-
                     user_task_assignments = list(collection.aggregate(pipeline))
                     if not user_task_assignments:
                         return 0
-
-                    # Deactivate current assignment (try using both ObjectId and string)
+                    not_done_task_assignment_ids = [assignment["_id"] for assignment in user_task_assignments]
+                    not_done_task_ids = [assignment["task_id_obj"] for assignment in user_task_assignments]
                     collection.update_many(
-                        {
-                            "assignee_id": {"$in": [user_id, ObjectId(user_id)]},
-                            "team_id": {"$in": [team_id, ObjectId(team_id)]},
-                            "is_active": True,
-                        },
+                        {"_id": {"$in": not_done_task_assignment_ids}},
                         {"$set": {"is_active": False, "updated_by": ObjectId(performed_by_user_id), "updated_at": now}},
                         session=session,
                     )
 
                     new_assignments = []
+
                     operations = []
                     dual_write_service = EnhancedDualWriteService()
-                    for task in user_task_assignments:
+                    for assignment in user_task_assignments:
                         operations.append(
                             {
                                 "collection_name": "task_assignments",
                                 "operation": "update",
-                                "mongo_id": task["_id"],
+                                "mongo_id": assignment["_id"],
                                 "data": {
-                                    "task_mongo_id": str(task["task_id"]),
-                                    "assignee_id": str(task["assignee_id"]),
-                                    "user_type": task["user_type"],
-                                    "team_id": str(task["team_id"]),
+                                    "task_mongo_id": str(assignment["task_id"]),
+                                    "assignee_id": str(assignment["assignee_id"]),
+                                    "user_type": assignment["user_type"],
+                                    "team_id": str(assignment["team_id"]),
                                     "is_active": False,
-                                    "created_at": task["created_at"],
+                                    "created_at": assignment["created_at"],
                                     "updated_at": datetime.now(timezone.utc),
-                                    "created_by": str(task["created_by"]),
+                                    "created_by": str(assignment["created_by"]),
                                     "updated_by": str(performed_by_user_id),
                                 },
                             }
@@ -443,7 +439,7 @@ class TaskAssignmentRepository(MongoRepository):
                         new_assignments.append(
                             TaskAssignmentModel(
                                 _id=new_assignment_id,
-                                task_id=task["task_id_obj"],
+                                task_id=assignment["task_id_obj"],
                                 assignee_id=PyObjectId(team_id),
                                 user_type="team",
                                 created_by=PyObjectId(performed_by_user_id),
@@ -457,7 +453,7 @@ class TaskAssignmentRepository(MongoRepository):
                                 "operation": "create",
                                 "mongo_id": new_assignment_id,
                                 "data": {
-                                    "task_mongo_id": str(task["task_id"]),
+                                    "task_mongo_id": str(assignment["task_id"]),
                                     "assignee_id": str(team_id),
                                     "user_type": "team",
                                     "team_id": str(team_id),
@@ -469,9 +465,49 @@ class TaskAssignmentRepository(MongoRepository):
                                 },
                             }
                         )
+                        task_details = assignment["task_info"]
+                        operations.append(
+                            {
+                                "collection_name": "tasks",
+                                "operation": "update",
+                                "mongo_id": assignment["task_id"],
+                                "data": {
+                                    "title": task_details.get("title"),
+                                    "description": task_details.get("description"),
+                                    "priority": task_details.get("priority"),
+                                    "status": TaskStatus.TODO,
+                                    "displayId": task_details.get("displayId"),
+                                    "deferredDetails": None,
+                                    "isAcknowledged": task_details.get("isAcknowledged", False),
+                                    "isDeleted": task_details.get("isDeleted", False),
+                                    "startedAt": task_details.get("startedAt"),
+                                    "dueAt": task_details.get("dueAt"),
+                                    "createdAt": task_details.get("createdAt"),
+                                    "updatedAt": datetime.now(timezone.utc),
+                                    "createdBy": str(task_details.get("createdBy")),
+                                    "updated_by": str(performed_by_user_id),
+                                },
+                            }
+                        )
+
                     if new_assignments:
                         collection.insert_many(new_assignments, session=session)
+                        from todo.repositories.task_repository import TaskRepository
+
+                        tasks_collection = TaskRepository.get_collection()
+                        tasks_collection.update_many(
+                            {"_id": {"$in": not_done_task_ids}},
+                            {
+                                "$set": {
+                                    "status": TaskStatus.TODO.value,
+                                    "deferredDetails": None,
+                                    "updatedAt": datetime.now(timezone.utc),
+                                }
+                            },
+                            session=session,
+                        )
                         dual_write_success = dual_write_service.batch_operations(operations)
+
                         if not dual_write_success:
                             import logging
 

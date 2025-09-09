@@ -497,7 +497,6 @@ class TeamService:
         team_members = UserService.get_users_by_team_id(team_id)
         team_member_ids = [user.id for user in team_members]
 
-        # Authentication Checks
         if user_id not in team_member_ids:
             raise cls.TeamOrUserNotFound
         if user_id == team.created_by:
@@ -508,16 +507,13 @@ class TeamService:
             if not UserRoleService.has_role(removed_by_user_id, RoleName.ADMIN.value, RoleScope.TEAM.value, team_id):
                 raise NotTeamAdminException()
 
-        # Remove User Roles
         user_roles = UserRoleService.get_user_roles(user_id, RoleScope.TEAM.value, team_id)
         user_role_ids = [roles["role_id"] for roles in user_roles]
         for role_id in user_role_ids:
             UserRoleService.remove_role_by_id(user_id, role_id, RoleScope.TEAM.value, team_id)
 
-        # Reassign Tasks:
         TaskAssignmentService.reassign_tasks_from_user_to_team(user_id, team_id, removed_by_user_id)
 
-        # Remove User
         from todo.repositories.user_team_details_repository import UserTeamDetailsRepository
 
         success = UserTeamDetailsRepository.remove_member_from_team(user_id=user_id, team_id=team_id)

@@ -27,7 +27,13 @@ class PostgresUserRole(models.Model):
 
     class Meta:
         db_table = "postgres_user_roles"
-        unique_together = ["user_id", "role_name", "scope", "team_id", "is_active"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user_id", "role_name", "scope", "team_id"],
+                condition=models.Q(is_active=True),
+                name="unique_active_user_team_role",
+            )
+        ]
         indexes = [
             models.Index(fields=["mongo_id"]),
             models.Index(fields=["user_id"]),

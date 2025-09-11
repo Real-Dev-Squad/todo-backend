@@ -18,9 +18,10 @@ def has_team_access(user_id: str, team_id: str) -> bool:
             return True
 
         team = TeamRepository.get_by_id(team_id)
-        if team:
-            if team.poc_id == user_id or team.created_by == user_id:
-                return True
+        if not team:
+            return False
+        if team.poc_id == user_id or team.created_by == user_id:
+            return True
 
         return False
 

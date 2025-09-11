@@ -188,3 +188,61 @@ class RemoveTeamMemberViewTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("Something went wrong", response.data["detail"])
+
+    @patch("todo.utils.team_access.has_team_access")
+    def test_remove_member_no_access(self, mock_has_team_access):
+        mock_has_team_access.return_value = False
+
+        mock_request = MagicMock()
+        mock_request.user_id = self.mock_user_id
+
+        response = self.view.delete(mock_request, self.team_id, self.user_id)
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn("not authorized", response.data["detail"].lower())
+
+
+class TeamAccessValidationTests(TestCase):
+    def setUp(self):
+        self.user_id = "user123"
+        self.team_id = "team456"
+        self.team_data = MagicMock()
+        self.team_data.poc_id = "other_user"
+        self.team_data.created_by = "other_creator"
+
+    @patch("todo.utils.team_access.TeamRepository.get_by_id")
+    @patch("todo.utils.team_access.UserRoleService.get_user_roles")
+    def test_has_team_access_no_role_no_poc_no_creator(self, mock_get_roles, mock_get_team):
+        from todo.utils.team_access import has_team_access
+        from todo.constants.role import RoleScope
+
+        mock_get_roles.return_value = []
+        mock_get_team.return_value = self.team_data
+
+        result = has_team_access(self.user_id, self.team_id)
+
+        self.assertFalse(result)
+        mock_get_roles.assert_called_once_with(user_id=self.user_id, scope=RoleScope.TEAM.value, team_id=self.team_id)
+        mock_get_team.assert_called_once_with(self.team_id)
+
+    @patch("todo.utils.team_access.TeamRepository.get_by_id")
+    @patch("todo.utils.team_access.UserRoleService.get_user_roles")
+    def test_has_team_access_team_not_found(self, mock_get_roles, mock_get_team):
+        from todo.utils.team_access import has_team_access
+
+        mock_get_roles.return_value = []
+        mock_get_team.return_value = None
+
+        result = has_team_access(self.user_id, self.team_id)
+
+        self.assertFalse(result)
+
+    @patch("todo.utils.team_access.UserRoleService.get_user_roles")
+    def test_has_team_access_exception_handling(self, mock_get_roles):
+        from todo.utils.team_access import has_team_access
+
+        mock_get_roles.side_effect = Exception("Database error")
+
+        result = has_team_access(self.user_id, self.team_id)
+
+        self.assertFalse(result)

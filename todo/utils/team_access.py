@@ -20,10 +20,7 @@ def has_team_access(user_id: str, team_id: str) -> bool:
         team = TeamRepository.get_by_id(team_id)
         if not team:
             return False
-        if team.poc_id == user_id or team.created_by == user_id:
-            return True
-
-        return False
+        return user_id == team.poc_id or user_id == team.created_by
 
     except Exception as e:
         logger.error(f"Error checking team access for user {user_id} and team {team_id}: {str(e)}")

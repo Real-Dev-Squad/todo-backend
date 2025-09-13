@@ -22,6 +22,7 @@ from todo.repositories.team_repository import TeamRepository
 from todo.repositories.audit_log_repository import AuditLogRepository
 from todo.repositories.user_repository import UserRepository
 from todo.repositories.task_repository import TaskRepository
+from todo.utils.team_access import team_access_required
 
 
 class TeamListView(APIView):
@@ -145,6 +146,7 @@ class TeamDetailView(APIView):
             500: OpenApiResponse(description="Internal server error"),
         },
     )
+    @team_access_required
     def get(self, request: Request, team_id: str):
         """
         Retrieve a single team by ID, or users in the team if ?member=true.
@@ -192,9 +194,11 @@ class TeamDetailView(APIView):
             200: OpenApiResponse(response=TeamDTO, description="Team updated successfully"),
             400: OpenApiResponse(description="Bad request - validation error or invalid member IDs"),
             404: OpenApiResponse(description="Team not found"),
+            403: OpenApiResponse(description="Forbidden"),
             500: OpenApiResponse(description="Internal server error"),
         },
     )
+    @team_access_required
     def patch(self, request: Request, team_id: str):
         """
         Update a team by ID.
@@ -282,9 +286,11 @@ class AddTeamMembersView(APIView):
             200: OpenApiResponse(response=TeamDTO, description="Team members added successfully"),
             400: OpenApiResponse(description="Bad request - validation error or user not a team member"),
             404: OpenApiResponse(description="Team not found"),
+            403: OpenApiResponse(description="Forbidden"),
             500: OpenApiResponse(description="Internal server error"),
         },
     )
+    @team_access_required
     def post(self, request: Request, team_id: str):
         """
         Add members to a team. Only existing team members can add other members.
@@ -352,6 +358,7 @@ class TeamInviteCodeView(APIView):
             404: OpenApiResponse(description="Team not found"),
         },
     )
+    @team_access_required
     def get(self, request: Request, team_id: str):
         """
         Return the invite code for a team if the requesting user is the creator or POC of the team.
@@ -398,9 +405,11 @@ class TeamActivityTimelineView(APIView):
                 },
                 description="Team activity timeline returned successfully",
             ),
+            403: OpenApiResponse(description="Forbidden"),
             404: OpenApiResponse(description="Team not found"),
         },
     )
+    @team_access_required
     def get(self, request: Request, team_id: str):
         team = TeamRepository.get_by_id(team_id)
         if not team:
@@ -464,11 +473,13 @@ class RemoveTeamMemberView(APIView):
         ],
         responses={
             204: OpenApiResponse(description="User removed from team successfully."),
+            403: OpenApiResponse(description="Forbidden"),
             404: OpenApiResponse(description="Team or user not found."),
             400: OpenApiResponse(description="Bad request or other error."),
         },
         tags=["teams"],
     )
+    @team_access_required
     def delete(self, request, team_id, user_id):
         print(f"DEBUG: RemoveTeamMemberView.delete called with team_id={team_id}, user_id={user_id}")
         from todo.services.team_service import TeamService

@@ -454,8 +454,6 @@ class TeamActivityTimelineView(APIView):
                 entry["status_from"] = log.status_from
             if log.status_to:
                 entry["status_to"] = log.status_to
-            if log.task_count:
-                entry["task_count"] = log.task_count
             timeline.append(entry)
         return Response({"timeline": timeline}, status=status.HTTP_200_OK)
 

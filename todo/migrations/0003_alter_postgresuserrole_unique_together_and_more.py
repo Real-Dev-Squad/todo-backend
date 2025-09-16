@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("todo", "0004_alter_postgresuserrole_unique_together"),
+        ("todo", "0002_rename_postgres_ta_assignee_95ca3b_idx_postgres_ta_assigne_f1c6e7_idx_and_more"),
     ]
 
     operations = [

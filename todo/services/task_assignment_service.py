@@ -159,15 +159,4 @@ class TaskAssignmentService:
         reassigned_tasks_count = TaskAssignmentRepository.reassign_tasks_from_user_to_team(
             user_id, team_id, performed_by_user_id
         )
-        if reassigned_tasks_count > 0:
-            AuditLogRepository.create(
-                AuditLogModel(
-                    team_id=PyObjectId(team_id),
-                    performed_by=PyObjectId(performed_by_user_id),
-                    task_count=reassigned_tasks_count,
-                    action="tasks_reassigned_to_team",
-                    assignee_from=PyObjectId(user_id),
-                    assignee_to=PyObjectId(team_id),
-                )
-            )
         return reassigned_tasks_count

@@ -133,7 +133,7 @@ class UserRoleService:
     @classmethod
     def remove_all_user_roles_for_team(cls, user_id: str, team_id: str) -> bool:
         """Remove all roles for a user within a specific team."""
-        try:    
+        try:
             user_roles = cls.get_user_roles(user_id, RoleScope.TEAM.value, team_id)
             user_role_ids = [roles["role_id"] for roles in user_roles]
             for role_id in user_role_ids:

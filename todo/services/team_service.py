@@ -510,8 +510,9 @@ class TeamService:
     @classmethod
     def remove_member_from_team(cls, user_id: str, team_id: str, removed_by_user_id: str):
         cls._validate_remove_member_permissions(user_id, team_id, removed_by_user_id)
-        
+
         from todo.repositories.user_team_details_repository import UserTeamDetailsRepository
+
         success = UserTeamDetailsRepository.remove_member_from_team(user_id=user_id, team_id=team_id)
         if not success:
             raise cls.TeamOrUserNotFound()

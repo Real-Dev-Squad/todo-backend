@@ -30,8 +30,6 @@ def has_team_access(user_id: str, team_id: str) -> bool:
 def team_access_required(func):
     def wrapper(self, request, *args, **kwargs):
         team_id = kwargs.get("team_id")
-        if team_id is None and len(args) > 0:
-            team_id = args[0]
         if not team_id:
             return Response({"detail": "Team ID is required."}, status=status.HTTP_400_BAD_REQUEST)
 

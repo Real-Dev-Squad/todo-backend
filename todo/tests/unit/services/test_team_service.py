@@ -13,6 +13,8 @@ from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.models.user_role import UserRoleModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.constants.role import RoleName, RoleScope
+from todo.dto.user_dto import UserDTO
+from todo.dto.team_dto import TeamDTO
 
 
 class TeamServiceTests(TestCase):
@@ -31,6 +33,25 @@ class TeamServiceTests(TestCase):
             invite_code="TEST123",
             created_by=PyObjectId(self.user_id),
             updated_by=PyObjectId(self.user_id),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+
+        self.user_details = [
+            UserDTO(id=self.user_id, name="Test User 1", addedOn=datetime.now(timezone.utc), tasksAssignedCount=2),
+            UserDTO(id=self.poc_id, name="Test User 2", addedOn=datetime.now(timezone.utc), tasksAssignedCount=1),
+            UserDTO(id=self.admin_id, name="Test User 3", addedOn=datetime.now(timezone.utc), tasksAssignedCount=2),
+            UserDTO(id=self.member_id, name="Test User 4", addedOn=datetime.now(timezone.utc), tasksAssignedCount=1),
+        ]
+
+        self.team_details = TeamDTO(
+            id=self.team_id,
+            name="Test Team",
+            description="Test Description",
+            poc_id=self.poc_id,
+            invite_code="TEST123",
+            created_by=self.user_id,
+            updated_by=self.user_id,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
@@ -273,86 +294,89 @@ class TeamServiceTests(TestCase):
             TeamService.join_team_by_invite_code("TEST123", self.user_id)
         self.assertIn("already a member", str(context.exception))
 
+    @patch("todo.services.user_service.UserService.get_users_by_team_id")
     @patch("todo.services.team_service.TeamService.get_team_by_id")
-    def test_cannot_remove_owner(self, mock_get_by_team_id):
+    def test_cannot_remove_owner(self, mock_get_by_team_id, mock_get_users_by_team_id):
         """Test cannot remove team owner"""
-        mock_get_by_team_id.return_value = self.team_model
-
+        mock_get_users_by_team_id.return_value = self.user_details
+        mock_get_by_team_id.return_value = self.team_details
         with self.assertRaises(CannotRemoveOwnerException):
-            TeamService.remove_member_from_team(PyObjectId(self.user_id), self.team_id, self.user_id)
+            TeamService._validate_remove_member_permissions(self.user_id, self.team_id, self.user_id)
 
+    @patch("todo.services.user_service.UserService.get_users_by_team_id")
     @patch("todo.services.team_service.TeamService.get_team_by_id")
-    def test_cannot_remove_poc(self, mock_get_by_team_id):
+    def test_cannot_remove_poc(self, mock_get_by_team_id, mock_get_users_by_team_id):
         """Test cannot remove team POC"""
-        mock_get_by_team_id.return_value = self.team_model
+        mock_get_users_by_team_id.return_value = self.user_details
+        mock_get_by_team_id.return_value = self.team_details
 
         with self.assertRaises(CannotRemoveTeamPOCException):
-            TeamService.remove_member_from_team(self.team_model.poc_id, self.team_id, self.user_id)
+            TeamService._validate_remove_member_permissions(self.poc_id, self.team_id, self.user_id)
 
-    @patch("todo.services.user_role_service.UserRoleService.has_role")
+    @patch("todo.services.user_service.UserService.get_users_by_team_id")
     @patch("todo.services.team_service.TeamService.get_team_by_id")
-    def test_normal_member_cannot_remove_member(self, mock_get_by_team_id, mock_has_role):
-        mock_get_by_team_id.return_value = self.team_model
-        mock_has_role.return_value = False
+    def test_normal_member_cannot_remove_member(self, mock_get_by_team_id, mock_get_users_by_team_id):
+        mock_get_users_by_team_id.return_value = self.user_details
+        mock_get_by_team_id.return_value = self.team_details
 
         with self.assertRaises(NotTeamAdminException):
-            TeamService.remove_member_from_team(self.admin_id, self.team_id, self.member_id)
+            TeamService._validate_remove_member_permissions(self.admin_id, self.team_id, self.member_id)
 
-    @patch("todo.services.user_role_service.UserRoleService.has_role")
+    @patch("todo.services.user_service.UserService.get_users_by_team_id")
     @patch("todo.services.team_service.TeamService.get_team_by_id")
-    def test_team_or_user_not_found(self, mock_get_by_team_id, mock_has_role):
-        mock_get_by_team_id.return_value = self.team_model
-        mock_has_role.return_value = False
+    def test_team_or_user_not_found(self, mock_get_by_team_id, mock_get_users_by_team_id):
+        mock_get_users_by_team_id.return_value = self.user_details
+        mock_get_by_team_id.return_value = self.team_details
 
         with self.assertRaises(TeamService.TeamOrUserNotFound):
-            TeamService.remove_member_from_team(self.member_id, "not-teamid-exist", self.member_id)
+            TeamService._validate_remove_member_permissions("not-existing-member", self.team_id, self.member_id)
 
-    @patch("todo.repositories.audit_log_repository.AuditLogRepository.create")
     @patch("todo.services.task_assignment_service.TaskAssignmentService.reassign_tasks_from_user_to_team")
-    @patch("todo.services.user_role_service.UserRoleService.remove_role_by_id")
+    @patch("todo.services.user_role_service.UserRoleService.remove_all_user_roles_for_team")
+    @patch("todo.repositories.audit_log_repository.AuditLogRepository.create")
     @patch("todo.repositories.user_team_details_repository.UserTeamDetailsRepository.remove_member_from_team")
-    @patch("todo.services.user_role_service.UserRoleService.get_user_roles")
-    @patch("todo.services.user_role_service.UserRoleService.has_role")
-    @patch("todo.services.team_service.TeamService.get_team_by_id")
+    @patch("todo.services.team_service.TeamService._validate_remove_member_permissions")
     def test_admin_can_remove_member_successfully(
-        self,
-        mock_get_by_team_id,
-        mock_has_role,
-        mock_get_user_roles,
-        mock_remove_member_from_team,
-        mock_remove_role_by_id,
-        mock_reassign_tasks_from_user_to_team,
-        mock_audit_log_create,
+        self, mock_validate, mock_remove_member, mock_audit_log_create, mock_remove_roles, mock_reassign_tasks
     ):
-        mock_get_by_team_id.return_value = self.team_model
-        mock_has_role.return_value = True
-        mock_get_user_roles.return_value = self.member_roles
+        mock_validate.return_value = None
+        mock_remove_member.return_value = True
+        mock_remove_roles.return_value = True
+        mock_reassign_tasks.return_value = True
 
         result = TeamService.remove_member_from_team(self.member_id, self.team_id, self.admin_id)
 
         self.assertTrue(result)
+        mock_remove_member.assert_called_once_with(user_id=self.member_id, team_id=self.team_id)
+        mock_remove_roles.assert_called_once()
+        mock_reassign_tasks.assert_called_once()
+        mock_audit_log_create.assert_called_once()
+        log_entry = mock_audit_log_create.call_args[0][0]
+        self.assertEqual(log_entry.action, "member_removed_from_team")
+        self.assertEqual(str(log_entry.team_id), self.team_id)
+        self.assertEqual(str(log_entry.performed_by), self.admin_id)
 
-    @patch("todo.repositories.audit_log_repository.AuditLogRepository.create")
     @patch("todo.services.task_assignment_service.TaskAssignmentService.reassign_tasks_from_user_to_team")
-    @patch("todo.services.user_role_service.UserRoleService.remove_role_by_id")
+    @patch("todo.services.user_role_service.UserRoleService.remove_all_user_roles_for_team")
+    @patch("todo.repositories.audit_log_repository.AuditLogRepository.create")
     @patch("todo.repositories.user_team_details_repository.UserTeamDetailsRepository.remove_member_from_team")
-    @patch("todo.services.user_role_service.UserRoleService.get_user_roles")
-    @patch("todo.services.user_role_service.UserRoleService.has_role")
-    @patch("todo.services.team_service.TeamService.get_team_by_id")
-    def test_user_can_remove_themself(
-        self,
-        mock_get_by_team_id,
-        mock_has_role,
-        mock_get_user_roles,
-        mock_remove_member_from_team,
-        mock_remove_role_by_id,
-        mock_reassign_tasks_from_user_to_team,
-        mock_audit_log_create,
+    @patch("todo.services.team_service.TeamService._validate_remove_member_permissions")
+    def test_user_can_remove_themselves(
+        self, mock_validate, mock_remove_member, mock_audit_log_create, mock_remove_roles, mock_reassign_tasks
     ):
-        mock_get_by_team_id.return_value = self.team_model
-        mock_has_role.return_value = True
-        mock_get_user_roles.return_value = self.member_roles
+        mock_validate.return_value = None
+        mock_remove_member.return_value = True
+        mock_remove_roles.return_value = True
+        mock_reassign_tasks.return_value = True
 
         result = TeamService.remove_member_from_team(self.member_id, self.team_id, self.member_id)
 
         self.assertTrue(result)
+        mock_remove_member.assert_called_once_with(user_id=self.member_id, team_id=self.team_id)
+        mock_remove_roles.assert_called_once_with(self.member_id, self.team_id)
+        mock_reassign_tasks.assert_called_once_with(self.member_id, self.team_id, self.member_id)
+        mock_audit_log_create.assert_called_once()
+        log_entry = mock_audit_log_create.call_args[0][0]
+        self.assertEqual(log_entry.action, "member_left_team")
+        self.assertEqual(str(log_entry.team_id), self.team_id)
+        self.assertEqual(str(log_entry.performed_by), self.member_id)

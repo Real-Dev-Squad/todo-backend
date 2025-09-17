@@ -359,7 +359,7 @@ class TaskAssignmentRepository(MongoRepository):
             return False
 
     @classmethod
-    def reassign_tasks_from_user_to_team(cls, user_id: str, team_id: str, performed_by_user_id: str):
+    def reassign_tasks_from_user_to_team(cls, user_id: str, team_id: str, performed_by_user_id: str) -> bool:
         """
         Reassign all tasks of user to team
         """
@@ -495,7 +495,7 @@ class TaskAssignmentRepository(MongoRepository):
                                         "title": task.get("title"),
                                         "description": task.get("description"),
                                         "priority": task.get("priority"),
-                                        "status": TaskStatus.TODO,
+                                        "status": TaskStatus.TODO.value,
                                         "displayId": task.get("displayId"),
                                         "deferredDetails": None,
                                         "isAcknowledged": task.get("isAcknowledged", False),
@@ -517,7 +517,7 @@ class TaskAssignmentRepository(MongoRepository):
                         logger = logging.getLogger(__name__)
                         logger.warning("Failed to sync task reassignments to Postgres")
 
-                        return len(user_task_assignments)
-                return len(user_task_assignments)
+                        return False
+                return True
             except Exception:
-                return 0
+                return False

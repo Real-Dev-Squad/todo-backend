@@ -156,7 +156,4 @@ class TaskAssignmentService:
         """
         Reassign all tasks of user to team
         """
-        reassigned_tasks_count = TaskAssignmentRepository.reassign_tasks_from_user_to_team(
-            user_id, team_id, performed_by_user_id
-        )
-        return reassigned_tasks_count
+        return TaskAssignmentRepository.reassign_tasks_from_user_to_team(user_id, team_id, performed_by_user_id)

@@ -10,9 +10,7 @@ from todo.exceptions.team_exceptions import (
 from todo.services.team_service import TeamService
 from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.models.team import TeamModel, UserTeamDetailsModel
-from todo.models.user_role import UserRoleModel
 from todo.models.common.pyobjectid import PyObjectId
-from todo.constants.role import RoleName, RoleScope
 from todo.dto.user_dto import UserDTO
 from todo.dto.team_dto import TeamDTO
 
@@ -68,84 +66,6 @@ class TeamServiceTests(TestCase):
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
-
-        # Mock user roles
-        self.owner_roles = [
-            UserRoleModel(
-                id=PyObjectId("507f1f77bcf86cd799439021"),
-                user_id=self.user_id,
-                role_name=RoleName.ADMIN,
-                scope=RoleScope.TEAM,
-                team_id=self.team_id,
-                is_active=True,
-                created_at=datetime.now(timezone.utc),
-                created_by="system",
-            ),
-            UserRoleModel(
-                id=PyObjectId("507f1f77bcf86cd799439022"),
-                user_id=self.user_id,
-                role_name=RoleName.OWNER,
-                scope=RoleScope.TEAM,
-                team_id=self.team_id,
-                is_active=True,
-                created_at=datetime.now(timezone.utc),
-                created_by="system",
-            ),
-            UserRoleModel(
-                id=PyObjectId("507f1f77bcf86cd799439023"),
-                user_id=self.user_id,
-                role_name=RoleName.MEMBER,
-                scope=RoleScope.TEAM,
-                team_id=self.team_id,
-                is_active=True,
-                created_at=datetime.now(timezone.utc),
-                created_by="system",
-            ),
-        ]
-
-        self.poc_roles = UserRoleModel(
-            id=PyObjectId("507f1f77bcf86cd799439031"),
-            user_id=self.poc_id,
-            role_name=RoleName.MEMBER,
-            scope=RoleScope.TEAM,
-            team_id=self.team_id,
-            is_active=True,
-            created_at=datetime.now(timezone.utc),
-            created_by="system",
-        )
-
-        self.admin_roles = [
-            UserRoleModel(
-                id=PyObjectId("507f1f77bcf86cd799439041"),
-                user_id=self.admin_id,
-                role_name=RoleName.ADMIN,
-                scope=RoleScope.TEAM,
-                team_id=self.team_id,
-                is_active=True,
-                created_at=datetime.now(timezone.utc),
-                created_by="system",
-            ),
-            UserRoleModel(
-                id=PyObjectId("507f1f77bcf86cd799439042"),
-                user_id=self.admin_id,
-                role_name=RoleName.MEMBER,
-                scope=RoleScope.TEAM,
-                team_id=self.team_id,
-                is_active=True,
-                created_at=datetime.now(timezone.utc),
-                created_by="system",
-            ),
-        ]
-
-        self.member_roles = [
-            {
-                "role_id": "507f1f77bcf86cd799439051",
-                "role_name": RoleName.MEMBER,
-                "scope": RoleScope.TEAM,
-                "team_id": self.team_id,
-                "assigned_at": datetime.now(timezone.utc),
-            }
-        ]
 
     @patch("todo.services.team_service.TeamRepository.get_by_id")
     @patch("todo.services.team_service.UserTeamDetailsRepository.get_by_user_id")

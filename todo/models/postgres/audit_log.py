@@ -17,7 +17,6 @@ class PostgresAuditLog(models.Model):
     assignee_from = models.CharField(max_length=24, null=True, blank=True)
     assignee_to = models.CharField(max_length=24, null=True, blank=True)
     performed_by = models.CharField(max_length=24, null=True, blank=True)
-    task_count = models.IntegerField(null=True, blank=True)
 
     last_sync_at = models.DateTimeField(auto_now=True)
     sync_status = models.CharField(

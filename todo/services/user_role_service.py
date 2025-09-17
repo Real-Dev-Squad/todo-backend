@@ -129,3 +129,16 @@ class UserRoleService:
         except Exception as e:
             logger.error(f"Failed to get team users with roles: {str(e)}")
             return []
+
+    @classmethod
+    def remove_all_user_roles_for_team(cls, user_id: str, team_id: str) -> bool:
+        """Remove all roles for a user within a specific team."""
+        try:
+            user_roles = cls.get_user_roles(user_id, RoleScope.TEAM.value, team_id)
+            user_role_ids = [roles["role_id"] for roles in user_roles]
+            for role_id in user_role_ids:
+                cls.remove_role_by_id(user_id, role_id, RoleScope.TEAM.value, team_id)
+            return True
+        except Exception as e:
+            logger.error(f"Failed to remove roles of user: {str(e)}")
+            return False

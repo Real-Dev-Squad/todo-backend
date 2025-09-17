@@ -29,7 +29,6 @@ class AuditLogRepository(MongoRepository):
             "assignee_from": str(audit_log.assignee_from) if audit_log.assignee_from else None,
             "assignee_to": str(audit_log.assignee_to) if audit_log.assignee_to else None,
             "performed_by": str(audit_log.performed_by) if audit_log.performed_by else None,
-            "task_count": int(audit_log.task_count) if audit_log.task_count else None,
         }
 
         dual_write_success = dual_write_service.create_document(

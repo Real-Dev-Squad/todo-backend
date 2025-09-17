@@ -416,7 +416,7 @@ class TaskAssignmentRepository(MongoRepository):
                         },
                         {
                             "$set": {
-                                "assignee_id": ObjectId(team_id),
+                                "assignee_id": team_id,
                                 "user_type": "team",
                                 "updated_at": now,
                                 "updated_by": ObjectId(performed_by_user_id),

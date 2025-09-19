@@ -13,6 +13,15 @@ from typing import List
 from todo.models.audit_log import AuditLogModel
 from todo.repositories.audit_log_repository import AuditLogRepository
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail
+from todo.constants.role import RoleScope
+from todo.services.user_role_service import UserRoleService
+from todo.services.task_assignment_service import TaskAssignmentService
+from todo.services.user_service import UserService
+from todo.exceptions.team_exceptions import (
+    CannotRemoveOwnerException,
+    NotTeamAdminException,
+    CannotRemoveTeamPOCException,
+)
 
 DEFAULT_ROLE_ID = "1"
 
@@ -483,7 +492,25 @@ class TeamService:
         pass
 
     @classmethod
-    def remove_member_from_team(cls, user_id: str, team_id: str, removed_by_user_id: str = None):
+    def _validate_remove_member_permissions(cls, user_id: str, team_id: str, removed_by_user_id: str):
+        team = TeamService.get_team_by_id(team_id)
+        team_members = UserService.get_users_by_team_id(team_id)
+        team_member_ids = [user.id for user in team_members]
+
+        if user_id not in team_member_ids:
+            raise cls.TeamOrUserNotFound
+        if user_id == team.created_by:
+            raise CannotRemoveOwnerException()
+        if user_id == team.poc_id:
+            raise CannotRemoveTeamPOCException()
+        if user_id != removed_by_user_id:
+            if not UserRoleService.has_role(removed_by_user_id, RoleName.ADMIN.value, RoleScope.TEAM.value, team_id):
+                raise NotTeamAdminException()
+
+    @classmethod
+    def remove_member_from_team(cls, user_id: str, team_id: str, removed_by_user_id: str):
+        cls._validate_remove_member_permissions(user_id, team_id, removed_by_user_id)
+
         from todo.repositories.user_team_details_repository import UserTeamDetailsRepository
 
         success = UserTeamDetailsRepository.remove_member_from_team(user_id=user_id, team_id=team_id)
@@ -494,9 +521,12 @@ class TeamService:
         AuditLogRepository.create(
             AuditLogModel(
                 team_id=PyObjectId(team_id),
-                action="member_removed_from_team",
+                action="member_removed_from_team" if user_id != removed_by_user_id else "member_left_team",
                 performed_by=PyObjectId(removed_by_user_id) if removed_by_user_id else PyObjectId(user_id),
             )
         )
+
+        UserRoleService.remove_all_user_roles_for_team(user_id, team_id)
+        TaskAssignmentService.reassign_tasks_from_user_to_team(user_id, team_id, removed_by_user_id)
 
         return True

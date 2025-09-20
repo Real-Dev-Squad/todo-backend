@@ -22,6 +22,12 @@ from todo.repositories.team_repository import TeamRepository
 from todo.repositories.audit_log_repository import AuditLogRepository
 from todo.repositories.user_repository import UserRepository
 from todo.repositories.task_repository import TaskRepository
+from todo.exceptions.team_exceptions import (
+    NotTeamAdminException,
+    CannotRemoveOwnerException,
+    CannotRemoveTeamPOCException,
+)
+from todo.serializers.remove_from_team_serializer import RemoveFromTeamSerializer
 
 
 class TeamListView(APIView):
@@ -469,9 +475,36 @@ class RemoveTeamMemberView(APIView):
         },
         tags=["teams"],
     )
+    def _handle_validation_errors(self, errors):
+        """Handle validation errors and return appropriate response."""
+        formatted = []
+        for field, msgs in errors.items():
+            for msg in msgs:
+                formatted.append(
+                    {
+                        "source": field,
+                        "title": "Invalid value",
+                        "detail": str(msg),
+                    }
+                )
+        return Response(
+            {
+                "statusCode": 400,
+                "message": "Validation Error",
+                "errors": formatted,
+                "authenticated": getattr(self.request, "user", None) is not None,
+            },
+            status=400,
+        )
+
     def delete(self, request, team_id, user_id):
         print(f"DEBUG: RemoveTeamMemberView.delete called with team_id={team_id}, user_id={user_id}")
         from todo.services.team_service import TeamService
+
+        serializer = RemoveFromTeamSerializer(data={"team_id": team_id, "user_id": user_id})
+
+        if not serializer.is_valid():
+            return self._handle_validation_errors(serializer.errors)
 
         try:
             # Pass the user performing the removal (request.user_id) and the user being removed (user_id)
@@ -479,5 +512,11 @@ class RemoveTeamMemberView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except TeamService.TeamOrUserNotFound:
             return Response({"detail": "Team or user not found."}, status=status.HTTP_404_NOT_FOUND)
+        except NotTeamAdminException as e:
+            return Response({"detail": e.message}, status=status.HTTP_403_FORBIDDEN)
+        except CannotRemoveTeamPOCException as e:
+            return Response({"detail": e.message}, status=status.HTTP_403_FORBIDDEN)
+        except CannotRemoveOwnerException as e:
+            return Response({"detail": e.message}, status=status.HTTP_403_FORBIDDEN)
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)

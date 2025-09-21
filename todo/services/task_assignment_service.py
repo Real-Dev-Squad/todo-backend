@@ -150,3 +150,10 @@ class TaskAssignmentService:
         Delete task assignment by task ID.
         """
         return TaskAssignmentRepository.delete_assignment(task_id, user_id)
+
+    @classmethod
+    def reassign_tasks_from_user_to_team(cls, user_id: str, team_id: str, performed_by_user_id: str):
+        """
+        Reassign all tasks of user to team
+        """
+        return TaskAssignmentRepository.reassign_tasks_from_user_to_team(user_id, team_id, performed_by_user_id)

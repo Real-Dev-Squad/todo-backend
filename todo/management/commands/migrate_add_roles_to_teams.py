@@ -2,18 +2,25 @@ from django.core.management.base import BaseCommand
 from todo.repositories.user_role_repository import UserRoleRepository
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
 from todo.constants.role import RoleScope, RoleName
-
+from datetime import datetime, timezone
+from todo.services.enhanced_dual_write_service import EnhancedDualWriteService
 
 class Command(BaseCommand):
     help = "Backfill user_roles so roles are present for every team member and fix incorrect assigned roles"
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.WARNING("\n--- Starting Team Roles Fix Script ---"))
-        teams_data = TeamRepository.get_collection().find({})
+        teams_data = TeamRepository.get_collection().find({"is_deleted": False})
         roles_scope = RoleScope.TEAM.value
 
         roles_ensured = 0
         roles_deactivated = 0
+        dual_write_service = EnhancedDualWriteService()
+        
+        roles_to_assign = []
+        roles_to_remove = []
+        postgres_operations = []
+        
         for team in teams_data:
             team_id = str(team["_id"])
             team_owner = team["created_by"]
@@ -21,23 +28,88 @@ class Command(BaseCommand):
             for member in team_members:
                 member_id = str(member.user_id)
                 if member_id == team_owner:
-                    for role in RoleName:
-                        if role.value != RoleName.MODERATOR.value:
-                            result = UserRoleRepository.assign_role(member_id, role.value, roles_scope, team_id)
-                            roles_ensured += 1
+                    member_roles = UserRoleRepository.get_user_roles(member_id, roles_scope, team_id)
+                    existing_roles = [role.role_name for role in member_roles]
+                    for role in (RoleName.OWNER.value, RoleName.ADMIN.value, RoleName.MEMBER.value):
+                        if role not in existing_roles:
+                            roles_to_assign.append({
+                                "user_id": member_id,
+                                "role_name": role,
+                                "scope": roles_scope,
+                                "team_id": team_id,
+                                "is_active": True,
+                                "created_at": datetime.now(timezone.utc),
+                                "created_by": "system"
+                            })
                 else:
-                    user_roles = UserRoleRepository.get_user_roles(member_id, roles_scope, team_id)
+                    member_roles = UserRoleRepository.get_user_roles(member_id, roles_scope, team_id)
                     has_member_role = False
-                    for role in user_roles:
+                    for role in member_roles:
                         if role.role_name == RoleName.MEMBER.value:
                             has_member_role = True
                         else:
-                            result = UserRoleRepository.remove_role_by_id(member_id, str(role.id), roles_scope, team_id)
-                            if result:
-                                roles_deactivated += 1
+                            roles_to_remove.append({
+                                "mongo_id": role.id,
+                                "user_id": member_id,
+                                "role_name": role.role_name,
+                                "scope": roles_scope,
+                                "team_id": role.team_id,
+                                "is_active": role.is_active,
+                                "created_by": role.created_by,
+                                "created_at": role.created_at
+                            })
                     if not has_member_role:
-                        UserRoleRepository.assign_role(member_id, RoleName.MEMBER.value, roles_scope, team_id)
-                        roles_ensured += 1
+                        roles_to_assign.append({
+                            "user_id": member_id,
+                            "role_name": RoleName.MEMBER.value,
+                            "scope": roles_scope,
+                            "team_id": team_id,
+                            "is_active": True,
+                            "created_at": datetime.now(timezone.utc),
+                            "created_by": "system"
+                        })
+                        
+        if roles_to_assign:
+            result = UserRoleRepository.get_collection().insert_many(roles_to_assign)
+            roles_ensured = len(result.inserted_ids)
+            self.stdout.write(self.style.SUCCESS(f"Successfully inserted {roles_ensured} new roles."))
+            
+            for role_data, mongo_id in zip(roles_to_assign, result.inserted_ids):
+                postgres_operations.append({
+                    "operation": "create",
+                    "collection_name": "user_roles",
+                    "mongo_id": str(mongo_id),
+                    "data": role_data
+                })
 
-        self.stdout.write(self.style.SUCCESS(f"Roles Ensured (Created or Already Existed): {roles_ensured}"))
-        self.stdout.write(self.style.SUCCESS(f"Incorrect Roles Removed: {roles_deactivated}"))
+        if roles_to_remove:
+            for role in roles_to_remove:
+                mongo_id = str(role["mongo_id"])
+                postgres_operations.append({
+                    "operation": "update",
+                    "collection_name": "user_roles",
+                    "mongo_id": mongo_id,
+                    "data": {
+                        "user_id": role["user_id"],
+                        "role_name": role["role_name"],
+                        "scope": role["scope"],
+                        "team_id": role["team_id"],
+                        "is_active": False,
+                        "created_at": role["created_at"],
+                        "created_by": role["created_by"]
+                    }
+                })
+            role_ids_to_remove = [roles["mongo_id"] for roles in roles_to_remove]    
+            result = UserRoleRepository.get_collection().update_many(
+                {"_id": {"$in": role_ids_to_remove}},
+                {"$set": {"is_active": False}}
+            )
+            roles_deactivated = result.modified_count
+            self.stdout.write(self.style.SUCCESS(f"Successfully deactivated {roles_deactivated} roles."))
+        if postgres_operations:
+            self.stdout.write(self.style.WARNING(f"\nStarting sync of {len(postgres_operations)} operations to PostgreSQL..."))
+            success = dual_write_service.batch_operations(postgres_operations)
+            if success:
+                self.stdout.write(self.style.SUCCESS("PostgreSQL sync completed successfully."))
+            else:
+                self.stdout.write(self.style.ERROR("PostgreSQL sync encountered errors. Check logs for details."))

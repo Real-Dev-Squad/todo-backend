@@ -1,8 +1,5 @@
 import logging
 
-from rest_framework.response import Response
-from rest_framework import status
-
 from todo.constants.role import RoleScope
 from todo.repositories.team_repository import TeamRepository
 from todo.services.user_role_service import UserRoleService
@@ -20,21 +17,8 @@ def has_team_access(user_id: str, team_id: str) -> bool:
         team = TeamRepository.get_by_id(team_id)
         if not team:
             return False
-        return user_id == team.poc_id or user_id == team.created_by
+        return user_id == team.poc_id
 
     except Exception as e:
         logger.error(f"Error checking team access for user {user_id} and team {team_id}: {str(e)}")
         return False
-
-
-def team_access_required(func):
-    def wrapper(self, request, *args, **kwargs):
-        team_id = kwargs.get("team_id")
-        if not team_id:
-            return Response({"detail": "Team ID is required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        if not has_team_access(request.user_id, team_id):
-            return Response({"detail": "You are not authorized to view this team."}, status=status.HTTP_403_FORBIDDEN)
-        return func(self, request, *args, **kwargs)
-
-    return wrapper

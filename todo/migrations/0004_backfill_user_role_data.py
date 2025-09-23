@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def fix_team_roles(apps, schema_editor):
     logger.info("\n--- Starting Team Roles Fix Script ---")
-    if 'test' in sys.argv:
+    if "test" in sys.argv:
         logger.info("\n--- Skipping Team Roles Fix Script in test environment ---")
         return
     teams_data = TeamRepository.get_collection().find({"is_deleted": False})

@@ -115,12 +115,12 @@ def fix_team_roles(apps, schema_editor):
                     },
                 }
             )
-            role_ids_to_remove = [roles["mongo_id"] for roles in roles_to_remove]
-            result = UserRoleRepository.get_collection().update_many(
-                {"_id": {"$in": role_ids_to_remove}}, {"$set": {"is_active": False}}
-            )
-            roles_deactivated = result.modified_count
-            logger.info(f"Successfully deactivated {roles_deactivated} roles.")
+        role_ids_to_remove = [roles["mongo_id"] for roles in roles_to_remove]
+        result = UserRoleRepository.get_collection().update_many(
+            {"_id": {"$in": role_ids_to_remove}}, {"$set": {"is_active": False}}
+        )
+        roles_deactivated = result.modified_count
+        logger.info(f"Successfully deactivated {roles_deactivated} roles.")
     if postgres_operations:
         logger.info(f"\nStarting sync of {len(postgres_operations)} operations to PostgreSQL...")
         success = dual_write_service.batch_operations(postgres_operations)

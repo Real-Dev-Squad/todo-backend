@@ -3,7 +3,9 @@ from django.http import JsonResponse
 from django.urls import resolve
 from rest_framework import status
 
-from todo.utils.team_access import has_team_access
+from todo.constants.messages import ApiErrors
+from todo.constants.role import RoleScope
+from todo.services.user_role_service import UserRoleService
 
 logger = logging.getLogger(__name__)
 
@@ -18,36 +20,34 @@ class TeamAccessMiddleware:
         self.get_response = get_response
         self.protected_routes = [
             "team_detail",
-            "add_team_members",
-            "team_invite_code",
             "team_activity_timeline",
-            "remove_team_member",
-            "team_user_roles",
-            "team_user_role_detail",
-            "team_user_role_delete",
         ]
 
     def __call__(self, request):
-        try:
-            resolved_url = resolve(request.path_info)
-            route_name = resolved_url.url_name
+        resolved_url = resolve(request.path_info)
+        route_name = resolved_url.url_name
 
-            if route_name in self.protected_routes:
+        if route_name in self.protected_routes:
+            try:
                 team_id = resolved_url.kwargs.get("team_id")
 
                 if not team_id:
                     return JsonResponse({"detail": "Team ID is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-                if not has_team_access(request.user_id, team_id):
-                    return JsonResponse(
-                        {"detail": "You are not authorized to view this team."}, status=status.HTTP_403_FORBIDDEN
-                    )
+                user_id = getattr(request, "user_id", None)
 
-        except Exception as e:
-            logger.error(f"Error in TeamAccessMiddleware: {str(e)}")
-            pass
+                user_team_roles = UserRoleService.get_user_roles(
+                    user_id=user_id, scope=RoleScope.TEAM.value, team_id=team_id
+                )
+
+                if not user_team_roles:
+                    return JsonResponse({"detail": ApiErrors.UNAUTHORIZED_TITLE}, status=status.HTTP_403_FORBIDDEN)
+
+            except Exception as e:
+                logger.error(f"Error in TeamAccessMiddleware: {str(e)}")
+                return JsonResponse(
+                    {"detail": ApiErrors.INTERNAL_SERVER_ERROR}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
         response = self.get_response(request)
         return response
-
-    # Access logic resides in `todo.utils.team_access.has_team_access`

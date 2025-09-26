@@ -48,6 +48,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.common.CommonMiddleware",
     "todo.middlewares.jwt_auth.JWTAuthenticationMiddleware",
+    "todo.middlewares.team_access_middleware.TeamAccessMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 

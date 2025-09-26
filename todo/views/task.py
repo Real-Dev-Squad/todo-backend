@@ -67,6 +67,7 @@ class TaskListView(APIView):
         responses={
             200: OpenApiResponse(response=GetTasksResponse, description="Successful response"),
             400: OpenApiResponse(description="Bad request"),
+            403: OpenApiResponse(description="Forbidden"),
             500: OpenApiResponse(description="Internal server error"),
         },
     )
@@ -108,6 +109,10 @@ class TaskListView(APIView):
             team_id=team_id,
             status_filter=status_filter,
         )
+
+        if response.error and response.error.get("code") == "FORBIDDEN":
+            return Response(data=response.model_dump(mode="json"), status=status.HTTP_403_FORBIDDEN)
+
         return Response(data=response.model_dump(mode="json"), status=status.HTTP_200_OK)
 
     @extend_schema(

@@ -198,6 +198,7 @@ class TeamDetailView(APIView):
             200: OpenApiResponse(response=TeamDTO, description="Team updated successfully"),
             400: OpenApiResponse(description="Bad request - validation error or invalid member IDs"),
             404: OpenApiResponse(description="Team not found"),
+            403: OpenApiResponse(description="Forbidden"),
             500: OpenApiResponse(description="Internal server error"),
         },
     )
@@ -288,6 +289,7 @@ class AddTeamMembersView(APIView):
             200: OpenApiResponse(response=TeamDTO, description="Team members added successfully"),
             400: OpenApiResponse(description="Bad request - validation error or user not a team member"),
             404: OpenApiResponse(description="Team not found"),
+            403: OpenApiResponse(description="Forbidden"),
             500: OpenApiResponse(description="Internal server error"),
         },
     )
@@ -404,6 +406,7 @@ class TeamActivityTimelineView(APIView):
                 },
                 description="Team activity timeline returned successfully",
             ),
+            403: OpenApiResponse(description="Forbidden"),
             404: OpenApiResponse(description="Team not found"),
         },
     )
@@ -470,6 +473,7 @@ class RemoveTeamMemberView(APIView):
         ],
         responses={
             204: OpenApiResponse(description="User removed from team successfully."),
+            403: OpenApiResponse(description="Forbidden"),
             404: OpenApiResponse(description="Team or user not found."),
             400: OpenApiResponse(description="Bad request or other error."),
         },

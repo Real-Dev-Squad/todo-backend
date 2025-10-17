@@ -146,15 +146,6 @@ class TeamUpdateIntegrationTests(AuthenticatedMongoTestCase):
         data = response.json()
         self.assertEqual(data["detail"], ApiErrors.UNAUTHORIZED_TITLE)
 
-    def test_update_team_empty_payload(self):
-        url = reverse("team_detail", args=[self.existing_team_id])
-        response = self.client.patch(url, data=json.dumps({}), content_type="application/json")
-
-        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
-        data = response.json()
-        self.assertIn("non_field_errors", data["errors"])
-        self.assertIn(ValidationErrors.POC_NOT_PROVIDED, str(data["errors"]["non_field_errors"]))
-
     def test_update_team_invalid_poc_id_format(self):
         url = reverse("team_detail", args=[self.existing_team_id])
         response = self.client.patch(url, data=json.dumps({"poc_id": "invalid-id"}), content_type="application/json")

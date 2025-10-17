@@ -346,11 +346,11 @@ class TeamService:
         cls._validate_is_user_team_admin(team_id, user_id, existing_team)
 
         update_data = {}
-        if poc_id is not None:
-            validation_error = cls._validate_is_user_team_member(team_id, poc_id)
-            if validation_error:
-                return validation_error
-            update_data["poc_id"] = PyObjectId(poc_id)
+
+        validation_error = cls._validate_is_user_team_member(team_id, poc_id)
+        if validation_error:
+            return validation_error
+        update_data["poc_id"] = PyObjectId(poc_id)
 
         try:
             # Update the team

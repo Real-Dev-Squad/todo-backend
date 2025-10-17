@@ -9,7 +9,6 @@ from todo.serializers.update_team_serializer import UpdateTeamSerializer
 from todo.serializers.add_team_member_serializer import AddTeamMemberSerializer
 from todo.services.team_service import TeamService
 from todo.dto.team_dto import CreateTeamDTO
-from todo.dto.update_team_dto import UpdateTeamDTO
 from todo.dto.responses.create_team_response import CreateTeamResponse
 from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.dto.responses.error_response import ApiErrorResponse, ApiErrorDetail, ApiErrorSource
@@ -125,6 +124,10 @@ class TeamListView(APIView):
 
 
 class TeamDetailView(APIView):
+    def _handle_validation_errors(self, errors):
+        """Handle validation errors."""
+        return Response(data={"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
     @extend_schema(
         operation_id="get_team_by_id",
         summary="Get team by ID",
@@ -211,32 +214,13 @@ class TeamDetailView(APIView):
         if not serializer.is_valid():
             return self._handle_validation_errors(serializer.errors)
 
-        try:
-            dto = UpdateTeamDTO(**serializer.validated_data)
-            updated_by_user_id = request.user_id
-            response: TeamDTO = TeamService.update_team(team_id, dto, updated_by_user_id)
-            data = response.model_dump(mode="json")
-            data.pop("invite_code", None)
-            return Response(data=data, status=status.HTTP_200_OK)
+        poc_id = serializer.validated_data.get("poc_id")
 
-        except ValueError as e:
-            if isinstance(e.args[0], ApiErrorResponse):
-                error_response = e.args[0]
-                return Response(data=error_response.model_dump(mode="json"), status=error_response.statusCode)
-
-            fallback_response = ApiErrorResponse(
-                statusCode=404,
-                message=str(e),
-                errors=[{"detail": str(e)}],
-            )
-            return Response(data=fallback_response.model_dump(mode="json"), status=404)
-        except Exception as e:
-            fallback_response = ApiErrorResponse(
-                statusCode=500,
-                message=ApiErrors.UNEXPECTED_ERROR_OCCURRED,
-                errors=[{"detail": str(e) if settings.DEBUG else ApiErrors.INTERNAL_SERVER_ERROR}],
-            )
-            return Response(data=fallback_response.model_dump(mode="json"), status=500)
+        user_id = request.user_id
+        response: TeamDTO = TeamService.update_team(team_id, poc_id, user_id)
+        data = response.model_dump(mode="json")
+        data.pop("invite_code", None)
+        return Response(data=data, status=status.HTTP_200_OK)
 
 
 class JoinTeamByInviteCodeView(APIView):

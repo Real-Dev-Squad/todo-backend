@@ -55,6 +55,7 @@ class ApiErrors:
     SEARCH_QUERY_EMPTY = "Search query cannot be empty"
     TASK_ALREADY_IN_WATCHLIST = "Task is already in the watchlist"
     CANNOT_REMOVE_OWNER = "Owner cannot be removed from the team"
+    MEMBER_NOT_FOUND = "Member with ID {0} not found."
     CANNOT_REMOVE_POC = "POC cannot be removed from a team. Reassign the POC first."
 
 
@@ -84,6 +85,7 @@ class ValidationErrors:
     SEARCH_QUERY_EMPTY = "Search query cannot be empty"
     TASK_ID_STRING_REQUIRED = "Task ID must be a string."
     INVALID_IS_ACTIVE_VALUE = "Invalid value for is_active"
+    POC_NOT_PROVIDED = "POC is required for team update"
 
 
 # Auth messages

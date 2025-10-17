@@ -20,9 +20,10 @@ from .auth_exceptions import (
     TokenInvalidError,
     RefreshTokenExpiredError,
     APIException,
-    UserNotFoundException,
     TokenMissingError,
 )
+
+from todo.exceptions.user_exceptions import UserNotFoundException
 
 
 def format_validation_errors(errors) -> List[ApiErrorDetail]:

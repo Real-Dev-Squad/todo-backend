@@ -5,7 +5,7 @@ from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.team_creation_invite_code_repository import TeamCreationInviteCodeRepository
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
-from todo.constants.messages import AppMessages, ApiErrors
+from todo.constants.messages import AppMessages, ApiErrors, ValidationErrors
 from todo.constants.role import RoleName
 from todo.utils.invite_code_utils import generate_invite_code
 from typing import List
@@ -22,7 +22,6 @@ from todo.exceptions.team_exceptions import (
     CannotRemoveTeamPOCException,
 )
 
-from todo.exceptions.user_exceptions import UserNotFoundException
 
 DEFAULT_ROLE_ID = "1"
 
@@ -348,7 +347,9 @@ class TeamService:
 
         update_data = {}
         if poc_id is not None:
-            cls._validate_is_user_team_member(team_id, poc_id)
+            validation_error = cls._validate_is_user_team_member(team_id, poc_id)
+            if validation_error:
+                return validation_error
             update_data["poc_id"] = PyObjectId(poc_id)
 
         try:
@@ -537,7 +538,13 @@ class TeamService:
     def _validate_is_user_team_member(cls, team_id: str, poc_id: str):
         """
         Validate that the user is a member of the team.
+        Returns ApiErrorResponse if validation fails, None if validation passes.
         """
 
         if not UserRoleService.has_role(poc_id, RoleName.MEMBER.value, RoleScope.TEAM.value, team_id):
-            raise UserNotFoundException(ApiErrors.MEMBER_NOT_FOUND.format(poc_id))
+            return ApiErrorResponse(
+                statusCode=400,
+                message=ValidationErrors.USER_NOT_TEAM_MEMBER,
+                errors=[ApiErrorDetail(detail=ValidationErrors.USER_NOT_TEAM_MEMBER)],
+            )
+        return

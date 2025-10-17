@@ -217,7 +217,10 @@ class TeamDetailView(APIView):
         poc_id = serializer.validated_data.get("poc_id")
 
         user_id = request.user_id
-        response: TeamDTO = TeamService.update_team(team_id, poc_id, user_id)
+        response = TeamService.update_team(team_id, poc_id, user_id)
+
+        if isinstance(response, ApiErrorResponse):
+            return Response(data=response.model_dump(mode="json"), status=response.statusCode)
         data = response.model_dump(mode="json")
         data.pop("invite_code", None)
         return Response(data=data, status=status.HTTP_200_OK)

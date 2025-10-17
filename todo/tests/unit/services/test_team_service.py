@@ -8,7 +8,6 @@ from todo.exceptions.team_exceptions import (
     CannotRemoveTeamPOCException,
     NotTeamAdminException,
 )
-from todo.exceptions.user_exceptions import UserNotFoundException
 from todo.services.team_service import TeamService
 from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.models.team import TeamModel, UserTeamDetailsModel
@@ -410,9 +409,9 @@ class TeamServiceTests(TestCase):
         )
         mock_has_role.side_effect = [True, False]
 
-        with self.assertRaises(UserNotFoundException) as context:
-            TeamService.update_team(team_id=self.team_id, poc_id=self.member_id, user_id=self.admin_user_id)
+        result = TeamService.update_team(team_id=self.team_id, poc_id=self.member_id, user_id=self.admin_user_id)
 
-        self.assertIn("Member with ID", str(context.exception))
+        self.assertIsNotNone(result)
+        self.assertIn("User is not a member of the team", str(result))
         self.assertEqual(mock_has_role.call_count, 2)
         mock_has_role.assert_any_call(self.member_id, RoleName.MEMBER.value, RoleScope.TEAM.value, self.team_id)

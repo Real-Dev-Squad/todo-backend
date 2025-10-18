@@ -2,6 +2,7 @@ from unittest import TestCase
 from unittest.mock import patch
 from datetime import datetime, timezone
 
+from todo.constants.messages import ApiErrors
 from todo.exceptions.team_exceptions import (
     CannotRemoveOwnerException,
     CannotRemoveTeamPOCException,
@@ -13,11 +14,14 @@ from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.dto.user_dto import UserDTO
 from todo.dto.team_dto import TeamDTO
+from todo.constants.role import RoleName, RoleScope
 
 
 class TeamServiceTests(TestCase):
     def setUp(self):
         self.user_id = "507f1f77bcf86cd799439011"
+        self.owner_id = "507f1f77bcf86cd799439011"
+        self.admin_user_id = "507f1f77bcf86cd799439020"
         self.team_id = "507f1f77bcf86cd799439012"
         self.poc_id = "507f1f77bcf86cd799439014"
         self.admin_id = "507f1f77bcf86cd799439015"
@@ -54,6 +58,9 @@ class TeamServiceTests(TestCase):
             updated_at=datetime.now(timezone.utc),
         )
 
+        self.user_model = UserDTO(
+            id=self.member_id, name="Test User", addedOn=datetime.now(timezone.utc), tasksAssignedCount=0
+        )
         # Mock user team details model
         self.user_team_details = UserTeamDetailsModel(
             id=PyObjectId("507f1f77bcf86cd799439013"),
@@ -300,3 +307,111 @@ class TeamServiceTests(TestCase):
         self.assertEqual(log_entry.action, "member_left_team")
         self.assertEqual(str(log_entry.team_id), self.team_id)
         self.assertEqual(str(log_entry.performed_by), self.member_id)
+
+    @patch("todo.services.team_service.UserRoleService.has_role")
+    def test_validate_is_team_admin_success(self, mock_has_role):
+        mock_has_role.return_value = True
+
+        result = TeamService._validate_is_user_team_admin(self.team_id, self.admin_id, self.team_model)
+        self.assertIsNone(result)
+        mock_has_role.assert_called_once_with(self.admin_id, RoleName.ADMIN.value, RoleScope.TEAM.value, self.team_id)
+
+    def test_validate_is_team_admin_success_for_owner(self):
+        result = TeamService._validate_is_user_team_admin(self.team_id, self.owner_id, self.team_model)
+        self.assertIsNone(result)
+
+    @patch("todo.services.team_service.UserRoleService.has_role")
+    def test_validate_is_team_admin_fails_for_regular_member(self, mock_has_role):
+        mock_has_role.return_value = False
+
+        with self.assertRaises(PermissionError) as context:
+            TeamService._validate_is_user_team_admin(self.team_id, self.member_id, self.team_model)
+
+        self.assertIn(ApiErrors.UNAUTHORIZED_TITLE, str(context.exception))
+        mock_has_role.assert_called_once_with(self.member_id, RoleName.ADMIN.value, RoleScope.TEAM.value, self.team_id)
+
+    @patch("todo.dto.update_team_dto.UserRepository.get_by_id")
+    @patch("todo.services.team_service.TeamRepository.get_by_id")
+    @patch("todo.services.team_service.TeamRepository.update")
+    @patch("todo.services.team_service.AuditLogRepository.create")
+    @patch("todo.services.team_service.UserRoleService.has_role")
+    def test_update_team_success_by_admin(
+        self, mock_has_role, mock_audit_log_create, mock_team_update, mock_team_get, mock_user_get
+    ):
+        mock_team_get.return_value = self.team_model
+        mock_team_update.return_value = self.team_model
+        mock_has_role.return_value = True
+        mock_user_get.return_value = UserDTO(
+            id=self.member_id, name="Test User", addedOn=datetime.now(timezone.utc), tasksAssignedCount=1
+        )
+
+        result = TeamService.update_team(
+            team_id=self.team_id,
+            poc_id=self.member_id,
+            user_id=self.admin_id,
+        )
+
+        self.assertIsInstance(result, TeamDTO)
+        mock_team_get.assert_called_once_with(self.team_id)
+        mock_team_update.assert_called_once()
+        mock_audit_log_create.assert_called_once()
+        self.assertEqual(mock_has_role.call_count, 2)
+        mock_has_role.assert_any_call(self.admin_id, RoleName.ADMIN.value, RoleScope.TEAM.value, self.team_id)
+        mock_has_role.assert_any_call(self.member_id, RoleName.MEMBER.value, RoleScope.TEAM.value, self.team_id)
+
+    @patch("todo.services.team_service.TeamRepository.get_by_id")
+    @patch("todo.services.team_service.TeamRepository.update")
+    @patch("todo.services.team_service.AuditLogRepository.create")
+    @patch("todo.repositories.user_repository.UserRepository.get_by_id")
+    @patch("todo.services.team_service.UserRoleService.has_role")
+    def test_update_team_success_by_owner(
+        self, mock_has_role, mock_user_get, mock_audit_log_create, mock_team_update, mock_team_get
+    ):
+        mock_team_get.return_value = self.team_model
+        mock_team_update.return_value = self.team_model
+        mock_user_get.return_value = self.user_model
+        mock_has_role.return_value = True
+
+        result = TeamService.update_team(
+            team_id=self.team_id,
+            poc_id=self.member_id,
+            user_id=self.owner_id,
+        )
+
+        self.assertIsInstance(result, TeamDTO)
+        mock_team_get.assert_called_once_with(self.team_id)
+        mock_team_update.assert_called_once()
+        mock_audit_log_create.assert_called_once()
+
+    @patch("todo.services.team_service.TeamRepository.get_by_id")
+    @patch("todo.services.team_service.UserRoleService.has_role")
+    def test_update_team_fails_for_non_admin(self, mock_has_role, mock_team_get):
+        mock_team_get.return_value = self.team_model
+        mock_has_role.return_value = False
+
+        with self.assertRaises(PermissionError) as context:
+            TeamService.update_team(team_id=self.team_id, poc_id=self.member_id, user_id=self.member_id)
+
+        self.assertIn(ApiErrors.UNAUTHORIZED_TITLE, str(context.exception))
+        mock_has_role.assert_called_once_with(self.member_id, RoleName.ADMIN.value, RoleScope.TEAM.value, self.team_id)
+
+    @patch("todo.dto.update_team_dto.UserRepository.get_by_id")
+    @patch("todo.services.team_service.TeamRepository.update")
+    @patch("todo.services.team_service.TeamRepository.get_by_id")
+    @patch("todo.services.team_service.UserRoleService.has_role")
+    def test_update_team_poc_not_team_member_raises_error(
+        self, mock_has_role, mock_team_get, mock_team_update, mock_user_get
+    ):
+        mock_team_get.return_value = self.team_model
+        mock_team_update.return_value = self.team_model
+        mock_user_get.return_value = UserDTO(
+            id=self.member_id, name="Test User", addedOn=datetime.now(timezone.utc), tasksAssignedCount=1
+        )
+        mock_has_role.side_effect = [True, False]
+
+        result = TeamService.update_team(team_id=self.team_id, poc_id=self.member_id, user_id=self.admin_user_id)
+
+        self.assertIsNotNone(result)
+        self.assertIn("User is not a member of the team", str(result))
+        self.assertEqual(mock_has_role.call_count, 2)
+        mock_has_role.assert_any_call(self.member_id, RoleName.MEMBER.value, RoleScope.TEAM.value, self.team_id)

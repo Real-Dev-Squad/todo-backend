@@ -1,12 +1,11 @@
 from todo.dto.team_dto import CreateTeamDTO, TeamDTO
-from todo.dto.update_team_dto import UpdateTeamDTO
 from todo.dto.responses.create_team_response import CreateTeamResponse
 from todo.dto.responses.get_user_teams_response import GetUserTeamsResponse
 from todo.models.team import TeamModel, UserTeamDetailsModel
 from todo.models.common.pyobjectid import PyObjectId
 from todo.repositories.team_creation_invite_code_repository import TeamCreationInviteCodeRepository
 from todo.repositories.team_repository import TeamRepository, UserTeamDetailsRepository
-from todo.constants.messages import AppMessages
+from todo.constants.messages import AppMessages, ApiErrors, ValidationErrors
 from todo.constants.role import RoleName
 from todo.utils.invite_code_utils import generate_invite_code
 from typing import List
@@ -22,6 +21,7 @@ from todo.exceptions.team_exceptions import (
     NotTeamAdminException,
     CannotRemoveTeamPOCException,
 )
+
 
 DEFAULT_ROLE_ID = "1"
 
@@ -324,14 +324,14 @@ class TeamService:
         )
 
     @classmethod
-    def update_team(cls, team_id: str, dto: UpdateTeamDTO, updated_by_user_id: str) -> TeamDTO:
+    def update_team(cls, team_id: str, poc_id: str, user_id: str) -> TeamDTO:
         """
         Update a team by its ID.
 
         Args:
             team_id: ID of the team to update
-            dto: Team update data including name, description, and POC
-            updated_by_user_id: ID of the user updating the team
+            poc_id: ID of the new POC
+            user_id: ID of the user updating the team
 
         Returns:
             TeamDTO with the updated team details
@@ -339,40 +339,31 @@ class TeamService:
         Raises:
             ValueError: If team update fails or team not found
         """
+        existing_team = TeamRepository.get_by_id(team_id)
+        if not existing_team:
+            raise ValueError(f"Team with id {team_id} not found")
+
+        cls._validate_is_user_team_admin(team_id, user_id, existing_team)
+
+        update_data = {}
+
+        validation_error = cls._validate_is_user_team_member(team_id, poc_id)
+        if validation_error:
+            return validation_error
+        update_data["poc_id"] = PyObjectId(poc_id)
+
         try:
-            # Check if team exists
-            existing_team = TeamRepository.get_by_id(team_id)
-            if not existing_team:
-                raise ValueError(f"Team with id {team_id} not found")
-
-            # Prepare update data
-            update_data = {}
-            if dto.name is not None:
-                update_data["name"] = dto.name
-            if dto.description is not None:
-                update_data["description"] = dto.description
-            if dto.poc_id is not None:
-                update_data["poc_id"] = PyObjectId(dto.poc_id) if dto.poc_id and dto.poc_id.strip() else None
-
             # Update the team
-            updated_team = TeamRepository.update(team_id, update_data, updated_by_user_id)
+            updated_team = TeamRepository.update(team_id, update_data, user_id)
             if not updated_team:
                 raise ValueError(f"Failed to update team with id {team_id}")
-
-            # Handle member updates if provided
-            if dto.member_ids is not None:
-                from todo.repositories.team_repository import UserTeamDetailsRepository
-
-                success = UserTeamDetailsRepository.update_team_members(team_id, dto.member_ids, updated_by_user_id)
-                if not success:
-                    raise ValueError(f"Failed to update team members for team with id {team_id}")
 
             # Audit log for team update
             AuditLogRepository.create(
                 AuditLogModel(
                     team_id=PyObjectId(team_id),
                     action="team_updated",
-                    performed_by=PyObjectId(updated_by_user_id),
+                    performed_by=PyObjectId(user_id),
                 )
             )
 
@@ -388,7 +379,6 @@ class TeamService:
                 created_at=updated_team.created_at,
                 updated_at=updated_team.updated_at,
             )
-
         except Exception as e:
             raise ValueError(f"Failed to update team: {str(e)}")
 
@@ -530,3 +520,31 @@ class TeamService:
         TaskAssignmentService.reassign_tasks_from_user_to_team(user_id, team_id, removed_by_user_id)
 
         return True
+
+    @classmethod
+    def _validate_is_user_team_admin(cls, team_id: str, user_id: str, team):
+        """
+        Validate that the user has admin role in the team.
+        """
+        if str(team.created_by) == user_id:
+            return
+
+        if UserRoleService.has_role(user_id, RoleName.ADMIN.value, RoleScope.TEAM.value, team_id):
+            return
+
+        raise PermissionError(ApiErrors.UNAUTHORIZED_TITLE)
+
+    @classmethod
+    def _validate_is_user_team_member(cls, team_id: str, poc_id: str):
+        """
+        Validate that the user is a member of the team.
+        Returns ApiErrorResponse if validation fails, None if validation passes.
+        """
+
+        if not UserRoleService.has_role(poc_id, RoleName.MEMBER.value, RoleScope.TEAM.value, team_id):
+            return ApiErrorResponse(
+                statusCode=400,
+                message=ValidationErrors.USER_NOT_TEAM_MEMBER,
+                errors=[ApiErrorDetail(detail=ValidationErrors.USER_NOT_TEAM_MEMBER)],
+            )
+        return

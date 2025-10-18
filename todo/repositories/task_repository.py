@@ -130,8 +130,13 @@ class TaskRepository(MongoRepository):
         if team_ids:
             # Get teams where user is POC
             poc_teams = TeamRepository.get_collection().find(
-                {"_id": {"$in": [ObjectId(team_id) for team_id in team_ids]}, "is_deleted": False, "poc_id": user_id}
+                {
+                    "_id": {"$in": [ObjectId(team_id) for team_id in team_ids]},
+                    "is_deleted": False,
+                    "poc_id": {"$in": [ObjectId(user_id), user_id]},
+                }
             )
+
             poc_team_ids = [str(team["_id"]) for team in poc_teams]
 
             # Get team assignments for POC teams

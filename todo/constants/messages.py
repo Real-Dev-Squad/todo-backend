@@ -84,6 +84,8 @@ class ValidationErrors:
     SEARCH_QUERY_EMPTY = "Search query cannot be empty"
     TASK_ID_STRING_REQUIRED = "Task ID must be a string."
     INVALID_IS_ACTIVE_VALUE = "Invalid value for is_active"
+    USER_NOT_TEAM_MEMBER = "User is not a member of the team"
+    POC_NOT_PROVIDED = "POC is required for team update"
 
 
 # Auth messages

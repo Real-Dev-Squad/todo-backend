@@ -415,3 +415,30 @@ class TeamServiceTests(TestCase):
         self.assertIn("User is not a member of the team", str(result))
         self.assertEqual(mock_has_role.call_count, 2)
         mock_has_role.assert_any_call(self.member_id, RoleName.MEMBER.value, RoleScope.TEAM.value, self.team_id)
+
+    @patch("todo.services.team_service.TeamRepository.get_by_id")
+    @patch("todo.services.team_service.TeamRepository.update")
+    @patch("todo.services.team_service.AuditLogRepository.create")
+    @patch("todo.repositories.user_repository.UserRepository.get_by_id")
+    @patch("todo.services.team_service.UserRoleService.has_role")
+    def test_update_team_creates_poc_changed_audit_log(
+        self, mock_has_role, mock_user_get, mock_audit_log_create, mock_team_update, mock_team_get
+    ):
+        mock_team_get.return_value = self.team_model
+        mock_team_update.return_value = self.team_model
+        mock_user_get.return_value = self.user_model
+        mock_has_role.return_value = True
+
+        TeamService.update_team(
+            team_id=self.team_id,
+            poc_id=self.member_id,
+            user_id=self.owner_id,
+        )
+
+        mock_audit_log_create.assert_called_once()
+
+        audit_log_model = mock_audit_log_create.call_args[0][0]
+
+        self.assertEqual(audit_log_model.action, "poc_changed")
+        self.assertEqual(audit_log_model.team_id, PyObjectId(self.team_id))
+        self.assertEqual(audit_log_model.performed_by, PyObjectId(self.owner_id))

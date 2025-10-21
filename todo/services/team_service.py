@@ -358,11 +358,11 @@ class TeamService:
             if not updated_team:
                 raise ValueError(f"Failed to update team with id {team_id}")
 
-            # Audit log for team update
+            # Audit log for POC change
             AuditLogRepository.create(
                 AuditLogModel(
                     team_id=PyObjectId(team_id),
-                    action="team_updated",
+                    action="poc_changed",
                     performed_by=PyObjectId(user_id),
                 )
             )

@@ -76,7 +76,7 @@ class TaskAssignmentService:
                     AuditLogModel(
                         task_id=assignment.task_id,
                         team_id=assignment.team_id,
-                        action="assigned_to_user_from_team",
+                        action="assigned_to_member",
                         performed_by=PyObjectId(user_id),
                     )
                 )

@@ -98,6 +98,38 @@ class UserRepository:
             raise APIException(RepositoryErrors.USER_CREATE_UPDATE_FAILED.format(str(e)))
 
     @classmethod
+    def update_picture_by_id(cls, user_id: str, picture_url: str) -> UserModel:
+        collection = cls._get_collection()
+        now = datetime.now(timezone.utc)
+        object_id = PyObjectId(user_id)
+
+        result = collection.find_one_and_update(
+            {"_id": object_id},
+            {"$set": {"picture": picture_url, "updated_at": now}},
+            return_document=ReturnDocument.AFTER,
+        )
+
+        if not result:
+            raise UserNotFoundException()
+
+        user_model = UserModel(**result)
+
+        dual_write_service = EnhancedDualWriteService()
+        dual_write_success = dual_write_service.update_document(
+            collection_name="users",
+            mongo_id=user_id,
+            data={"picture": picture_url, "updated_at": now},
+        )
+
+        if not dual_write_success:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to sync picture update for user {user_id} to Postgres")
+
+        return user_model
+
+    @classmethod
     def search_users(cls, query: str, page: int = 1, limit: int = 10) -> tuple[List[UserModel], int]:
         """
         Search users by name or email using fuzzy search with MongoDB regex

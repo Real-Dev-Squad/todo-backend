@@ -28,6 +28,7 @@ class CloudinaryService:
             cloud_name=cloud_name,
             api_key=api_key,
             api_secret=api_secret,
+            secure=True,
         )
 
     @classmethod
@@ -44,7 +45,7 @@ class CloudinaryService:
             raise APIException("imageName must be a non-empty string")
 
         upload_folder = f"todo/users/{user_id}"
-        public_id = f"{user_id}/{image_name.strip()}"
+        public_id = image_name.strip()
 
         file_obj = io.BytesIO(file_data)
 

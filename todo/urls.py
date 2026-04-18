@@ -1,7 +1,7 @@
 from django.urls import path
 from todo.views.task import TaskListView, TaskDetailView, TaskUpdateView
 from todo.views.health import HealthView
-from todo.views.user import UsersView
+from todo.views.user import UsersView, UserDetailView
 from todo.views.auth import GoogleLoginView, GoogleCallbackView, LogoutView
 from todo.views.role import RoleListView, RoleDetailView
 from todo.views.user_role import UserRoleListView, TeamUserRoleListView, TeamUserRoleDetailView, TeamUserRoleDeleteView
@@ -57,6 +57,7 @@ urlpatterns = [
     path("auth/google/callback", GoogleCallbackView.as_view(), name="google_callback"),
     path("auth/logout", LogoutView.as_view(), name="google_logout"),
     path("users", UsersView.as_view(), name="users"),
+    path("users/profile", UserDetailView.as_view(), name="user_profile"),
     path("users/<str:user_id>/roles", UserRoleListView.as_view(), name="user_roles"),
     path("team-invite-codes/generate", GenerateTeamCreationInviteCodeView.as_view(), name="generate_team_invite_code"),
     path("team-invite-codes/verify", VerifyTeamCreationInviteCodeView.as_view(), name="verify_team_invite_code"),

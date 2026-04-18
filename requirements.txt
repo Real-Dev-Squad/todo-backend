@@ -29,3 +29,4 @@ testcontainers[mongodb]==4.10.0
 drf-spectacular==0.28.0
 debugpy==1.8.14
 psycopg2-binary==2.9.9
+cloudinary==1.44.1

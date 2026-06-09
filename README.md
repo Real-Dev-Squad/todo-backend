@@ -198,3 +198,59 @@ When making changes to Django models, you need to create and apply migrations:
 - Ensure VS Code Python extension is installed
 - Check that breakpoints are set in the correct files
 - Verify the debug server shows "Debug server listening on port 5678"
+
+## Model Context Protocol (MCP) Server
+
+The application includes a built-in MCP server that allows AI agents (such as Cursor, Claude Desktop, or Gemini) to interact directly with the backend database to query, create, update, and manage tasks, teams, and users.
+
+### Local Configuration
+
+1. Make sure your virtual environment is activated and requirements are installed.
+2. In your `.env` file, specify either the user email or user ID of a registered user who already has access to the application:
+   ```env
+   MCP_USER_EMAIL='user@example.com'
+   ```
+3. Test that the MCP server starts up locally:
+   ```bash
+   python manage.py run_mcp
+   ```
+
+### Client Integration
+
+To register this MCP server with your developer clients:
+
+#### Cursor
+1. Go to **Settings > Features > MCP**.
+2. Click **+ Add New MCP Server**.
+3. Set the following fields:
+   - **Name**: `todo-backend`
+   - **Type**: `command`
+   - **Command**: `/path/to/todo-backend/venv/bin/python /path/to/todo-backend/manage.py run_mcp`
+4. Click **+ Add Env Var** and configure `MCP_USER_EMAIL` (or `MCP_USER_ID`).
+
+#### Claude Desktop
+Add the following block to your `claude_desktop_config.json` (usually located at `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+```json
+{
+  "mcpServers": {
+    "todo-backend": {
+      "command": "/path/to/todo-backend/venv/bin/python",
+      "args": ["/path/to/todo-backend/manage.py", "run_mcp"],
+      "env": {
+        "MCP_USER_EMAIL": "user@example.com",
+        "CORS_ALLOWED_ORIGINS": "http://localhost:3000,http://localhost:8000"
+      }
+    }
+  }
+}
+```
+
+### Deployment Considerations
+
+Since the default command `python manage.py run_mcp` runs the MCP server over standard input/output (stdio), it is designed to run locally alongside your editor or local client.
+
+If you wish to deploy the MCP server as a remote service (e.g., for a hosted team or multi-user setup):
+1. **HTTP/SSE Transport**: FastMCP supports Server-Sent Events (SSE) over HTTP. You can modify the startup call in `run_mcp.py` to use `mcp.run("sse")` which spins up an ASGI/HTTP endpoint rather than `"stdio"`.
+2. **Security & Authentication**: Ensure that access to the remote SSE endpoint is protected behind a reverse proxy (e.g., Nginx, Cloudflare Access) requiring API token validation or OAuth headers.
+3. **Database Access**: Ensure the deployed environment is correctly configured with environment variables to connect to MongoDB and PostgreSQL.
+

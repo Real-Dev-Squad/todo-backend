@@ -38,6 +38,7 @@ def verify_access() -> UserModel:
     if user_id:
         try:
             from todo.models.common.pyobjectid import PyObjectId
+
             object_id = PyObjectId(user_id)
             doc = collection.find_one({"_id": object_id})
         except Exception:
@@ -113,12 +114,15 @@ def list_tasks(
                 continue
             tasks_data.append(t.model_dump(mode="json"))
 
-        return json.dumps({
-            "tasks": tasks_data,
-            "page": page,
-            "limit": limit,
-            "has_more": response.links.next is not None if response.links else False
-        }, indent=2)
+        return json.dumps(
+            {
+                "tasks": tasks_data,
+                "page": page,
+                "limit": limit,
+                "has_more": response.links.next is not None if response.links else False,
+            },
+            indent=2,
+        )
 
     except Exception as e:
         return f"Error occurred while listing tasks: {str(e)}"
@@ -207,10 +211,13 @@ def create_task(
         )
 
         response = TaskService.create_task(dto)
-        return json.dumps({
-            "message": "Task created successfully",
-            "task": response.data.model_dump(mode="json"),
-        }, indent=2)
+        return json.dumps(
+            {
+                "message": "Task created successfully",
+                "task": response.data.model_dump(mode="json"),
+            },
+            indent=2,
+        )
 
     except Exception as e:
         return f"Error creating task: {str(e)}"
@@ -295,10 +302,13 @@ def update_task(
             validated_data=validated_data,
             user_id=user_id_str,
         )
-        return json.dumps({
-            "message": "Task updated successfully",
-            "task": updated_dto.model_dump(mode="json"),
-        }, indent=2)
+        return json.dumps(
+            {
+                "message": "Task updated successfully",
+                "task": updated_dto.model_dump(mode="json"),
+            },
+            indent=2,
+        )
     except Exception as e:
         return f"Error updating task: {str(e)}"
 
@@ -327,12 +337,15 @@ def list_users(page: int = 1, limit: int = 50) -> str:
     try:
         users, total_count = UserService.get_all_users(page=page, limit=limit)
         users_list = [u.model_dump(mode="json") for u in users]
-        return json.dumps({
-            "users": users_list,
-            "total_count": total_count,
-            "page": page,
-            "limit": limit,
-        }, indent=2)
+        return json.dumps(
+            {
+                "users": users_list,
+                "total_count": total_count,
+                "page": page,
+                "limit": limit,
+            },
+            indent=2,
+        )
     except Exception as e:
         return f"Error listing users: {str(e)}"
 
@@ -367,16 +380,16 @@ def search_users(query: str, page: int = 1, limit: int = 10) -> str:
     verify_access()
     try:
         users, total_count = UserService.search_users(query=query, page=page, limit=limit)
-        users_list = [
-            {"id": str(u.id), "name": u.name, "email": u.email_id}
-            for u in users
-        ]
-        return json.dumps({
-            "results": users_list,
-            "total_count": total_count,
-            "page": page,
-            "limit": limit,
-        }, indent=2)
+        users_list = [{"id": str(u.id), "name": u.name, "email": u.email_id} for u in users]
+        return json.dumps(
+            {
+                "results": users_list,
+                "total_count": total_count,
+                "page": page,
+                "limit": limit,
+            },
+            indent=2,
+        )
     except Exception as e:
         return f"Error searching users: {str(e)}"
 

@@ -1,7 +1,7 @@
 import os
 import json
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional
 
 from django.core.management.base import BaseCommand
 from mcp.server.fastmcp import FastMCP
